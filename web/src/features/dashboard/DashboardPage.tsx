@@ -204,7 +204,7 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
                   <div className="font-semibold">{l.member.fullName}</div>
                   <div className="text-sm text-neutral-600"><MemberNumber value={l.member.memberNumber} /></div>
                 </Td>
-                <Td kind="num">{formatDate(l.borrowedAt)}</Td>
+                <Td kind="num" className="max-wide:hidden">{formatDate(l.borrowedAt)}</Td>
                 <Td kind="num" className={cn(l.status === "OVERDUE" && "font-semibold text-danger-700")}>{formatDate(l.dueAt)}</Td>
                 <Td kind="nowrap"><LoanStatusBadge loan={l} /></Td>
               </Tr>
