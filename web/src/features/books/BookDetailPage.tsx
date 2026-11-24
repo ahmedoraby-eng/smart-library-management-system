@@ -11,6 +11,7 @@ import { useBook } from "./api";
 import { BookCover } from "./BookCover";
 import { DeleteBookDialog } from "./DeleteBookDialog";
 import { formatDay } from "../../lib/format";
+import { BookLoans } from "../circulation/BookLoans";
 
 const route = getRouteApi("/app/books/$bookId");
 
@@ -142,7 +143,7 @@ function BookDetail({ book }: { book: BookDto }) {
           <CardBody>
             {book.description ? <p className="whitespace-pre-line text-neutral-800">{book.description}</p> : <p className="text-neutral-600">No description</p>}
           </CardBody>
-          {/* SLM-5: Loans table (tabs Active (n) / History) goes here. */}
+          {can("LOAN_READ") && <BookLoans bookId={book.id} activeCount={book.activeLoans} />}
         </Card>
         <Card data-testid="copies-card">
           <CardHeader title="Copies" />

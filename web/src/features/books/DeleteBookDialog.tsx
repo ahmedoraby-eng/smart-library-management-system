@@ -80,11 +80,10 @@ function BlockedDialog({ book, onClose, closeRef }: { book: BookDto; onClose: ()
       testId="delete-dialog-blocked"
       footer={
         <>
-          {/* SLM-5: deep-link to the Active loans tab of the book detail once it exists. */}
           <Button
             onClick={() => {
               onClose();
-              void navigate({ to: "/books/$bookId", params: { bookId: book.id } });
+              void navigate({ to: "/loans", search: { bookId: book.id, status: "ACTIVE", page: 1, size: 20 } });
             }}
             data-testid="dialog-view-loans"
           >

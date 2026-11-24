@@ -10,8 +10,9 @@ import { BookEditPage, BookNewPage } from "../features/books/BookFormPages";
 import { BooksPage } from "../features/books/BooksPage";
 import { BorrowPage } from "../features/circulation/BorrowPage";
 import { CirculationLayout } from "../features/circulation/CirculationLayout";
+import { LoanHistoryPage } from "../features/circulation/LoanHistoryPage";
 import { ReturnPage } from "../features/circulation/ReturnPage";
-import { BorrowSearchSchema, ReturnSearchSchema } from "../features/circulation/searchSchemas";
+import { BorrowSearchSchema, LoanHistorySearchSchema, ReturnSearchSchema } from "../features/circulation/searchSchemas";
 import { ApiError } from "../lib/apiClient";
 import { queryClient, setApiErrorHandler } from "../lib/queryClient";
 
@@ -67,7 +68,7 @@ const circulationIndexRoute = createRoute({
 });
 const borrowRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/borrow", validateSearch: BorrowSearchSchema, component: BorrowPage });
 const returnRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/return", validateSearch: ReturnSearchSchema, component: ReturnPage });
-const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", component: () => <ComingSoonPage title="Loan history" /> });
+const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", validateSearch: LoanHistorySearchSchema, component: LoanHistoryPage });
 const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: () => <ComingSoonPage title="Book discovery" /> });
 const staffRoute = createRoute({ getParentRoute: () => appRoute, path: "/admin/users", component: () => <ComingSoonPage title="Staff users" /> });
 
