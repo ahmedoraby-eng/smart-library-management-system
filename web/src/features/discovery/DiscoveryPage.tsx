@@ -11,7 +11,7 @@ import { useCan } from "../auth/session";
 import { BookCover } from "../books/BookCover";
 import { useMemberSearch } from "../circulation/api";
 import { MemberStatusBadge } from "../members/badges";
-import { useDiscover } from "./api";
+import { useAiQuota, useDiscover } from "./api";
 
 // The circulation routes arrive with SLM-4; until then the typed router only knows "/circulation".
 const BORROW_TO = "/circulation/borrow" as "/circulation";
@@ -22,6 +22,7 @@ const EXAMPLES = ["Clean code for a junior developer", "A light classic novel", 
 export function DiscoveryPage() {
   const can = useCan();
   const discover = useDiscover();
+  const quota = useAiQuota();
   const [query, setQuery] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -157,6 +158,7 @@ export function DiscoveryPage() {
               </Button>
             </div>
           </div>
+          <QuotaLine quota={quota.data} />
         </form>
       </Card>
 
@@ -174,6 +176,24 @@ export function DiscoveryPage() {
         ) : null}
       </section>
     </>
+  );
+}
+
+/** SLM-16 cost tiers, visible: what's left today, and a red note once the user's AI searches are used up. */
+function QuotaLine({ quota }: { quota: { left: number; limit: number } | undefined }) {
+  if (!quota) return null;
+  const out = quota.left <= 0;
+  return (
+    <div className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+      {out ? (
+        <p className="text-sm font-medium text-danger-700" role="status" data-testid="ai-quota-note">
+          You've used today's {quota.limit} AI searches. Results are still matched by meaning, without AI ranking or reasons.
+        </p>
+      ) : <span />}
+      <span className="ml-auto text-sm text-neutral-600 tabular-nums" data-testid="ai-searches-left">
+        {quota.left} of {quota.limit} AI searches left today
+      </span>
+    </div>
   );
 }
 
@@ -212,7 +232,10 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
     <>
       {data.mode === "FALLBACK" && data.note && (
         // A single match is not a failure (the model is skipped on purpose to save cost): info, not warning.
-        <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
+        // Quota used up: the red note under the search box says it. Budget used up or a single match: calm info.
+        data.fallbackReason !== "QUOTA_EXCEEDED" && (
+          <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" || data.fallbackReason === "BUDGET_EXHAUSTED" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
+        )
       )}
       <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
         <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>

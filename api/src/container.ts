@@ -36,7 +36,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
   const staffIdentity = new StaffIdentityService(staffRepo, config);
   // SLM-16 hybrid retrieval: one embedder and one chunk store for indexing and search.
   const embedder = selectEmbedder(config, ai);
-  const chunkStore = new PgChunkStore(db);
+  const chunkStore = new PgChunkStore(db, embedder?.dimensions);
   // SLM-16 cost controls: daily budget (global Neuron cap + per-user quota) and a TTL cache, in Postgres.
   const aiBudget = new PgAiBudget(db, clock, config.aiDailyNeuronCap, config.aiUserDailySearches);
   const aiCache = new PgAiCache(db, clock);

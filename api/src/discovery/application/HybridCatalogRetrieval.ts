@@ -10,7 +10,7 @@ const MIN_HITS = 5;
 export const QUERY_EMBEDDING_TTL_SECONDS = 24 * 60 * 60;
 
 export type SemanticFallbackReason = "NO_EMBEDDER" | "TIMEOUT" | "EMBEDDING_ERROR" | "BUDGET_EXHAUSTED";
-export type RetrievalLog = (entry: { retrieval: RetrievalMode; lexical: number; semantic: number; both: number; fallbackReason: SemanticFallbackReason | null; latencyMs: number; embeddingCacheHit: boolean; neurons: number; topSimilarity: number | null }) => void;
+export type RetrievalLog = (entry: { retrieval: RetrievalMode; lexical: number; semantic: number; both: number; fallbackReason: SemanticFallbackReason | null; latencyMs: number; embeddingCacheHit: boolean; neurons: number; topSimilarity: number | null; vector: "hnsw" | "brute-force" | "off" }) => void;
 
 class SemanticTimeout extends Error {}
 class OverBudget extends Error {}
@@ -76,11 +76,13 @@ export class HybridCatalogRetrieval implements CatalogRetrieval {
     }
 
     const count = (f: Candidate["foundBy"]) => fused.filter((c) => c.foundBy === f).length;
+    const vector = this.embedder && this.chunks ? ((await this.chunks.usesPgvector().catch(() => false)) ? "hnsw" : "brute-force") : "off";
     this.log({
       retrieval: this.mode, lexical: count("lexical"), semantic: count("semantic"), both: count("both"),
       fallbackReason: semantic.ok ? null : semantic.reason, latencyMs: Date.now() - started,
       embeddingCacheHit: semantic.ok && semantic.cacheHit, neurons: Math.round(this.neurons * 1000) / 1000,
       topSimilarity: semantic.ok && semantic.top !== null ? Math.round(semantic.top * 1000) / 1000 : null,
+      vector,
     });
     return fused;
   }

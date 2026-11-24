@@ -5,7 +5,10 @@ import type { ChunkRow, ChunkStore, IndexableBook, VectorHit } from "../domain/I
 
 /** How many nearest chunks the vector query reads before grouping by book. */
 const CHUNK_POOL_FACTOR = 2;
-let pathLogged = false;
+/** Per isolate: whether `book_chunks.embedding_v` exists. Asked once, then reused by every request. */
+let pgvectorColumn: Promise<boolean> | null = null;
+/** pgvector's column is vector(768); any other size must use the array path (and loadConfig refuses it anyway). */
+export const PGVECTOR_DIMENSIONS = 768;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const vectorLiteral = (v: number[]) => `[${v.join(",")}]`;
 /** Postgres array literal: one parameter (Drizzle would spread a JS array into a tuple). */
@@ -18,21 +21,21 @@ const arrayLiteral = (v: number[]) => `{${v.join(",")}}`;
  * Reads `books` by name for live text and availability (the read-model exception, as for retrieval).
  */
 export class PgChunkStore implements ChunkStore {
-  private pgvector: Promise<boolean> | null = null;
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: Db, private readonly dimensions = PGVECTOR_DIMENSIONS) {}
 
-  usesPgvector(): Promise<boolean> {
-    this.pgvector ??= this.db
-      .execute(sql`SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'`)
-      .then((r) => {
-        const yes = r.rows.length > 0;
-        if (!pathLogged) {
-          pathLogged = true;
-          console.info(JSON.stringify({ level: "info", event: "vector_search_path", path: yes ? "hnsw" : "brute-force" }));
-        }
-        return yes;
-      });
-    return this.pgvector;
+  async usesPgvector(): Promise<boolean> {
+    if (!pgvectorColumn) {
+      const asked = this.db
+        .execute(sql`SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'`)
+        .then((r) => {
+          const yes = r.rows.length > 0;
+          console.info(JSON.stringify({ level: "info", event: "vector_search_path", path: yes ? "hnsw" : "brute-force" })); // once per isolate
+          return yes;
+        });
+      pgvectorColumn = asked;
+      asked.catch(() => { if (pgvectorColumn === asked) pgvectorColumn = null; }); // a failed check is asked again
+    }
+    return (await pgvectorColumn) && this.dimensions === PGVECTOR_DIMENSIONS;
   }
 
   async liveBooks(ids?: string[]): Promise<IndexableBook[]> {
@@ -77,11 +80,12 @@ export class PgChunkStore implements ChunkStore {
       for (const e of change.embedded) {
         await tx.execute(sql`DELETE FROM book_chunks WHERE book_id = ${e.bookId}::uuid`);
         if (e.rows.length === 0) continue;
+        // One representation only (less CPU): the vector column with pgvector, the array without.
         const values = e.rows.map((c) => pgvector
-          ? sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[], ${vectorLiteral(c.embedding)}::vector)`
+          ? sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, NULL, ${vectorLiteral(c.embedding)}::vector)`
           : sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[])`);
         await tx.execute(sql`INSERT INTO book_chunks ${cols} VALUES ${sql.join(values, sql`, `)}
-          ON CONFLICT (book_id, chunk_index, model) DO UPDATE SET content = EXCLUDED.content, source_hash = EXCLUDED.source_hash, embedding = EXCLUDED.embedding`);
+          ON CONFLICT (book_id, chunk_index, model) DO NOTHING`);
       }
       const r = await tx.execute(sql`DELETE FROM book_chunks c
         WHERE c.model <> ${model}
@@ -114,7 +118,7 @@ export class PgChunkStore implements ChunkStore {
     // No pgvector: exact cosine over every chunk of live books.
     const { rows } = await this.db.execute(sql`SELECT c.book_id, c.embedding FROM book_chunks c
       JOIN books b ON b.id = c.book_id AND b.archived_at IS NULL ${avail}
-      WHERE c.model = ${opts.model}`);
+      WHERE c.model = ${opts.model} AND c.embedding IS NOT NULL`);
     const best = new Map<string, number>();
     for (const r of rows) {
       const s = cosine(query, (r.embedding as number[]).map(Number));

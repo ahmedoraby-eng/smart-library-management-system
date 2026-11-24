@@ -15,7 +15,12 @@ export interface SyncResult {
   upToDate: number;
   removed: number;
   neurons: number;
+  /** Stale books left for the next call (embedding is batched: Workers Free allows 10 ms CPU per call). */
+  remaining: number;
 }
+
+/** Books embedded per call when the caller gives no batch size. */
+export const DEFAULT_BATCH_BOOKS = 16;
 
 /**
  * SLM-16 indexing: keeps `book_chunks` in step with the catalogue at the lowest cost.
@@ -44,9 +49,13 @@ export class BookIndexSync {
   }
 
   /** Every live book; returns what was done. Throws on failure (the admin endpoint reports it). */
-  async syncAll(): Promise<SyncResult> {
-    if (!this.embedder) return { embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0 };
-    return this.sync(await this.store.liveBooks());
+  /**
+   * Every live book, in batches: copies (same text) are always done, at most `maxEmbedBooks` books call
+   * the model. Idempotent and resumable: call again while `remaining` > 0. Throws on failure.
+   */
+  async syncAll(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult> {
+    if (!this.embedder) return { embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0 };
+    return this.sync(await this.store.liveBooks(), maxEmbedBooks);
   }
 
   /** One book, best effort: never throws, gives up after a timeout (the next sync catches up). */
@@ -56,7 +65,7 @@ export class BookIndexSync {
     try {
       const books = await this.store.liveBooks([bookId]);
       await Promise.race([
-        this.sync(books),
+        this.sync(books, 1),
         new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), timeoutMs); }),
       ]);
     } catch (e) {
@@ -67,9 +76,9 @@ export class BookIndexSync {
   }
 
   /** After a demo reset: re-index everything, never failing the reset itself. */
-  async syncAllSafely(): Promise<SyncResult | null> {
+  async syncAllSafely(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult | null> {
     try {
-      const r = await this.syncAll();
+      const r = await this.syncAll(maxEmbedBooks);
       this.log({ level: "info", event: "book_index_sync", ...r });
       return r;
     } catch (e) {
@@ -78,7 +87,7 @@ export class BookIndexSync {
     }
   }
 
-  private async sync(books: IndexableBook[]): Promise<SyncResult> {
+  private async sync(books: IndexableBook[], maxEmbedBooks: number): Promise<SyncResult> {
     const embedder = this.embedder!;
     const indexed = await this.store.indexedHashes(embedder.model);
     const stale: Array<{ book: IndexableBook; hash: string }> = [];
@@ -90,7 +99,8 @@ export class BookIndexSync {
     // Same text already embedded under another id (demo reset): copy, don't pay again.
     const known = await this.store.knownHashes([...new Set(stale.map((s) => s.hash))], embedder.model);
     const copied = stale.filter((s) => known.has(s.hash));
-    const toEmbed = stale.filter((s) => !known.has(s.hash)).map((s) => ({ ...s, chunks: chunkBook(s.book) }));
+    const needEmbedding = stale.filter((s) => !known.has(s.hash));
+    const toEmbed = needEmbedding.slice(0, Math.max(maxEmbedBooks, 0)).map((s) => ({ ...s, chunks: chunkBook(s.book) }));
 
     let neurons = 0;
     const embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }> = [];
@@ -113,6 +123,7 @@ export class BookIndexSync {
     return {
       embeddedBooks: embedded.length, chunks: embedded.reduce((n, e) => n + e.rows.length, 0), reusedBooks: copied.length,
       upToDate: books.length - stale.length, removed, neurons: Math.round(neurons * 1000) / 1000,
+      remaining: needEmbedding.length - toEmbed.length,
     };
   }
 }

@@ -9,7 +9,8 @@ CREATE TABLE book_chunks (
   content     text        NOT NULL,
   source_hash text        NOT NULL,
   model       text        NOT NULL,
-  embedding   real[]      NOT NULL,
+  -- Filled only where pgvector is missing (CI, embedded Postgres); with pgvector the vector lives in embedding_v only.
+  embedding   real[],
   created_at  timestamptz NOT NULL DEFAULT now(),
   UNIQUE (book_id, chunk_index, model)
 );
@@ -23,6 +24,7 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector') THEN
     EXECUTE 'CREATE EXTENSION IF NOT EXISTS vector';
+    -- 768 = @cf/baai/bge-base-en-v1.5; loadConfig refuses an EMBEDDING_MODEL of another size.
     EXECUTE 'ALTER TABLE book_chunks ADD COLUMN embedding_v vector(768)';
     EXECUTE 'CREATE INDEX book_chunks_embedding_hnsw ON book_chunks USING hnsw (embedding_v vector_cosine_ops)';
   END IF;

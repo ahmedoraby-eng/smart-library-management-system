@@ -12,8 +12,8 @@ const NO_PROVIDER_NOTE = "Basic search mode: AI ranking isn't set up here. Showi
 const FAILED_NOTE = "AI ranking is unavailable right now. Showing keyword matches from the catalog instead. Every result is a real catalog record.";
 export const SINGLE_NOTE = "Only one book in the catalog matches, so it's shown without AI ranking.";
 export const quotaNote = (quota: number) =>
-  `You've used today's ${quota} AI searches. Showing catalog matches without AI ranking; the limit resets at midnight UTC.`;
-export const BUDGET_NOTE = "Today's AI budget for the library is used up. Showing catalog matches without AI ranking; it resets at midnight UTC.";
+  `You've used today's ${quota} AI searches. Results are still matched by meaning, without AI ranking or reasons. More AI searches tomorrow (midnight UTC).`;
+export const BUDGET_NOTE = "Today's AI budget for the library is used up, so results are matched by keywords only. AI search is back at midnight UTC.";
 
 export type FallbackReason =
   | "NO_PROVIDER" | "TIMEOUT" | "PROVIDER_ERROR" | "INVALID_OUTPUT" | "NO_VALID_ITEMS"
@@ -44,9 +44,11 @@ class ProviderTimeout extends Error {}
  * The catalog is the source of truth: candidates come from retrieval, the validator keeps only
  * candidate ids, and title, author and availability are re-read from the database. Any provider
  * trouble ends in the deterministic ranking; core library flows never import this module.
- * SLM-16 cost controls: a result cache (not for member-specific requests), no model call for 0 or 1
- * candidate, a per-user daily quota and a global daily Neuron cap, each ending in the fallback with a
- * clear note (never an error). Logs mode, latency, candidates, Neurons and reasons, never the request text.
+ * SLM-16 cost tiers (Ahmed, 25/11): 1 = hybrid retrieval + AI ranking with reasons; 2 = the user's daily
+ * AI searches are used up → hybrid retrieval ranked by RRF, no model (≈0.1 Neuron); 3 = the library's
+ * daily Neuron budget is used up (embeddings stop too) → keyword retrieval, deterministic ranking.
+ * Each ends with a clear note, never an error. Plus a result cache (not for member-specific requests)
+ * and no model call for 0 or 1 candidate. Logs mode, latency, candidates, Neurons and reasons, never the request text.
  */
 export class BookDiscoveryService {
   constructor(
@@ -70,7 +72,7 @@ export class BookDiscoveryService {
       const hit = await this.fromCache(cacheKey);
       if (hit) {
         this.log({ mode: hit.mode, latencyMs: Date.now() - started, candidates: hit.items.length, fallbackReason: null, provider: this.provider?.name ?? null, dropped: 0, cacheHit: true, neurons: 0, ...(hit.retrieval ? { retrieval: hit.retrieval } : {}) });
-        return { ...hit, cached: true };
+        return { ...hit, cached: true, tier: hit.mode === "AI" ? 1 : hit.retrieval === "hybrid" ? 2 : 3, ...(await this.left(ctx.userId)) };
       }
     }
 
@@ -93,9 +95,12 @@ export class BookDiscoveryService {
         mode, latencyMs: Date.now() - started, candidates: candidates.length, fallbackReason, provider: this.provider?.name ?? null, dropped,
         cacheHit: false, neurons, ...(neuronsToday !== undefined ? { neuronsToday } : {}), ...(retrieval ? { retrieval } : {}),
       });
+      // Tier 1 = the model ranked; 2 = no model, hybrid RRF ranking; 3 = no model, keyword ranking.
+      const tier = mode === "AI" ? 1 : retrieval === "hybrid" ? 2 : 3;
       const response: DiscoveryResponse = {
         mode, items, note: items.length === 0 ? note ?? NO_MATCH_NOTE : note,
         ...(retrieval ? { retrieval } : {}), ...(fallbackReason ? { fallbackReason } : {}),
+        tier, ...(await this.left(ctx.userId)),
       };
       // Only a real AI ranking is worth keeping; fallbacks are free to recompute and may recover.
       if (cacheKey && mode === "AI" && items.length > 0) {
@@ -136,6 +141,18 @@ export class BookDiscoveryService {
       return finish("FALLBACK", fallbackRank(candidates, limit), FAILED_NOTE, "NO_VALID_ITEMS", valid.dropped);
     }
     return finish("AI", valid.items, valid.note, null, valid.dropped);
+  }
+
+  /** The caller's AI searches left today, for the counter next to the search box. */
+  private async left(userId?: string): Promise<{ aiSearches?: { left: number; limit: number } }> {
+    if (!userId || !this.cost.budget) return {};
+    const q = await this.cost.budget.searchesLeft(userId).catch(() => null);
+    return q ? { aiSearches: q } : {};
+  }
+
+  /** The caller's AI searches left today (GET /api/ai/quota). */
+  async quota(userId: string): Promise<{ left: number; limit: number }> {
+    return this.cost.budget ? this.cost.budget.searchesLeft(userId) : { left: this.cost.userQuota ?? 0, limit: this.cost.userQuota ?? 0 };
   }
 
   /** The call happened, so it costs: the model's own token count, or the worst case when there is none (timeout). */

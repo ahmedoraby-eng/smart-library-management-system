@@ -55,7 +55,7 @@ export async function seed(databaseUrl: string, opts: { reset: boolean }): Promi
 export async function indexCatalogueWithFakeEmbedder(databaseUrl: string): Promise<number> {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 2 });
   try {
-    const r = await new BookIndexSync(new PgChunkStore(drizzle({ client: pool })), new FakeEmbedder()).syncAll();
+    const r = await new BookIndexSync(new PgChunkStore(drizzle({ client: pool })), new FakeEmbedder()).syncAll(10_000); // local: no CPU limit
     return r.embeddedBooks;
   } finally {
     await pool.end();

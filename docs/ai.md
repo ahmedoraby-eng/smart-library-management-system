@@ -168,7 +168,19 @@ If the model answers with a valid but empty list, the response is `mode: "AI"` w
 
 ## Cost controls (SLM-16)
 
-AI spend is bounded by design. Every step below costs nothing when it isn't needed, and every limit ends in the keyword ranking with a clear note, never in an error.
+AI spend is bounded by design. Every step below costs nothing when it isn't needed, and every limit ends in a cheaper tier with a clear note, never in an error.
+
+### Tiers (Ahmed, 25/11)
+
+| Tier | When | Retrieval | Ranking | Cost |
+|---|---|---|---|---|
+| **1** | normal | hybrid (full-text + vector, RRF) | AI model, with reasons | ≈ 16 Neurons (≤ 26) + ≈ 0.1 |
+| **2** | the user's 50 AI searches today are used (`QUOTA_EXCEEDED`) | hybrid | RRF order, no model, no reasons | ≈ 0.1 Neuron (0 on a cached query) |
+| **3** | the library's 8,000 Neurons today are used (`BUDGET_EXHAUSTED`); embeddings stop too | full-text only | deterministic | 0 |
+
+The response carries `tier` and `aiSearches: { left, limit }`. `GET /api/ai/quota` returns the same count for the page load. The discovery page shows "N of 50 AI searches left today" next to the search, a red note under the search box at 0, and a calm info note in tier 3.
+
+If embeddings fail (an error, or more than 1.5 s) while the user still has AI searches, retrieval drops to full-text only and the model still ranks. A failed embedding isn't a cost signal, so the reasons are kept. The response then says `retrieval: "lexical"`.
 
 | Control | What it does |
 |---|---|
@@ -182,6 +194,8 @@ AI spend is bounded by design. Every step below costs nothing when it isn't need
 | Global cap | **8,000 Neurons per UTC day** (`AI_DAILY_NEURON_CAP`, 80 % of the free 10,000). Past it: `BUDGET_EXHAUSTED` for everyone, and query embeddings stop too (full-text only). A burst can overshoot by a few calls, which the 20 % headroom absorbs. |
 | `max_tokens` 600 | Caps the output of a ranking call. |
 | Reindex | Admin only, 2 a minute, embeds only missing or stale chunks. |
+| CPU (Workers Free: 10 ms per call) | Reindex, the demo reset and the cron embed at most `INDEX_BATCH_BOOKS` books per call (default 16). They're idempotent and resumable: `POST /api/admin/discovery/reindex?limit=N` answers `partial` with `remaining`, and you call it again. Copies of unchanged text are plain SQL. With pgvector, only the `vector` column is written (no second `real[]` copy). |
+| Dimensions | The index is `vector(768)`; `loadConfig` refuses an `EMBEDDING_MODEL` of another known size. |
 
 **Where it lives:** Postgres, in `ai_usage(day, scope)` and `ai_cache(key, value, expires_at)` (migration `0005_ai_cost.sql`). Days are UTC. The nightly cron purges expired cache rows. The Workers Cache API isn't used because it's a no-op on `*.workers.dev` hosts. The AI Gateway isn't used either: the caches and caps above already cover it, inside our own code and tests.
 
@@ -199,6 +213,16 @@ The token `usage` the model returns is used when present; otherwise text length 
 | Daily ceiling | 8,000 ≈ 300+ AI searches at worst |
 
 **Visibility.** Every discovery log line has `neurons` (embedding + ranking), `cacheHit`, `neuronsToday`, the retrieval mode and the fallback reason, never the request text. The retrieval log adds `embeddingCacheHit` and `topSimilarity`. Admins see one line on the dashboard ("AI usage today: N / 8,000 Neurons · M AI searches") from `GET /api/admin/discovery/usage`.
+
+## Demo queries for the assessors
+
+Checked on the seed by `api/test/ai-cost.test.ts`, using the deterministic local embedder. Re-check on the deployed Worker, since bge decides there.
+
+| Query | Expected book | `foundBy` | Why |
+|---|---|---|---|
+| `Daniel Kahnemann` (author typo) | *Thinking, Fast and Slow* | `lexical` | Trigram similarity catches the misspelt author; the vector side has nothing to match. |
+| `a book for someone who is losing a parent` | *H Is for Hawk*, *Crying in H Mart* | `semantic` | Neither description has "losing" or "parent"; they talk about a father's death, a mother, grief and mourning. |
+| `a memoir about grief and mourning` | *A Grief Observed* | `both` | The words match, and so does the meaning. |
 
 ## Isolation
 

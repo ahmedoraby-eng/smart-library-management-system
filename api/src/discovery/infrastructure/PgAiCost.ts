@@ -50,6 +50,11 @@ export class PgAiBudget implements AiBudget {
     }
   }
 
+  async searchesLeft(userId: string): Promise<{ left: number; limit: number }> {
+    const { rows } = await this.db.execute(sql`SELECT searches FROM ai_usage WHERE day = ${this.day()}::date AND scope = ${userScope(userId)}`);
+    return { left: Math.max(this.userQuota - Number(rows[0]?.searches ?? 0), 0), limit: this.userQuota };
+  }
+
   async today(): Promise<UsageToday> {
     const day = this.day();
     const { rows } = await this.db.execute(sql`SELECT searches, neurons FROM ai_usage WHERE day = ${day}::date AND scope = ${GLOBAL}`);

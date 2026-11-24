@@ -24,11 +24,12 @@ const fallback: DiscoveryResponse = {
 
 const MEMBER_ID = "3f2b8f0e-4c1a-4a52-9d55-1f0c6f5a9b11";
 type Reply = DiscoveryResponse | { status: number; retryAfter?: number };
-function stubApi(role: Role, reply: Reply) {
+function stubApi(role: Role, reply: Reply, quota: { left: number; limit: number } = { left: 50, limit: 50 }) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
       new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
     if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Test", role, permissions: ROLE_PERMISSIONS[role], isDemo: false });
+    if (url === "/api/ai/quota") return json(quota);
     if (url === "/api/ai/book-discovery") {
       if ("status" in reply) return json({ type: "about:blank", title: "x", status: reply.status, code: reply.status === 429 ? "RATE_LIMITED" : "INTERNAL" }, reply.status, reply.retryAfter ? { "retry-after": String(reply.retryAfter) } : {});
       return json(reply);
@@ -165,5 +166,49 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
     await userEvent.click(screen.getByTestId("discovery-submit"));
     await waitFor(() => expect(sent(f)).toHaveLength(2));
     expect(sent(f)[1]).toEqual({ query: "software architecture" });
+  });
+
+  describe("SLM-16 cost tiers in the UI", () => {
+    const ask = async (text = "clean code for a junior") => {
+      await userEvent.type(await screen.findByTestId("discovery-query"), text);
+      await userEvent.click(screen.getByTestId("discovery-submit"));
+    };
+
+    it("searches only on submit: typing a valid request sends nothing", async () => {
+      const f = stubApi("LIBRARIAN", ai);
+      await renderWithProviders(<DiscoveryPage />);
+      await userEvent.type(await screen.findByTestId("discovery-query"), "clean code for a junior developer");
+      expect(sent(f)).toHaveLength(0);
+    });
+
+    it("shows the AI searches left today, and updates it from each answer", async () => {
+      stubApi("LIBRARIAN", { ...ai, tier: 1, aiSearches: { left: 41, limit: 50 } }, { left: 42, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      expect(await screen.findByTestId("ai-searches-left")).toHaveTextContent("42 of 50 AI searches left today");
+      await ask();
+      await screen.findByTestId("results-title");
+      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("41 of 50 AI searches left today");
+      expect(screen.queryByTestId("ai-quota-note")).toBeNull();
+    });
+
+    it("tier 2: none left → a red note under the search box, results still shown, no extra warning", async () => {
+      const tier2: DiscoveryResponse = { ...fallback, tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches.", aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", tier2, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      expect(await screen.findByTestId("ai-quota-note")).toHaveTextContent("Results are still matched by meaning, without AI ranking or reasons.");
+      await ask();
+      expect(await screen.findAllByTestId("discovery-item")).toHaveLength(1);
+      expect(screen.queryByTestId("discovery-fallback-notice")).toBeNull();
+    });
+
+    it("tier 3: the library budget is used up → a calm (info) note with the results", async () => {
+      const tier3: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "BUDGET_EXHAUSTED", note: "Today's AI budget for the library is used up, so results are matched by keywords only.", aiSearches: { left: 12, limit: 50 } };
+      stubApi("LIBRARIAN", tier3, { left: 12, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      await ask();
+      const notice = await screen.findByTestId("discovery-fallback-notice");
+      expect(notice).toHaveTextContent("matched by keywords only");
+      expect(notice.className).toMatch(/info/);
+    });
   });
 });

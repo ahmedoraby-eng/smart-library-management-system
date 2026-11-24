@@ -11,8 +11,10 @@ import { FakeEmbedder } from "../src/discovery/infrastructure/FakeEmbedder";
 import { PgAiBudget, PgAiCache } from "../src/discovery/infrastructure/PgAiCost";
 import { PgCatalogRetrieval } from "../src/discovery/infrastructure/PgCatalogRetrieval";
 import { PgChunkStore } from "../src/discovery/infrastructure/PgChunkStore";
+import { loadConfig } from "../src/platform/config";
 import { createDb } from "../src/platform/db";
-import { as, pool, resetDb, seedStaff, testApp } from "./support";
+import { selectEmbedder } from "../src/discovery/infrastructure/selectProvider";
+import { as, pool, resetDb, seedStaff, testApp, testEnv } from "./support";
 
 afterAll(() => pool.end());
 
@@ -61,7 +63,7 @@ function setup(opts: { cap?: number; quota?: number; embedder?: Embedder; provid
   const service = new BookDiscoveryService(retrieval, provider, (e) => logs.push(e), 8000, { cache, budget, userQuota: opts.quota ?? 50 });
   return { service, budget, cache, logs, retrievalLogs, provider, embedder };
 }
-const index = () => new BookIndexSync(new PgChunkStore(db()), new FakeEmbedder()).syncAll();
+const index = () => new BookIndexSync(new PgChunkStore(db()), new FakeEmbedder()).syncAll(10_000);
 const usageRow = async (scope: string) => (await pool.query("SELECT searches, neurons::float AS neurons FROM ai_usage WHERE scope = $1", [scope])).rows[0];
 
 describe("SLM-16 cost: price estimate", () => {
@@ -227,3 +229,106 @@ describe("SLM-16 cost: API", () => {
     expect(await res.json()).toMatchObject({ status: "ok", vector: "brute-force" });
   });
 });
+
+describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
+  beforeEach(() => addBook("hmart", "Crying in H Mart", "Memoir", "A musician remembers her Korean mother through food, illness and mourning."));
+
+  it("tier 1: hybrid retrieval + AI ranking with reasons; the response says how many AI searches are left", async () => {
+    await index();
+    const { service } = setup({ quota: 50 });
+    const r = await service.discover({ query: "a memoir about grief" }, { userId: staff.librarian });
+    expect(r).toMatchObject({ mode: "AI", tier: 1, retrieval: "hybrid", aiSearches: { left: 49, limit: 50 } });
+  });
+
+  it("tier 2: past the user's quota → hybrid retrieval ranked by RRF, no model call, ≈0.1 Neuron", async () => {
+    await index();
+    const { service, provider, logs } = setup({ quota: 0 });
+    const r = await service.discover({ query: "a book for someone losing a parent" }, { userId: staff.librarian });
+    expect(r).toMatchObject({ mode: "FALLBACK", tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", aiSearches: { left: 0, limit: 0 } });
+    expect(r.items.some((i) => i.book.id === ids.hawk && i.foundBy === "semantic")).toBe(true); // still found by meaning
+    expect(provider.calls).toBe(0);
+    expect(logs[0]!.neurons).toBeLessThan(1);
+  });
+
+  it("tier 3: past the library's daily budget → keyword retrieval, deterministic ranking, no AI call at all", async () => {
+    await index();
+    const embedder = countingEmbedder();
+    const { service, budget, provider } = setup({ cap: 5, embedder });
+    await budget.addNeurons(5);
+    const r = await service.discover({ query: "readable code" }, { userId: staff.librarian });
+    expect(r).toMatchObject({ mode: "FALLBACK", tier: 3, retrieval: "lexical", fallbackReason: "BUDGET_EXHAUSTED" });
+    expect(r.items[0]!.book.id).toBe(ids.clean);
+    expect(provider.calls + embedder.calls).toBe(0);
+  });
+
+  it("GET /api/ai/quota gives the counter its starting value; each AI search uses one", async () => {
+    const app = testApp({ env: { AI_FAKE: "true", AI_USER_DAILY_SEARCHES: "3" } });
+    const quota = async () => (await (await app.request("/api/ai/quota", await as(staff.supervisor))).json()) as { left: number; limit: number };
+    expect(await quota()).toEqual({ left: 3, limit: 3 });
+    const res = await app.request("/api/ai/book-discovery", await as(staff.supervisor, { method: "POST", body: { query: "readable code" } }));
+    expect(((await res.json()) as { aiSearches: unknown }).aiSearches).toEqual({ left: 2, limit: 3 });
+    expect(await quota()).toEqual({ left: 2, limit: 3 });
+  });
+});
+
+describe("SLM-16 indexing within Workers Free CPU (10 ms per call)", () => {
+  it("reindex embeds at most N books per call, reports what's left, and resumes until done", async () => {
+    const sync = new BookIndexSync(new PgChunkStore(db()), new FakeEmbedder());
+    expect(await sync.syncAll(3)).toMatchObject({ embeddedBooks: 3, remaining: 1 });
+    expect(await sync.syncAll(3)).toMatchObject({ embeddedBooks: 1, remaining: 0, upToDate: 3 });
+    expect(await sync.syncAll(3)).toMatchObject({ embeddedBooks: 0, remaining: 0, upToDate: 4 });
+  });
+
+  it("the endpoint takes ?limit and says partial/done", async () => {
+    const app = testApp({ env: { AI_FAKE: "true" } });
+    const r1 = await (await app.request("/api/admin/discovery/reindex?limit=2", await as(staff.admin, { method: "POST", body: {} }))).json();
+    expect(r1).toMatchObject({ result: "partial", embeddedBooks: 2, remaining: 2 });
+    const r2 = await (await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))).json();
+    expect(r2).toMatchObject({ result: "done", embeddedBooks: 2, remaining: 0 });
+  });
+});
+
+describe("SLM-16 config", () => {
+  it("the semantic threshold comes from EMBEDDING_MIN_SIMILARITY (default 0.72)", () => {
+    const binding = { run: async () => ({}) };
+    expect(selectEmbedder(loadConfig(testEnv), binding)!.minSimilarity).toBe(0.72);
+    expect(selectEmbedder(loadConfig({ ...testEnv, EMBEDDING_MIN_SIMILARITY: "0.75" }), binding)!.minSimilarity).toBe(0.75);
+    expect(() => loadConfig({ ...testEnv, EMBEDDING_MIN_SIMILARITY: "1.5" })).toThrow(/EMBEDDING_MIN_SIMILARITY/);
+  });
+
+  it("refuses an embedding model whose size doesn't match the vector(768) index", () => {
+    expect(() => loadConfig({ ...testEnv, EMBEDDING_MODEL: "@cf/baai/bge-m3" })).toThrow(/1024 dimensions/);
+    expect(() => loadConfig({ ...testEnv, EMBEDDING_MODEL: "@cf/baai/bge-base-en-v1.5" })).not.toThrow();
+  });
+
+  it("the cost numbers come from config", () => {
+    const c = loadConfig({ ...testEnv, AI_DAILY_NEURON_CAP: "1234", AI_USER_DAILY_SEARCHES: "7", INDEX_BATCH_BOOKS: "9" });
+    expect(c).toMatchObject({ aiDailyNeuronCap: 1234, aiUserDailySearches: 7, indexBatchBooks: 9 });
+    expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 16 });
+  });
+});
+
+describe("SLM-16 demo queries for the assessors (full seed; foundBy as documented in docs/ai.md)", () => {
+  const foundBy = async (query: string) => {
+    const r = new HybridCatalogRetrieval(new PgCatalogRetrieval(db()), new PgChunkStore(db()), new FakeEmbedder());
+    return new Map((await r.candidates(query, { limit: 20, availableOnly: false })).map((c) => [c.title, c.foundBy]));
+  };
+  beforeEach(async () => {
+    await pool.query("DELETE FROM books");
+    await pool.query(await readFile(fileURLToPath(new URL("../../seed/demo.sql", import.meta.url).href), "utf8"));
+    await index();
+  });
+
+  it("keyword only: an author typo «Daniel Kahnemann» finds Kahneman's book through trigram similarity", async () => {
+    expect((await foundBy("Daniel Kahnemann")).get("Thinking, Fast and Slow")).toBe("lexical");
+  });
+  it("meaning only: «a book for someone who is losing a parent» finds the grief memoirs", async () => {
+    const m = await foundBy("a book for someone who is losing a parent");
+    expect(m.get("H Is for Hawk")).toBe("semantic");
+    expect(m.get("Crying in H Mart")).toBe("semantic");
+  });
+  it("both: «a memoir about grief and mourning»", async () => {
+    expect((await foundBy("a memoir about grief and mourning")).get("A Grief Observed")).toBe("both");
+  });
+});
+

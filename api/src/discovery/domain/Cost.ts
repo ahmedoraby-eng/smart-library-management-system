@@ -54,6 +54,8 @@ export interface AiBudget {
   /** Adds spent Neurons (globally, and to the user when given). */
   addNeurons(neurons: number, userId?: string): Promise<void>;
   today(): Promise<UsageToday>;
+  /** The user's AI searches left today (never negative). */
+  searchesLeft(userId: string): Promise<{ left: number; limit: number }>;
 }
 
 /** Small TTL key/value store for query embeddings and ranked results. */
