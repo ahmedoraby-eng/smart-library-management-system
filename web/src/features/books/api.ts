@@ -1,0 +1,49 @@
+import type { BookDeleteResult, BookDto, BookInput, BookListQuery, Page } from "@slm/contracts";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, toQuery } from "../../lib/apiClient";
+
+/** Every books query lives under this key, so circulation (SLM-4) can invalidate them all at once. */
+export const booksKey = ["books"] as const;
+
+export function useBooks(query: BookListQuery) {
+  return useQuery({
+    queryKey: [...booksKey, "list", query],
+    queryFn: () => api<Page<BookDto>>(`/books${toQuery(query)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useCategories() {
+  return useQuery({
+    queryKey: [...booksKey, "categories"],
+    queryFn: async () => (await api<{ items: string[] }>("/books/categories")).items,
+    staleTime: 60_000,
+  });
+}
+
+export function useBook(id: string) {
+  return useQuery({
+    queryKey: [...booksKey, "detail", id],
+    queryFn: () => api<BookDto>(`/books/${encodeURIComponent(id)}`),
+  });
+}
+
+/** Create (no id) or update (id + the version the form was loaded with). */
+export function useSaveBook(id?: string, version?: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BookInput) =>
+      id
+        ? api<BookDto>(`/books/${encodeURIComponent(id)}`, { method: "PUT", body: { ...input, version } })
+        : api<BookDto>("/books", { method: "POST", body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: booksKey }),
+  });
+}
+
+export function useDeleteBook() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<BookDeleteResult>(`/books/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: booksKey }),
+  });
+}
