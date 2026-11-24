@@ -102,6 +102,8 @@ export function DiscoveryPage() {
                   </div>
                 </div>
               ) : (
+                <>
+                <span className="mb-1 block text-sm font-medium text-neutral-700" aria-hidden="true">For member (optional)</span>
                 <Combobox
                   label="For member (optional)"
                   placeholder="Search name, member number or email"
@@ -124,6 +126,7 @@ export function DiscoveryPage() {
                     </div>
                   )}
                 />
+                </>
               )}
             </div>
           )}

@@ -157,7 +157,7 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
           <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
         ))}
       </div>
-      <ul className="mt-2 flex flex-nowrap gap-x-2.5 whitespace-nowrap text-xs text-neutral-600">
+      <ul className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 whitespace-nowrap text-xs text-neutral-600">
         {items.map((i) => (
           <li key={i.key} className="flex items-center gap-1.5">
             <span className={cn("h-1.5 w-1.5 rounded-full", i.dot)} aria-hidden="true" />
@@ -188,7 +188,7 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
             <tr>
               <Th>Book</Th>
               <Th>Member</Th>
-              <Th>Borrowed</Th>
+              <Th className="max-wide:hidden">Borrowed</Th>
               <Th>Due</Th>
               <Th>Status</Th>
             </tr>

@@ -87,7 +87,7 @@ export function LoanHistoryPage() {
               compact
               leading={<SearchIcon size={16} />}
               type="search"
-              placeholder="Search book title, ISBN, member name or number"
+              placeholder="Search book or member"
               value={qText}
               onChange={(e) => setQText(e.target.value)}
               data-testid="loan-search"
