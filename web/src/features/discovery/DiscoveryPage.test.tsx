@@ -22,6 +22,7 @@ const fallback: DiscoveryResponse = {
   items: [{ book: book("b1", "Fundamentals of Software Architecture", 2), reason: "Matches: software, architecture", matchedTerms: ["software", "architecture"] }],
 };
 
+const MEMBER_ID = "3f2b8f0e-4c1a-4a52-9d55-1f0c6f5a9b11";
 type Reply = DiscoveryResponse | { status: number; retryAfter?: number };
 function stubApi(role: Role, reply: Reply) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
@@ -31,6 +32,9 @@ function stubApi(role: Role, reply: Reply) {
     if (url === "/api/ai/book-discovery") {
       if ("status" in reply) return json({ type: "about:blank", title: "x", status: reply.status, code: reply.status === 429 ? "RATE_LIMITED" : "INTERNAL" }, reply.status, reply.retryAfter ? { "retry-after": String(reply.retryAfter) } : {});
       return json(reply);
+    }
+    if (url.startsWith("/api/members")) {
+      return json({ items: [{ id: MEMBER_ID, memberNumber: "M-000001", fullName: "Sara Haddad", email: "sara@example.org", phone: null, status: "ACTIVE", registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 0, overdueLoans: 0, version: 0 }], page: 1, size: 8, total: 1 });
     }
     void init;
     return json({}, 404);
@@ -136,5 +140,27 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
     await userEvent.type(box, "{Enter}");
     await screen.findAllByTestId("discovery-item");
     expect(sent(f)[0]).toEqual({ query: "A light classic novel" });
+  });
+
+  it("«For member»: sends memberId, both ids ride on [Borrow], and Clear removes the member again", async () => {
+    const f = stubApi("LIBRARIAN", ai);
+    await renderWithProviders(<DiscoveryPage />);
+    await userEvent.type(await screen.findByTestId("discovery-query"), "software architecture");
+    await userEvent.type(await screen.findByRole("combobox"), "sara");
+    await userEvent.click(await screen.findByRole("option", { name: /Sara Haddad/ }));
+    expect(await screen.findByTestId("discovery-member")).toHaveTextContent("Sara Haddad");
+    await userEvent.click(screen.getByTestId("discovery-submit"));
+    await screen.findAllByTestId("discovery-item");
+    expect(sent(f)[0]).toEqual({ query: "software architecture", memberId: MEMBER_ID });
+    const href = screen.getByTestId("borrow-from-result").getAttribute("href")!;
+    expect(href).toContain("/circulation/borrow?");
+    expect(href).toContain("book=b1");
+    expect(href).toContain(`member=${MEMBER_ID}`);
+    await userEvent.click(screen.getByTestId("clear-member"));
+    expect(screen.queryByTestId("discovery-member")).not.toBeInTheDocument();
+    expect(screen.getByTestId("borrow-from-result").getAttribute("href")).not.toContain("member=");
+    await userEvent.click(screen.getByTestId("discovery-submit"));
+    await waitFor(() => expect(sent(f)).toHaveLength(2));
+    expect(sent(f)[1]).toEqual({ query: "software architecture" });
   });
 });
