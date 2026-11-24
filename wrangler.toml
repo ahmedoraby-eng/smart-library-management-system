@@ -51,10 +51,70 @@ name = "GOOGLE_CALLBACK_LIMITER"
 namespace_id = "1005"
 simple = { limit = 10, period = 60 }
 
-# Postgres (Neon) through Hyperdrive, query cache OFF. Basel fills in the id.
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "<hyperdrive-config-id>"
+# ---------------------------------------------------------------------------------------------
+# Top level = local runs (`wrangler dev`, `npm run demo:local`, `npm run e2e`): no Hyperdrive or
+# Workers AI binding, so nothing needs a Cloudflare login; the database comes from DATABASE_URL and
+# local runs use AI_FAKE. Production lives in [env.production] below; deploy with
+# `npm run deploy` (= wrangler deploy --env production).
+# ---------------------------------------------------------------------------------------------
 
-# [ai]
-# binding = "AI"
+[env.production]
+name = "smart-library"
+# Inherited from the top level: main, compatibility, rules, [assets].
+# Not inherited (so repeated here): vars, ratelimits, hyperdrive, ai, triggers.
+
+[env.production.triggers]
+# Nightly demo-data reset: 00:00 UTC = 02:00 Cairo (winter).
+crons = ["0 0 * * *"]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+LOAN_DAYS = "14"
+MAX_ACTIVE_LOANS = "5"
+DEMO_ACCOUNTS_ENABLED = "true"
+AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
+# Demo emails must be on a reserved domain (.test, .invalid or .example); config refuses others.
+DEMO_LIBRARIAN_EMAIL = "librarian@smartlibrary.example"
+DEMO_ADMIN_EMAIL = "admin@smartlibrary.example"
+# FILL: the Google account(s) that become Admin on first Google sign-in (comma-separated).
+BOOTSTRAP_ADMIN_EMAILS = "REPLACE_WITH_ADMIN_GOOGLE_EMAIL"
+# FILL when the Google OAuth client exists (public value). Leave empty and Google sign-in stays off
+# (the button is hidden). GOOGLE_CLIENT_SECRET must then be set as a secret too, or left unset.
+GOOGLE_CLIENT_ID = ""
+# Secrets, never here (wrangler secret put <NAME> --env production):
+#   SESSION_SECRET (32+ random chars), DEMO_LIBRARIAN_PASSWORD, DEMO_ADMIN_PASSWORD (12+ each),
+#   GOOGLE_CLIENT_SECRET (only with GOOGLE_CLIENT_ID).
+
+[[env.production.ratelimits]]
+name = "DEMO_LOGIN_LIMITER"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }
+
+[[env.production.ratelimits]]
+name = "HEALTH_LIMITER"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }
+
+[[env.production.ratelimits]]
+name = "DISCOVERY_LIMITER"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
+[[env.production.ratelimits]]
+name = "GOOGLE_START_LIMITER"
+namespace_id = "1004"
+simple = { limit = 10, period = 60 }
+
+[[env.production.ratelimits]]
+name = "GOOGLE_CALLBACK_LIMITER"
+namespace_id = "1005"
+simple = { limit = 10, period = 60 }
+
+# Postgres (Neon) through Hyperdrive, query cache OFF.
+# FILL: the id printed by `wrangler hyperdrive create smart-library-db --connection-string=... --caching-disabled`.
+[[env.production.hyperdrive]]
+binding = "HYPERDRIVE"
+id = "REPLACE_WITH_HYPERDRIVE_ID"
+
+[env.production.ai]
+binding = "AI"
