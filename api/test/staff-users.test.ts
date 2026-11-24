@@ -1,3 +1,4 @@
+import { accessViolation } from "../src/staff/domain/accessRules";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { as, pool, resetDb, seedStaff, testApp } from "./support";
 
@@ -106,16 +107,30 @@ describe("SLM-8 staff users: role and status changes", () => {
     expect((await put(staff.admin, staff.admin, { role: "ADMIN", status: "ACTIVE" })).res.status).toBe(200);
   });
 
-  it("the last active Admin can't be demoted or disabled → 409 LAST_ADMIN (stale actor)", async () => {
-    // The actor's principal was read at the start of its request; meanwhile it lost its Admin role.
-    // The service, not the route guard, must still refuse to leave zero active Admins.
+  it("a stale actor (no longer an active Admin) is refused under the lock → 403, target unchanged", async () => {
+    // The actor's principal was read at the start of its request; meanwhile it lost its Admin role
+    // (or was disabled). The service re-checks the actor against the locked rows (Yousef, SLM-8 review).
     const other = await addStaff("other@library.test", "Omar Admin", "ADMIN");
-    await pool.query("UPDATE staff_users SET role = 'LIBRARIAN' WHERE id = $1", [staff.admin]);
+    const target = await addStaff("t@library.test", "Tia Target", "LIBRARIAN");
     const { container } = testApp();
-    for (const change of [{ role: "SUPERVISOR", status: "ACTIVE" }, { role: "ADMIN", status: "DISABLED" }] as const) {
-      await expect(container.staffAdmin.changeAccess(staff.admin, other, change)).rejects.toMatchObject({ status: 409, code: "LAST_ADMIN" });
+    for (const demote of ["UPDATE staff_users SET role = 'LIBRARIAN' WHERE id = $1", "UPDATE staff_users SET role = 'ADMIN', status = 'DISABLED' WHERE id = $1"]) {
+      await pool.query(demote, [staff.admin]);
+      for (const [id, change] of [[other, { role: "SUPERVISOR", status: "ACTIVE" }], [target, { role: "ADMIN", status: "ACTIVE" }]] as const) {
+        await expect(container.staffAdmin.changeAccess(staff.admin, id, change)).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+      }
     }
     expect(await row(other)).toEqual({ role: "ADMIN", status: "ACTIVE" });
+    expect(await row(target)).toEqual({ role: "LIBRARIAN", status: "ACTIVE" });
+  });
+
+  it("the last active Admin can't be demoted or disabled → 409 LAST_ADMIN (rule unit)", () => {
+    const admin = { id: "a", email: "a@x.test", fullName: "A", role: "ADMIN", status: "ACTIVE", isDemo: false, createdAt: new Date() } as const;
+    // Reachable only if the actor and the target were the same row, which the self rule blocks first;
+    // kept as a backstop and checked at the rule level.
+    expect(accessViolation(admin, { role: "LIBRARIAN", status: "ACTIVE" }, "z", ["a", "z"])).toBeNull();
+    expect(accessViolation(admin, { role: "LIBRARIAN", status: "ACTIVE" }, "a", ["a"])).toBe("self");
+    expect(accessViolation({ ...admin, id: "b" }, { role: "ADMIN", status: "DISABLED" }, "a", ["a", "b"])).toBeNull();
+    expect(accessViolation({ ...admin, id: "b" }, { role: "ADMIN", status: "DISABLED" }, "c", ["a"])).toBe("actor_not_admin");
   });
 
   it("two Admins demoting each other at once: exactly one wins, one active Admin is left (race-safe)", async () => {
@@ -129,9 +144,9 @@ describe("SLM-8 staff users: role and status changes", () => {
       ]);
       const statuses = [x.res.status, y.res.status].sort();
       expect(statuses[0]).toBe(200);
-      // The loser either saw the winner's change under the lock (409 LAST_ADMIN) or was already demoted when its request began (403).
+      // The loser was demoted by the winner: under the lock it is no longer an active Admin → 403.
       const loser = x.res.status === 200 ? y : x;
-      expect([["LAST_ADMIN", 409], ["FORBIDDEN", 403]]).toContainEqual([loser.json.code, loser.res.status]);
+      expect([loser.res.status, loser.json.code]).toEqual([403, "FORBIDDEN"]);
       expect(await activeAdmins()).toBe(1);
     }
   });

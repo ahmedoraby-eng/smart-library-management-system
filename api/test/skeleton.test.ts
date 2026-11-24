@@ -117,8 +117,8 @@ describe("SL-08 demo accounts", () => {
 describe("SL-08 Google provisioning (service level)", () => {
   it("unknown Google account → read-only SUPERVISOR; bootstrap email → ADMIN", async () => {
     const { container } = testApp();
-    expect((await container.staffIdentity.signInWithGoogle({ email: "Reviewer@Gmail.com", name: "Rita Reviewer" })).role).toBe("SUPERVISOR");
-    expect((await container.staffIdentity.signInWithGoogle({ email: "boss@example.org" })).role).toBe("ADMIN");
+    expect((await container.staffIdentity.signInWithGoogle({ sub: "g-rita", email: "Reviewer@Gmail.com", name: "Rita Reviewer" })).role).toBe("SUPERVISOR");
+    expect((await container.staffIdentity.signInWithGoogle({ sub: "g-boss", email: "boss@example.org" })).role).toBe("ADMIN");
   });
 });
 

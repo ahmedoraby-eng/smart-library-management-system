@@ -54,6 +54,8 @@ export function loadConfig(env: RawEnv): Config {
       const password = str(env, `${prefix}_PASSWORD`);
       if (!email || !password) throw new Error(`DEMO_ACCOUNTS_ENABLED needs ${prefix}_EMAIL and ${prefix}_PASSWORD`);
       if (password.length < 12) throw new Error(`${prefix}_PASSWORD must be at least 12 characters`);
+      // A demo email must be on a reserved domain (RFC 2606), never a real inbox (Yousef, SLM-8 review).
+      if (!/@[^@\s]+\.(test|invalid|example)$/.test(email)) throw new Error(`${prefix}_EMAIL must end in .test, .invalid or .example`);
       demoAccounts.push({ email, password, role, fullName });
     }
   }

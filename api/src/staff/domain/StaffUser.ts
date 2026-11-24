@@ -9,6 +9,8 @@ export interface StaffUser {
   role: Role;
   status: StaffStatus;
   isDemo: boolean;
+  /** Google's stable subject id, bound on the first Google sign-in (null for demo and not-yet-bound rows). */
+  googleSub?: string | null;
   createdAt: Date;
 }
 
@@ -16,7 +18,10 @@ export interface StaffUserRepository {
   findByEmail(email: string): Promise<StaffUser | null>;
   findById(id: string): Promise<StaffUser | null>;
   /** First Google sign-in: insert if absent (race-safe); returns the stored row either way. */
-  provision(input: { email: string; fullName: string; role: Role }): Promise<StaffUser>;
+  provision(input: { email: string; fullName: string; role: Role; googleSub: string }): Promise<StaffUser>;
+  findByGoogleSub(sub: string): Promise<StaffUser | null>;
+  /** Binds the Google subject to a row that has none yet; returns false if the row already had one. */
+  bindGoogleSub(id: string, sub: string): Promise<boolean>;
   /** Demo accounts come from config: create or restore them (role, ACTIVE, is_demo). */
   upsertDemo(input: { email: string; fullName: string; role: Role }): Promise<StaffUser>;
   list(): Promise<StaffUser[]>;

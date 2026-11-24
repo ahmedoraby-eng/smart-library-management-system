@@ -16,7 +16,11 @@ export const toMe = (p: Principal): Me => ({
 });
 
 /** Public sign-in routes. They set or clear the session cookie; no other auth state exists. */
-export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter, googleStartLimiter: (c: Context<AppEnv>) => Limiter) {
+export function authRoutes(
+  demoLoginLimiter: (c: Context<AppEnv>) => Limiter,
+  googleStartLimiter: (c: Context<AppEnv>) => Limiter,
+  googleCallbackLimiter: (c: Context<AppEnv>) => Limiter,
+) {
   const r = new Hono<AppEnv>();
 
   r.post("/demo-login", async (c) => {
@@ -59,6 +63,13 @@ export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter, go
   r.get("/google/callback", async (c) => {
     const { config, googleSignIn } = c.var.container;
     if (!config.google || !googleSignIn) throw new NotFoundError("Google sign-in");
+    // Limited per IP before any work: the callback does the token exchange and DB provisioning.
+    try {
+      await googleCallbackLimiter(c).check(`google-callback:${c.req.header("cf-connecting-ip") ?? "local"}`);
+    } catch (e) {
+      if (e instanceof RateLimitedError) return c.redirect("/signin?error=google_busy", 302);
+      throw e;
+    }
     const pending = await readGoogleStateCookie(c, config);
     // One-time use: the state cookie is cleared whatever the outcome.
     deleteCookie(c, GOOGLE_STATE_COOKIE, { path: GOOGLE_STATE_PATH, secure: true });

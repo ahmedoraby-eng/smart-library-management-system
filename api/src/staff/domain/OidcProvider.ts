@@ -13,6 +13,8 @@ export interface OidcAuthorizeRequest {
 
 /** The verified claims we use from the ID token (signature, iss, aud and exp are already checked). */
 export interface OidcIdentity {
+  /** Google's stable subject id (`sub`). */
+  sub: string;
   email: string;
   emailVerified: boolean;
   name: string | null;

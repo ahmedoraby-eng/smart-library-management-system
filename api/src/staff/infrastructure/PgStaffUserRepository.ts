@@ -17,10 +17,20 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
     return rows[0] ?? null;
   }
 
-  async provision(input: { email: string; fullName: string; role: StaffUser["role"] }): Promise<StaffUser> {
+  async findByGoogleSub(sub: string): Promise<StaffUser | null> {
+    const rows = await this.db.select().from(staffUsers).where(eq(staffUsers.googleSub, sub)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async bindGoogleSub(id: string, sub: string): Promise<boolean> {
+    const r = await this.db.execute(sql`UPDATE staff_users SET google_sub = ${sub} WHERE id = ${id} AND google_sub IS NULL`);
+    return (r.rowCount ?? 0) === 1;
+  }
+
+  async provision(input: { email: string; fullName: string; role: StaffUser["role"]; googleSub: string }): Promise<StaffUser> {
     await this.db
       .insert(staffUsers)
-      .values({ email: input.email.toLowerCase(), fullName: input.fullName, role: input.role })
+      .values({ email: input.email.toLowerCase(), fullName: input.fullName, role: input.role, googleSub: input.googleSub })
       .onConflictDoNothing();
     const row = await this.findByEmail(input.email);
     if (!row) throw new Error("provision: row missing after insert");
@@ -67,8 +77,9 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
   ): Promise<{ kind: "ok"; user: StaffUser } | { kind: "refused"; reason: V } | null> {
     if (!UUID.test(id)) return null;
     return this.db.transaction(async (tx) => {
-      // One statement, ordered by id: the target and every ACTIVE ADMIN are locked together, so two
-      // Admins demoting each other at once serialise here and the second sees the first's change.
+      // One statement, ordered by id: the target and every ACTIVE ADMIN (the acting Admin among them)
+      // are locked together, so two Admins demoting each other at once serialise here and the second
+      // sees the first's change; the rules then re-check the actor against these locked rows.
       const { rows } = await tx.execute(sql`SELECT ${COLUMNS} FROM staff_users
         WHERE id = ${id} OR (role = 'ADMIN' AND status = 'ACTIVE') ORDER BY id FOR UPDATE`);
       const locked = rows.map(toStaffUser);
@@ -86,7 +97,7 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, (m) => "\\" + m);
-const COLUMNS = sql.raw("id, email, full_name, role, status, is_demo, created_at");
+const COLUMNS = sql.raw("id, email, full_name, role, status, is_demo, google_sub, created_at");
 
 function toStaffUser(r: Record<string, unknown>): StaffUser {
   return {
@@ -96,6 +107,7 @@ function toStaffUser(r: Record<string, unknown>): StaffUser {
     role: r.role as StaffUser["role"],
     status: r.status as StaffUser["status"],
     isDemo: Boolean(r.is_demo),
+    googleSub: (r.google_sub as string | null) ?? null,
     createdAt: new Date(r.created_at as string | Date),
   };
 }
