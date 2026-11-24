@@ -12,6 +12,8 @@ export interface Config {
   loanDays: number;
   maxActiveLoans: number;
   aiModel: string | null;
+  /** SLM-16: Workers AI embedding model for hybrid retrieval; null = vector search off (EMBEDDING_MODEL=off). */
+  embeddingModel: string | null;
   aiFake: boolean;
 }
 
@@ -72,6 +74,7 @@ export function loadConfig(env: RawEnv): Config {
     loanDays: int(env, "LOAN_DAYS", 14, 1, 60),
     maxActiveLoans: int(env, "MAX_ACTIVE_LOANS", 5, 1, 50),
     aiModel: str(env, "AI_MODEL"),
+    embeddingModel: str(env, "EMBEDDING_MODEL")?.toLowerCase() === "off" ? null : (str(env, "EMBEDDING_MODEL") ?? "@cf/baai/bge-base-en-v1.5"),
     aiFake,
   };
 }

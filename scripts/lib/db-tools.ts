@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
+import { BookIndexSync } from "../../api/src/discovery/application/BookIndexSync";
+import { FakeEmbedder } from "../../api/src/discovery/infrastructure/FakeEmbedder";
+import { PgChunkStore } from "../../api/src/discovery/infrastructure/PgChunkStore";
 
 const root = fileURLToPath(new URL("../../", import.meta.url).href);
 
@@ -41,6 +44,21 @@ export async function seed(databaseUrl: string, opts: { reset: boolean }): Promi
     throw e;
   } finally {
     await client.end();
+  }
+}
+
+/**
+ * SLM-16, local runs only (AI_FAKE): chunk + embed the catalogue with the deterministic fake embedder,
+ * so hybrid retrieval works from the first search. Production embeds inside the Worker (Workers AI
+ * binding) via the admin reindex endpoint and the nightly reset; no Cloudflare token is ever needed here.
+ */
+export async function indexCatalogueWithFakeEmbedder(databaseUrl: string): Promise<number> {
+  const pool = new pg.Pool({ connectionString: databaseUrl, max: 2 });
+  try {
+    const r = await new BookIndexSync(new PgChunkStore(drizzle({ client: pool })), new FakeEmbedder()).syncAll();
+    return r.embeddedBooks;
+  } finally {
+    await pool.end();
   }
 }
 

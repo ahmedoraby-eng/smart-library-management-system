@@ -51,5 +51,8 @@ const fitOf = (r: { fit?: unknown } | null) => (typeof r?.fit === "number" && Nu
 
 /** «Matches: x, y» from retrieval's own terms; used by the fallback and for AI items that came without a reason. */
 export function templateReason(c: Candidate): string {
-  return c.matchedTerms.length ? `Matches: ${c.matchedTerms.join(", ")}` : `Related to “${c.category}”`;
+  if (c.matchedTerms.length) return `Matches: ${c.matchedTerms.join(", ")}`;
+  // SLM-16: found by vector search only, so no request word appears in its text.
+  if (c.foundBy === "semantic") return `Close in meaning to the request (${c.category})`;
+  return `Related to “${c.category}”`;
 }

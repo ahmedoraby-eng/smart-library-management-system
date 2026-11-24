@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { Db } from "../../platform/db";
-import type { Candidate, CatalogRetrieval, DiscoveryBook } from "../domain/Discovery";
+import type { Candidate, DiscoveryBook, LexicalRetrieval } from "../domain/Discovery";
 
 type Row = Record<string, unknown>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,13 +40,20 @@ const toCandidate = (r: Row, terms: string[], related: boolean): Candidate => {
 
 /**
  * Postgres full-text (ts_rank_cd on the weighted `books.search` vector, terms OR-ed, english stemming)
- * plus trigram word similarity for typos; deterministic, no vector store. Reads the `loans` table
+ * plus trigram word similarity for typos; deterministic. The lexical half of hybrid retrieval (SLM-16). Reads the `loans` table
  * by name for the member's recent titles (architecture §6, read model).
  */
-export class PgCatalogRetrieval implements CatalogRetrieval {
+export class PgCatalogRetrieval implements LexicalRetrieval {
   constructor(private readonly db: Db) {}
 
   async candidates(query: string, opts: { limit: number; availableOnly: boolean }): Promise<Candidate[]> {
+    const out = await this.hits(query, opts);
+    if (out.length < Math.min(MIN_HITS, opts.limit)) out.push(...(await this.topUp(query, out, opts)));
+    return out;
+  }
+
+  /** Full-text + trigram matches only, best first (no category top-up). */
+  async hits(query: string, opts: { limit: number; availableOnly: boolean }): Promise<Candidate[]> {
     const terms = queryTerms(query);
     const avail: SQL = opts.availableOnly ? sql`AND b.available_copies > 0` : sql``;
     const tsq = terms.length ? sql`to_tsquery('english', ${terms.join(" | ")})` : null;
@@ -57,21 +64,34 @@ export class PgCatalogRetrieval implements CatalogRetrieval {
     const hits = await this.db.execute(sql`SELECT b.id, b.title, b.author, b.category, b.publication_year, b.description, ${rank} AS score
       FROM books b WHERE b.archived_at IS NULL ${avail} AND ${hitWhere}
       ORDER BY score DESC, lower(b.title) ASC, b.id ASC LIMIT ${opts.limit}`);
-    const out = hits.rows.map((r) => toCandidate(r, terms, false));
+    return hits.rows.map((r) => toCandidate(r, terms, false));
+  }
 
-    if (out.length < Math.min(MIN_HITS, opts.limit)) {
-      // Closest categories: those of the hits plus any whose name resembles the request.
-      const have = out.map((c) => sql`${c.id}::uuid`);
-      const notIn = have.length ? sql`AND b.id NOT IN (${sql.join(have, sql`, `)})` : sql``;
-      const hitCategories = [...new Set(out.map((c) => c.category))];
-      const inHit = hitCategories.length ? sql`b.category IN (${sql.join(hitCategories.map((c) => sql`${c}`), sql`, `)}) OR` : sql``;
-      const more = await this.db.execute(sql`SELECT b.id, b.title, b.author, b.category, b.publication_year, b.description
-        FROM books b WHERE b.archived_at IS NULL ${avail} ${notIn}
-          AND (${inHit} word_similarity(b.category, ${query}) > 0.5)
-        ORDER BY b.available_copies DESC, lower(b.title) ASC, b.id ASC LIMIT ${opts.limit - out.length}`);
-      out.push(...more.rows.map((r) => toCandidate(r, terms, true)));
-    }
-    return out;
+  /** Candidates for books found by another retriever (vector search), in the given order. */
+  async byIds(ids: string[], query: string, opts: { availableOnly: boolean }): Promise<Candidate[]> {
+    const valid = ids.filter((i) => UUID.test(i));
+    if (!valid.length) return [];
+    const terms = queryTerms(query);
+    const avail: SQL = opts.availableOnly ? sql`AND b.available_copies > 0` : sql``;
+    const { rows } = await this.db.execute(sql`SELECT b.id, b.title, b.author, b.category, b.publication_year, b.description
+      FROM books b WHERE b.archived_at IS NULL ${avail} AND b.id IN (${sql.join(valid.map((i) => sql`${i}::uuid`), sql`, `)})`);
+    const byId = new Map(rows.map((r) => [r.id as string, toCandidate(r, terms, false)]));
+    return valid.flatMap((i) => byId.get(i) ?? []);
+  }
+
+  /** Books from the closest categories (those of `have`, or one whose name resembles the request), marked related. */
+  async topUp(query: string, have: Candidate[], opts: { limit: number; availableOnly: boolean }): Promise<Candidate[]> {
+    const terms = queryTerms(query);
+    const avail: SQL = opts.availableOnly ? sql`AND b.available_copies > 0` : sql``;
+    const ids = have.map((c) => sql`${c.id}::uuid`);
+    const notIn = ids.length ? sql`AND b.id NOT IN (${sql.join(ids, sql`, `)})` : sql``;
+    const hitCategories = [...new Set(have.map((c) => c.category))];
+    const inHit = hitCategories.length ? sql`b.category IN (${sql.join(hitCategories.map((c) => sql`${c}`), sql`, `)}) OR` : sql``;
+    const more = await this.db.execute(sql`SELECT b.id, b.title, b.author, b.category, b.publication_year, b.description
+      FROM books b WHERE b.archived_at IS NULL ${avail} ${notIn}
+        AND (${inHit} word_similarity(b.category, ${query}) > 0.5)
+      ORDER BY b.available_copies DESC, lower(b.title) ASC, b.id ASC LIMIT ${Math.max(opts.limit - have.length, 0)}`);
+    return more.rows.map((r) => toCandidate(r, terms, true));
   }
 
   async summaries(ids: string[]): Promise<Map<string, DiscoveryBook>> {

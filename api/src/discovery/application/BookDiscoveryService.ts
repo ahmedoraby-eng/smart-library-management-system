@@ -9,7 +9,7 @@ const NO_PROVIDER_NOTE = "Basic search mode: AI ranking isn't set up here. Showi
 const FAILED_NOTE = "AI ranking is unavailable right now. Showing keyword matches from the catalog instead. Every result is a real catalog record.";
 
 export type FallbackReason = "NO_PROVIDER" | "TIMEOUT" | "PROVIDER_ERROR" | "INVALID_OUTPUT" | "NO_VALID_ITEMS";
-export type DiscoveryLog = (entry: { mode: "AI" | "FALLBACK"; latencyMs: number; candidates: number; fallbackReason: FallbackReason | null; provider: string | null; dropped: number }) => void;
+export type DiscoveryLog = (entry: { mode: "AI" | "FALLBACK"; latencyMs: number; candidates: number; fallbackReason: FallbackReason | null; provider: string | null; dropped: number; retrieval?: "hybrid" | "lexical" }) => void;
 
 class ProviderTimeout extends Error {}
 
@@ -40,10 +40,11 @@ export class BookDiscoveryService {
       const books = await this.catalog.summaries(picks.map((p) => p.candidate.id)); // availability: always fresh from the DB
       const items = picks.flatMap((p) => {
         const book = books.get(p.candidate.id);
-        return book ? [{ book, reason: p.reason, matchedTerms: p.candidate.matchedTerms }] : [];
+        return book ? [{ book, reason: p.reason, matchedTerms: p.candidate.matchedTerms, ...(p.candidate.foundBy ? { foundBy: p.candidate.foundBy } : {}) }] : [];
       });
-      this.log({ mode, latencyMs: Date.now() - started, candidates: candidates.length, fallbackReason, provider: this.provider?.name ?? null, dropped });
-      return { mode, items, note: items.length === 0 ? note ?? NO_MATCH_NOTE : note };
+      const retrieval = this.catalog.lastMode?.();
+      this.log({ mode, latencyMs: Date.now() - started, candidates: candidates.length, fallbackReason, provider: this.provider?.name ?? null, dropped, ...(retrieval ? { retrieval } : {}) });
+      return { mode, items, note: items.length === 0 ? note ?? NO_MATCH_NOTE : note, ...(retrieval ? { retrieval } : {}) };
     };
 
     if (candidates.length === 0) return finish(this.provider ? "AI" : "FALLBACK", [], NO_MATCH_NOTE, null);

@@ -242,7 +242,11 @@ function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryI
       <BookCover title={book.title} url={book.coverImageUrl} size="md" />
       <div className="min-w-0 flex-1">
         <Link to="/books/$bookId" params={{ bookId: book.id }} className="font-book text-[19px] leading-6 text-neutral-900 no-underline hover:underline plain:text-md">{book.title}</Link>
-        <p className="text-sm text-neutral-600">{meta}</p>
+        <p className="text-sm text-neutral-600">
+          {meta}
+          {/* SLM-16: vector search found it although none of the request's words are in its text. */}
+          {item.foundBy === "semantic" && <span className="text-brass-700" data-testid="found-by-meaning"> · Found by meaning</span>}
+        </p>
         {/* Reading Room: a librarian's note in italic serif under a brass hairline; plain: the tinted box with an inline label. */}
         <div
           className="mt-2.5 max-w-[72ch] border-l-2 border-brass-200 pl-3.5 plain:max-w-none plain:rounded-md plain:border-brand-200 plain:bg-neutral-25 plain:px-3 plain:py-2 plain:text-base"

@@ -41,6 +41,7 @@ export default {
         close = opened.close;
         await opened.container.demoData.reset();
         console.log(JSON.stringify({ level: "info", message: "demo data reset (cron)" }));
+        await opened.container.bookIndex.syncAllSafely(); // SLM-16: re-embed the seeded books
       } catch (e) {
         console.error(JSON.stringify({ level: "error", message: "demo reset failed (cron)", error: String(e), stack: (e as Error)?.stack }));
         throw e;

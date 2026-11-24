@@ -21,6 +21,8 @@ LOAN_DAYS = "14"
 MAX_ACTIVE_LOANS = "5"
 DEMO_ACCOUNTS_ENABLED = "true"
 AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
+# SLM-16 hybrid retrieval (768-dim, matches migration 0004). "off" = full-text only.
+EMBEDDING_MODEL = "@cf/baai/bge-base-en-v1.5"
 # Set per deployment (public, not secret): GOOGLE_CLIENT_ID, BOOTSTRAP_ADMIN_EMAILS, DEMO_LIBRARIAN_EMAIL, DEMO_ADMIN_EMAIL
 # Secrets (wrangler secret put): SESSION_SECRET, GOOGLE_CLIENT_SECRET, DEMO_LIBRARIAN_PASSWORD, DEMO_ADMIN_PASSWORD
 

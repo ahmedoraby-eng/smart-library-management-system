@@ -14,7 +14,7 @@ const ai: DiscoveryResponse = {
   mode: "AI", note: null,
   items: [
     { book: book("b1", "Fundamentals of Software Architecture", 2), reason: "Written for developers stepping into architecture.", matchedTerms: ["architecture"] },
-    { book: book("b2", "System Design Interview", 0, 2), reason: "Step-by-step walkthroughs of real systems.", matchedTerms: [] },
+    { book: book("b2", "System Design Interview", 0, 2), reason: "Step-by-step walkthroughs of real systems.", matchedTerms: [], foundBy: "semantic" },
   ],
 };
 const fallback: DiscoveryResponse = {
@@ -72,6 +72,9 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
     const [first, second] = screen.getAllByTestId("discovery-item");
     expect(within(first!).getByTestId("availability-badge")).toHaveAttribute("data-level", "available");
     expect(within(first!).getByText("Why this book")).toBeInTheDocument();
+    // SLM-16: only the book found by vector search alone carries the note.
+    expect(within(first!).queryByTestId("found-by-meaning")).toBeNull();
+    expect(screen.getAllByTestId("discovery-item")[1]).toHaveTextContent("Found by meaning");
     expect(within(first!).getByTestId("borrow-from-result")).toHaveAttribute("href", expect.stringContaining("/circulation/borrow?book=b1"));
     expect(within(second!).getByTestId("availability-badge")).toHaveAttribute("data-level", "unavailable");
     expect(within(second!).getByTestId("next-due")).toBeInTheDocument();

@@ -42,17 +42,23 @@ export function bookRoutes() {
   r.post("/", requirePermission("BOOK_WRITE"), async (c) => {
     const input = parseOr400(BookInputSchema, await body(c));
     const book = await c.var.container.books.create(input);
+    await c.var.container.bookIndex.syncBookSafely(book.id); // SLM-16: chunk + embed for discovery; never fails the save
     c.header("location", `/api/books/${book.id}`);
     return c.json(toBookDto(book), 201);
   });
 
   r.put("/:id", requirePermission("BOOK_WRITE"), async (c) => {
     const { version, ...input } = parseOr400(BookUpdateSchema, await body(c));
-    return c.json(toBookDto(await c.var.container.books.update(c.req.param("id"), version, input)));
+    const book = await c.var.container.books.update(c.req.param("id"), version, input);
+    await c.var.container.bookIndex.syncBookSafely(book.id); // re-embeds only if the catalogue text changed
+    return c.json(toBookDto(book));
   });
 
-  r.delete("/:id", requirePermission("BOOK_DELETE"), async (c) =>
-    c.json({ result: await c.var.container.books.remove(c.req.param("id")) }));
+  r.delete("/:id", requirePermission("BOOK_DELETE"), async (c) => {
+    const result = await c.var.container.books.remove(c.req.param("id"));
+    await c.var.container.bookIndex.syncBookSafely(c.req.param("id")); // archived → its chunks go
+    return c.json({ result });
+  });
 
   return r;
 }
