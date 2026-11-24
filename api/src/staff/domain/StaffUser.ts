@@ -22,3 +22,21 @@ export interface StaffUserRepository {
   list(): Promise<StaffUser[]>;
   update(id: string, change: { role: Role; status: StaffStatus }): Promise<StaffUser | null>;
 }
+
+export interface StaffListParams { q?: string; page: number; size: number }
+
+/** Role/status change under row locks: the target and every ACTIVE ADMIN are locked, then `decide` runs. */
+export interface StaffAccessStore {
+  /** Sorted by name (case-insensitive), then id; q matches name or email. */
+  search(p: StaffListParams): Promise<{ items: StaffUser[]; total: number }>;
+  /**
+   * Locks the target and the ACTIVE ADMIN rows (one ordered `FOR UPDATE`, so two concurrent demotions
+   * can't both pass), asks `decide`, and applies the change only when it returns null.
+   * Returns null for an unknown id.
+   */
+  changeAccess<V>(
+    id: string,
+    change: { role: Role; status: StaffStatus },
+    decide: (target: StaffUser, activeAdminIds: string[]) => V | null,
+  ): Promise<{ kind: "ok"; user: StaffUser } | { kind: "refused"; reason: V } | null>;
+}

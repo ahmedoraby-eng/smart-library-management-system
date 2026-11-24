@@ -1,9 +1,9 @@
 import { asc, eq, sql } from "drizzle-orm";
 import type { DbOrTx } from "../../platform/db";
-import type { StaffUser, StaffUserRepository } from "../domain/StaffUser";
+import type { StaffAccessStore, StaffListParams, StaffUser, StaffUserRepository } from "../domain/StaffUser";
 import { staffUsers } from "./schema";
 
-export class PgStaffUserRepository implements StaffUserRepository {
+export class PgStaffUserRepository implements StaffUserRepository, StaffAccessStore {
   constructor(private readonly db: DbOrTx) {}
 
   async findByEmail(email: string): Promise<StaffUser | null> {
@@ -47,4 +47,55 @@ export class PgStaffUserRepository implements StaffUserRepository {
     const rows = await this.db.update(staffUsers).set(change).where(eq(staffUsers.id, id)).returning();
     return rows[0] ?? null;
   }
+
+  async search(p: StaffListParams): Promise<{ items: StaffUser[]; total: number }> {
+    const where = p.q
+      ? sql`WHERE full_name ILIKE ${"%" + likeEscape(p.q) + "%"} OR email ILIKE ${"%" + likeEscape(p.q) + "%"}`
+      : sql``;
+    const [{ rows }, count] = await Promise.all([
+      this.db.execute(sql`SELECT ${COLUMNS} FROM staff_users ${where}
+        ORDER BY lower(full_name) ASC, id ASC LIMIT ${p.size} OFFSET ${(p.page - 1) * p.size}`),
+      this.db.execute(sql`SELECT count(*)::int AS n FROM staff_users ${where}`),
+    ]);
+    return { items: rows.map(toStaffUser), total: Number(count.rows[0]?.n ?? 0) };
+  }
+
+  async changeAccess<V>(
+    id: string,
+    change: { role: StaffUser["role"]; status: StaffUser["status"] },
+    decide: (target: StaffUser, activeAdminIds: string[]) => V | null,
+  ): Promise<{ kind: "ok"; user: StaffUser } | { kind: "refused"; reason: V } | null> {
+    if (!UUID.test(id)) return null;
+    return this.db.transaction(async (tx) => {
+      // One statement, ordered by id: the target and every ACTIVE ADMIN are locked together, so two
+      // Admins demoting each other at once serialise here and the second sees the first's change.
+      const { rows } = await tx.execute(sql`SELECT ${COLUMNS} FROM staff_users
+        WHERE id = ${id} OR (role = 'ADMIN' AND status = 'ACTIVE') ORDER BY id FOR UPDATE`);
+      const locked = rows.map(toStaffUser);
+      const target = locked.find((u) => u.id === id);
+      if (!target) return null;
+      const activeAdminIds = locked.filter((u) => u.role === "ADMIN" && u.status === "ACTIVE").map((u) => u.id);
+      const reason = decide(target, activeAdminIds);
+      if (reason !== null) return { kind: "refused" as const, reason };
+      const updated = await tx.execute(sql`UPDATE staff_users SET role = ${change.role}, status = ${change.status}
+        WHERE id = ${id} RETURNING ${COLUMNS}`);
+      return { kind: "ok" as const, user: toStaffUser(updated.rows[0]!) };
+    });
+  }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const likeEscape = (s: string) => s.replace(/[\\%_]/g, (m) => "\\" + m);
+const COLUMNS = sql.raw("id, email, full_name, role, status, is_demo, created_at");
+
+function toStaffUser(r: Record<string, unknown>): StaffUser {
+  return {
+    id: r.id as string,
+    email: r.email as string,
+    fullName: r.full_name as string,
+    role: r.role as StaffUser["role"],
+    status: r.status as StaffUser["status"],
+    isDemo: Boolean(r.is_demo),
+    createdAt: new Date(r.created_at as string | Date),
+  };
 }

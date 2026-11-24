@@ -31,6 +31,8 @@ const MATRIX: Record<string, Who[]> = {
   "GET /api/dashboard/summary": ["A", "L", "S"],
   "POST /api/ai/book-discovery": ["A", "L", "S"],
   "POST /api/admin/reset-demo": ["A"],
+  "GET /api/staff-users": ["A"],
+  "PUT /api/staff-users/:id": ["A"],
 };
 /** Reachable without a session (architecture §4). */
 const PUBLIC = new Set(["GET /api/health", "POST /api/auth/demo-login", "POST /api/auth/logout"]);

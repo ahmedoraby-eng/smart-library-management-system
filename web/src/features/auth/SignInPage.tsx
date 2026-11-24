@@ -1,9 +1,10 @@
-import type { AuthProviders, Me } from "@slm/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Me } from "@slm/contracts";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input, BookIcon } from "../../components/ui";
 import { ApiError, api } from "../../lib/apiClient";
+import { useAuthProviders } from "./providers";
 import { meQueryKey, safeNext, useMe } from "./session";
 
 const route = getRouteApi("/signin");
@@ -23,12 +24,7 @@ export function SignInPage() {
   const queryClient = useQueryClient();
   const me = useMe();
   // Which sign-in methods the server has configured; the Google button only shows when it works.
-  const providers = useQuery({
-    queryKey: ["auth-providers"],
-    queryFn: () => api<AuthProviders>("/auth/providers"),
-    retry: false,
-    staleTime: Infinity,
-  });
+  const providers = useAuthProviders();
   const googleOn = providers.data?.google === true;
   const demoOn = providers.data?.demo !== false;
 
