@@ -13,6 +13,9 @@ const FAILED_NOTE = "AI ranking is unavailable right now. Showing keyword matche
 export const SINGLE_NOTE = "Only one book in the catalog matches, so it's shown without AI ranking.";
 export const quotaNote = (quota: number) =>
   `You've used today's ${quota} AI searches. Results are still matched by meaning, without AI ranking or reasons. More AI searches tomorrow (midnight UTC).`;
+/** Quota used up while the vector side is down too: the results are keyword matches, so say so. */
+export const quotaKeywordNote = (quota: number) =>
+  `You've used today's ${quota} AI searches, and search by meaning is unavailable right now, so results are matched by keywords only. More AI searches tomorrow (midnight UTC).`;
 export const BUDGET_NOTE = "Today's AI budget for the library is used up, so results are matched by keywords only. AI search is back at midnight UTC.";
 
 export type FallbackReason =
@@ -118,7 +121,12 @@ export class BookDiscoveryService {
     // 3. Daily budget: per-user quota of AI searches, then the global Neuron cap.
     if (budget && ctx.userId) {
       const verdict = await budget.reserveSearch(ctx.userId);
-      if (verdict === "QUOTA_EXCEEDED") return finish("FALLBACK", fallbackRank(candidates, limit), quotaNote(this.cost.userQuota ?? 0), verdict);
+      if (verdict === "QUOTA_EXCEEDED") {
+        // The note follows the tier actually served: hybrid (tier 2) or keyword-only (embeddings down).
+        const quota = this.cost.userQuota ?? 0;
+        const note = this.catalog.lastMode?.() === "lexical" ? quotaKeywordNote(quota) : quotaNote(quota);
+        return finish("FALLBACK", fallbackRank(candidates, limit), note, verdict);
+      }
       if (verdict === "BUDGET_EXHAUSTED") return finish("FALLBACK", fallbackRank(candidates, limit), BUDGET_NOTE, verdict);
     } else if (budget && !(await budget.underCap())) {
       return finish("FALLBACK", fallbackRank(candidates, limit), BUDGET_NOTE, "BUDGET_EXHAUSTED");

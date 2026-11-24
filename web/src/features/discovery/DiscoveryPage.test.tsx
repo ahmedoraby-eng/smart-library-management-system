@@ -201,6 +201,16 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
       expect(screen.queryByTestId("discovery-fallback-notice")).toBeNull();
     });
 
+    it("quota used up with keyword-only results: the server's keyword note is shown too", async () => {
+      const kw: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches, and search by meaning is unavailable right now, so results are matched by keywords only.", aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", kw, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      await ask();
+      expect(await screen.findByTestId("discovery-fallback-notice")).toHaveTextContent("matched by keywords only");
+      expect(screen.getByTestId("ai-quota-note")).toHaveTextContent("matched by keywords only right now");
+      expect(screen.getByTestId("ai-quota-note")).not.toHaveTextContent("by meaning");
+    });
+
     it("tier 3: the library budget is used up → a calm (info) note with the results", async () => {
       const tier3: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "BUDGET_EXHAUSTED", note: "Today's AI budget for the library is used up, so results are matched by keywords only.", aiSearches: { left: 12, limit: 50 } };
       stubApi("LIBRARIAN", tier3, { left: 12, limit: 50 });

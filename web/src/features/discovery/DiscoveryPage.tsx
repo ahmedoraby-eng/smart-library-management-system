@@ -158,7 +158,7 @@ export function DiscoveryPage() {
               </Button>
             </div>
           </div>
-          <QuotaLine quota={quota.data} />
+          <QuotaLine quota={quota.data} keywordsOnly={discover.data?.retrieval === "lexical"} />
         </form>
       </Card>
 
@@ -180,14 +180,15 @@ export function DiscoveryPage() {
 }
 
 /** SLM-16 cost tiers, visible: what's left today, and a red note once the user's AI searches are used up. */
-function QuotaLine({ quota }: { quota: { left: number; limit: number } | undefined }) {
+function QuotaLine({ quota, keywordsOnly }: { quota: { left: number; limit: number } | undefined; keywordsOnly: boolean }) {
   if (!quota) return null;
   const out = quota.left <= 0;
   return (
     <div className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
       {out ? (
         <p className="text-sm font-medium text-danger-700" role="status" data-testid="ai-quota-note">
-          You've used today's {quota.limit} AI searches. Results are still matched by meaning, without AI ranking or reasons.
+          You've used today's {quota.limit} AI searches.{" "}
+          {keywordsOnly ? "Results are matched by keywords only right now, without AI ranking or reasons." : "Results are still matched by meaning, without AI ranking or reasons."}
         </p>
       ) : <span />}
       <span className="ml-auto text-sm text-neutral-600 tabular-nums" data-testid="ai-searches-left">
@@ -232,8 +233,9 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
     <>
       {data.mode === "FALLBACK" && data.note && (
         // A single match is not a failure (the model is skipped on purpose to save cost): info, not warning.
-        // Quota used up: the red note under the search box says it. Budget used up or a single match: calm info.
-        data.fallbackReason !== "QUOTA_EXCEEDED" && (
+        // Quota used up with hybrid results: the red note under the search box says it all. If retrieval fell back
+        // to keywords too, show the server's note (it says keywords). Budget used up or a single match: calm info.
+        (data.fallbackReason !== "QUOTA_EXCEEDED" || data.retrieval === "lexical") && (
           <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" || data.fallbackReason === "BUDGET_EXHAUSTED" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
         )
       )}

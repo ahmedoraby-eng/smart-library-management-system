@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { BookDiscoveryService, quotaNote, type DiscoveryLog } from "../src/discovery/application/BookDiscoveryService";
+import { BookDiscoveryService, quotaKeywordNote, quotaNote, type DiscoveryLog } from "../src/discovery/application/BookDiscoveryService";
 import { BookIndexSync } from "../src/discovery/application/BookIndexSync";
 import { HybridCatalogRetrieval, type RetrievalLog } from "../src/discovery/application/HybridCatalogRetrieval";
 import { neuronsFor, normaliseQuery, WORST_CASE_RANK_NEURONS } from "../src/discovery/domain/Cost";
@@ -248,6 +248,14 @@ describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
     expect(r.items.some((i) => i.book.id === ids.hawk && i.foundBy === "semantic")).toBe(true); // still found by meaning
     expect(provider.calls).toBe(0);
     expect(logs[0]!.neurons).toBeLessThan(1);
+  });
+
+  it("quota used up while embeddings are down: the note says keywords, not meaning (it follows the tier served)", async () => {
+    await index();
+    const broken: Embedder = { model: "fake-embedding-v1", dimensions: 768, queryPrefix: "", minSimilarity: 0.2, embed: async () => { throw new Error("AI down"); } };
+    const { service } = setup({ quota: 0, embedder: broken });
+    const r = await service.discover({ query: "readable code" }, { userId: staff.librarian });
+    expect(r).toMatchObject({ tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: quotaKeywordNote(0) });
   });
 
   it("tier 3: past the library's daily budget → keyword retrieval, deterministic ranking, no AI call at all", async () => {
