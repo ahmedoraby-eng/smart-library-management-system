@@ -36,6 +36,11 @@ name = "HEALTH_LIMITER"
 namespace_id = "1002"
 simple = { limit = 10, period = 60 }
 
+[[ratelimits]]
+name = "DISCOVERY_LIMITER"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
 # Postgres (Neon) through Hyperdrive, query cache OFF. Basel fills in the id.
 # [[hyperdrive]]
 # binding = "HYPERDRIVE"

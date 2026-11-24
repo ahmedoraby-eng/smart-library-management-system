@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { pageQuery } from "./common";
 
-const year = new Date().getUTCFullYear();
-
 /** Same shape in lists and details (architecture §4). Derived fields are computed, never stored. */
 export const BookDtoSchema = z.object({
   id: z.string(),
@@ -16,9 +14,9 @@ export const BookDtoSchema = z.object({
   coverImageUrl: z.string().nullable(),
   totalCopies: z.number().int(),
   availableCopies: z.number().int(),
-  activeLoans: z.number().int(),
-  nextDueAt: z.string().nullable(),
-  hasLoanHistory: z.boolean(),
+  activeLoans: z.number().int(), // open loans of this title (= totalCopies − availableCopies)
+  nextDueAt: z.string().nullable(), // earliest dueAt among open loans; drives «Next copy due back …»
+  hasLoanHistory: z.boolean(), // any loan ever; the delete dialog says «archive» vs «delete»
   archived: z.boolean(),
   version: z.number().int(),
   createdAt: z.string(),
@@ -26,36 +24,84 @@ export const BookDtoSchema = z.object({
 });
 export type BookDto = z.infer<typeof BookDtoSchema>;
 
-const isbn = z
-  .string()
-  .trim()
-  .transform((s) => s.replace(/[-\s]/g, "").toUpperCase())
-  .refine((s) => /^(\d{9}[\dX]|\d{13})$/.test(s), "must be a 10- or 13-digit ISBN");
+/** ISBN-10 or ISBN-13 with a valid check digit; hyphens and spaces are allowed and removed. */
+export function normalizeIsbn(raw: string): string | null {
+  const s = raw.replace(/[-\s]/g, "").toUpperCase();
+  if (/^\d{9}[\dX]$/.test(s)) {
+    let sum = 0;
+    for (let i = 0; i < 10; i++) sum += (s[i] === "X" ? 10 : Number(s[i])) * (10 - i);
+    return sum % 11 === 0 ? s : null;
+  }
+  if (/^\d{13}$/.test(s)) {
+    let sum = 0;
+    for (let i = 0; i < 13; i++) sum += Number(s[i]) * (i % 2 === 0 ? 1 : 3);
+    return sum % 10 === 0 ? s : null;
+  }
+  return null;
+}
 
+const currentYear = () => new Date().getUTCFullYear();
+const optionalText = (max: number, message: string) =>
+  z.string().trim().max(max, message).optional().transform((v) => v ?? "");
+
+/** Field rules and messages follow ux.md §3.4 (the form shows these messages next to each field). */
 export const BookInputSchema = z.object({
-  title: z.string().trim().min(1, "is required").max(300),
-  author: z.string().trim().min(1, "is required").max(200),
-  isbn: isbn.nullable().optional().transform((v) => v ?? null),
-  description: z.string().trim().max(4000).default(""),
-  category: z.string().trim().min(1, "is required").max(80),
-  publisher: z.string().trim().max(200).default(""),
-  publicationYear: z.number().int().min(1450).max(year + 1).nullable().optional().transform((v) => v ?? null),
-  coverImageUrl: z.string().trim().url().max(1000).nullable().optional().transform((v) => v ?? null),
-  totalCopies: z.number().int().min(0).max(10_000),
+  title: z.string({ error: "Enter a title." }).trim().min(1, "Enter a title.").max(200, "Keep the title under 200 characters."),
+  author: z.string({ error: "Enter an author." }).trim().min(1, "Enter an author.").max(200, "Keep the author under 200 characters."),
+  isbn: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return null;
+      const n = normalizeIsbn(v);
+      if (!n) {
+        ctx.addIssue({ code: "custom", message: "Enter a valid ISBN-10 or ISBN-13." });
+        return z.NEVER;
+      }
+      return n;
+    }),
+  category: z.string({ error: "Choose or type a category." }).trim().min(1, "Choose or type a category.").max(60, "Keep the category under 60 characters."),
+  publisher: optionalText(120, "Keep the publisher under 120 characters."),
+  publicationYear: z
+    .number({ error: `Enter a year between 1450 and ${currentYear()}.` })
+    .int(`Enter a year between 1450 and ${currentYear()}.`)
+    .refine((y) => y >= 1450 && y <= currentYear(), { message: `Enter a year between 1450 and ${currentYear()}.` })
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
+  coverImageUrl: z
+    .string()
+    .trim()
+    .max(1000)
+    .refine((u) => u === "" || /^https:\/\/[^\s]+$/i.test(u), { message: "Enter a full image URL starting with https://." })
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
+  description: optionalText(2000, "Keep the description under 2,000 characters."),
+  totalCopies: z.number({ error: "Enter at least 1 copy." }).int("Enter a whole number.").min(1, "Enter at least 1 copy.").max(10_000),
 });
 export type BookInput = z.infer<typeof BookInputSchema>;
+export type BookInputRaw = z.input<typeof BookInputSchema>;
 
 export const BookUpdateSchema = BookInputSchema.extend({ version: z.number().int().min(0) });
 export type BookUpdate = z.infer<typeof BookUpdateSchema>;
 
-export const BookSortKeys = ["title", "author", "createdAt", "publicationYear", "availableCopies", "relevance"] as const;
+export const BOOK_SORT_KEYS = ["title", "author", "createdAt", "publicationYear", "availableCopies"] as const;
+export type BookSortKey = (typeof BOOK_SORT_KEYS)[number];
+
+/** List/search params. Shared by the API and the Books route's validateSearch (filters live in the URL). */
 export const BookListQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
-  category: z.string().trim().max(80).optional(),
-  available: z.enum(["true", "false"]).optional(),
-  sort: z.string().optional(), // e.g. "title,-createdAt"; keys whitelisted by the API
+  category: z.string().trim().max(60).optional(),
+  availability: z.enum(["all", "available", "unavailable"]).optional(),
+  sort: z.string().max(80).optional(), // e.g. "title" or "-createdAt"; keys whitelisted by the API
   ...pageQuery,
 });
 export type BookListQuery = z.infer<typeof BookListQuerySchema>;
 
 export const BookDeleteResultSchema = z.object({ result: z.enum(["archived", "deleted"]) });
+export type BookDeleteResult = z.infer<typeof BookDeleteResultSchema>;
+
+export const CategoriesSchema = z.object({ items: z.array(z.string()) });
