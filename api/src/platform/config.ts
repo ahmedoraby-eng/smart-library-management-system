@@ -43,6 +43,8 @@ export function loadConfig(env: RawEnv): Config {
 
   const clientId = str(env, "GOOGLE_CLIENT_ID");
   const clientSecret = str(env, "GOOGLE_CLIENT_SECRET");
+  // Both or neither: with neither, Google sign-in is off and the button hides.
+  if ((clientId === null) !== (clientSecret === null)) throw new Error("Config GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together");
 
   const demoAccountsEnabled = bool(env, "DEMO_ACCOUNTS_ENABLED");
   const demoAccounts: DemoAccount[] = [];

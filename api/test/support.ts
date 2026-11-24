@@ -7,6 +7,7 @@ import { loadConfig, type RawEnv } from "../src/platform/config";
 import type { Clock } from "../src/platform/clock";
 import { createDb } from "../src/platform/db";
 import { SESSION_COOKIE } from "../src/platform/security/session";
+import type { OidcProvider } from "../src/staff/domain/OidcProvider";
 
 export const pool = new pg.Pool({ connectionString: inject("databaseUrl"), max: 25 });
 
@@ -28,9 +29,9 @@ export const testEnv: RawEnv = {
   DEMO_ADMIN_PASSWORD: DEMO.admin.password,
 };
 
-export function testApp(opts: { env?: RawEnv; clock?: Clock } = {}) {
+export function testApp(opts: { env?: RawEnv; clock?: Clock; oidc?: OidcProvider } = {}) {
   const config = loadConfig({ ...testEnv, ...opts.env });
-  const container = buildContainer(createDb(pool), config, opts.clock ?? (() => new Date()));
+  const container = buildContainer(createDb(pool), config, opts.clock ?? (() => new Date()), undefined, { oidc: opts.oidc });
   return Object.assign(createApp(async () => ({ container })), { container });
 }
 

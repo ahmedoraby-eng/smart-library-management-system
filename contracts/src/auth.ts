@@ -57,3 +57,7 @@ export const DemoLoginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 export type DemoLogin = z.infer<typeof DemoLoginSchema>;
+
+/** GET /api/auth/providers (public): which sign-in methods are configured, so the UI shows only those. */
+export const AuthProvidersSchema = z.object({ google: z.boolean(), demo: z.boolean() });
+export type AuthProviders = z.infer<typeof AuthProvidersSchema>;

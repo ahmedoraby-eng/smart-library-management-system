@@ -17,11 +17,15 @@ import { PgDemoDataStore } from "./demo/infrastructure/PgDemoDataStore";
 import type { Clock } from "./platform/clock";
 import type { Config } from "./platform/config";
 import type { Db } from "./platform/db";
+import { GoogleSignIn } from "./staff/application/GoogleSignIn";
+import { StaffAdminService } from "./staff/application/StaffAdminService";
 import { StaffIdentityService } from "./staff/application/StaffIdentityService";
+import type { OidcProvider } from "./staff/domain/OidcProvider";
+import { GoogleOidcProvider } from "./staff/infrastructure/GoogleOidcProvider";
 import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserRepository";
 
 /** Manual wiring: env bindings → repositories → services. One place, no DI framework. */
-export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding) {
+export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding, overrides: { oidc?: OidcProvider } = {}) {
   const staffRepo = new PgStaffUserRepository(db);
   const staffIdentity = new StaffIdentityService(staffRepo, config);
   return {
@@ -30,6 +34,9 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     clock,
     staffRepo,
     staffIdentity,
+    // Google sign-in exists only when its client is configured; tests pass a fake provider.
+    googleSignIn: config.google ? new GoogleSignIn(overrides.oidc ?? new GoogleOidcProvider(config.google), staffIdentity) : null,
+    staffAdmin: new StaffAdminService(staffRepo),
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),

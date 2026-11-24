@@ -9,6 +9,8 @@ DEMO_LIBRARIAN_PASSWORD=
 DEMO_ADMIN_EMAIL=admin@demo.test
 DEMO_ADMIN_PASSWORD=
 BOOTSTRAP_ADMIN_EMAILS=
+# Google sign-in: set both or neither. While they are unset, the "Sign in with Google" button hides.
+# Redirect URI to register: <origin>/api/auth/google/callback
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 LOAN_DAYS=14

@@ -59,9 +59,9 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
               <Th>Member</Th>
               <Th>Borrowed</Th>
               <Th>Due</Th>
-              <Th>Returned</Th>
+              {tab === "history" && <Th>Returned</Th>}
               <Th>Status</Th>
-              <Th className="max-lg:hidden">Processed by</Th>
+              <Th className="max-wide:hidden">Processed by</Th>
             </tr>
           </Thead>
           <tbody>
@@ -73,11 +73,11 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
                 </Td>
                 <Td kind="num" className="text-neutral-700">{formatDate(l.borrowedAt)}</Td>
                 <Td kind="num" className={cn(l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDate(l.dueAt)}</Td>
-                <Td kind="num" className="text-neutral-700">{l.returnedAt ? formatDate(l.returnedAt) : "—"}</Td>
+                {tab === "history" && <Td kind="num" className="text-neutral-700">{l.returnedAt ? formatDate(l.returnedAt) : "—"}</Td>}
                 <Td kind="nowrap">
                   <LoanStatusBadge loan={l} />
                 </Td>
-                <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={l.processedBy.name}>{l.processedBy.name}</Td>
+                <Td kind="truncate" className="text-neutral-700 max-wide:hidden" title={l.processedBy.name}>{l.processedBy.name}</Td>
               </Tr>
             ))}
           </tbody>
