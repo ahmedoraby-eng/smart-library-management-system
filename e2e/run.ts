@@ -30,6 +30,7 @@ const tmp = mkdtempSync(join(tmpdir(), "slm-e2e-"));
 let pg: EmbeddedPostgres | undefined;
 let wrangler: ChildProcess | undefined;
 let stopped = false;
+let movedDevVars = false;
 // wrangler merges .dev.vars over --env-file values, so a developer's file is moved aside for the run and put back.
 const devVars = `${root}.dev.vars`;
 const devVarsAside = `${root}.dev.vars.e2e-aside`;
@@ -45,7 +46,7 @@ async function cleanup(): Promise<void> {
   }
   await pg?.stop().catch(() => undefined);
   rmSync(tmp, { recursive: true, force: true });
-  if (existsSync(devVarsAside)) renameSync(devVarsAside, devVars);
+  if (movedDevVars && existsSync(devVarsAside) && !existsSync(devVars)) renameSync(devVarsAside, devVars);
 }
 
 async function waitForHealth(url: string): Promise<void> {
@@ -61,9 +62,18 @@ async function waitForHealth(url: string): Promise<void> {
 }
 
 async function main(): Promise<number> {
+  // A run that crashed hard may have left the developer's file aside: put it back first, never overwrite it.
+  if (existsSync(devVarsAside)) {
+    if (existsSync(devVars)) {
+      throw new Error(`Both .dev.vars and ${devVarsAside} exist (left by an interrupted e2e run). Keep the right one, delete the other, then rerun.`);
+    }
+    renameSync(devVarsAside, devVars);
+    console.log("note: restored .dev.vars left aside by an interrupted e2e run.");
+  }
   if (existsSync(devVars)) {
     console.log("note: .dev.vars is moved aside for this run and restored at the end.");
     renameSync(devVars, devVarsAside);
+    movedDevVars = true;
   }
   const pgPort = await freePort(5460);
   const appPort = await freePort(8860);
