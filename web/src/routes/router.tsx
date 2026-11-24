@@ -2,9 +2,11 @@ import { BookListQuerySchema, MemberListQuerySchema } from "@slm/contracts";
 import { createRootRoute, createRoute, createRouter, Navigate, Outlet, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 import { AppLayout } from "../app/AppLayout";
-import { ComingSoonPage, DashboardPage, ForbiddenPage, NotFoundPage } from "../app/pages";
+import { ComingSoonPage, ForbiddenPage, NotFoundPage } from "../app/pages";
 import { SignInPage } from "../features/auth/SignInPage";
 import { meQueryKey } from "../features/auth/session";
+import { DiscoveryPage } from "../features/discovery/DiscoveryPage";
+import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookDetailPage } from "../features/books/BookDetailPage";
 import { BookEditPage, BookNewPage } from "../features/books/BookFormPages";
 import { BooksPage } from "../features/books/BooksPage";
@@ -63,7 +65,7 @@ const memberDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/
 // Sidebar targets built in later stories (circulation SLM-4, loans SLM-5, discovery SLM-9, staff SLM-8).
 const circulationRoute = createRoute({ getParentRoute: () => appRoute, path: "/circulation", component: () => <ComingSoonPage title="Circulation" /> });
 const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", component: () => <ComingSoonPage title="Loan history" /> });
-const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: () => <ComingSoonPage title="Book discovery" /> });
+const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: DiscoveryPage });
 const staffRoute = createRoute({ getParentRoute: () => appRoute, path: "/admin/users", component: () => <ComingSoonPage title="Staff users" /> });
 
 const forbiddenRoute = createRoute({ getParentRoute: () => appRoute, path: "/403", component: ForbiddenPage });
