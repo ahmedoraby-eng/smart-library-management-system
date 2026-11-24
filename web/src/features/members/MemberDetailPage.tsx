@@ -7,7 +7,8 @@ import {
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { cn } from "../../lib/cn";
-import { formatDay } from "../../lib/format";
+import { MemberNumber } from "../../components/MemberNumber";
+import { formatDate } from "../../lib/format";
 import { useCan } from "../auth/session";
 import { useReturn } from "../circulation/api";
 import { ReturnConfirmDialog, returnErrorMessage } from "../circulation/ReturnConfirmDialog";
@@ -106,13 +107,13 @@ function MemberDetail({ member }: { member: MemberDto }) {
           </h1>
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-neutral-700" data-testid="member-profile">
             <dt className="text-neutral-600">Member no.</dt>
-            <dd className="tabular-nums" data-testid="profile-number">{member.memberNumber}</dd>
+            <dd data-testid="profile-number"><MemberNumber value={member.memberNumber} /></dd>
             <dt className="text-neutral-600">Email</dt>
             <dd data-testid="profile-email">{member.email}</dd>
             <dt className="text-neutral-600">Phone</dt>
             <dd className="tabular-nums" data-testid="profile-phone">{member.phone ?? "—"}</dd>
             <dt className="text-neutral-600">Registered</dt>
-            <dd data-testid="profile-registered">{formatDay(member.registeredAt)}</dd>
+            <dd data-testid="profile-registered">{formatDate(member.registeredAt)}</dd>
           </dl>
         </div>
         <div className="flex items-center gap-2">
@@ -299,9 +300,9 @@ function LoanRow({ loan, history, onReturn }: { loan: LoanDto; history: boolean;
         </Link>
         <div className="truncate text-sm text-neutral-600">{loan.book.author}</div>
       </Td>
-      <Td kind="num" className="text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
-      <Td kind="num" className={overdue ? "font-semibold text-danger-700" : "text-neutral-700"}>{formatDay(loan.dueAt)}</Td>
-      {history && <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>}
+      <Td kind="num" className="text-neutral-700">{formatDate(loan.borrowedAt)}</Td>
+      <Td kind="num" className={overdue ? "font-semibold text-danger-700" : "text-neutral-700"}>{formatDate(loan.dueAt)}</Td>
+      {history && <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDate(loan.returnedAt) : "—"}</Td>}
       <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>

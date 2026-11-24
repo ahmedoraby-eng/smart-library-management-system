@@ -36,8 +36,8 @@ function Tab({ to, icon, children, testId }: { to: "/circulation/borrow" | "/cir
     <Link
       to={to}
       data-testid={testId}
-      className="-mb-px inline-flex items-center gap-2 border-b-2 border-transparent px-1 pb-3 font-semibold text-neutral-600 no-underline hover:text-neutral-900"
-      activeProps={{ className: "border-brand-600 text-brand-700", "aria-current": "page" }}
+      className="-mb-px inline-flex items-center gap-2 border-b-2 border-transparent px-1 pb-3 font-semibold text-neutral-600 no-underline hover:text-neutral-900 aria-[current=page]:border-brand-600 aria-[current=page]:text-brand-700"
+      activeProps={{ "aria-current": "page" }}
     >
       {icon}
       {children}
