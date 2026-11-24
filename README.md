@@ -17,7 +17,7 @@ A staff-facing library operations app: catalogue, members, **Borrow Book** / **R
 | Contracts | zod schemas in `contracts/`, shared by the API and the UI |
 | Auth | Sign in with Google (OIDC) in the app, plus two demo staff accounts; HttpOnly session cookie; roles live in our DB and are read on every request |
 | AI | Workers AI ranks real catalogue candidates; the app falls back to deterministic results if the AI isn't available |
-| Tests | Vitest on real PostgreSQL 16, Playwright for the main user journeys |
+| Tests | Vitest on real PostgreSQL 16, a local Playwright smoke for the main user journeys (`npm run e2e`) |
 
 ## Run locally
 **Quickest:** `npm install` then `npm run demo:local`. It starts an embedded PostgreSQL 16 on a free port, migrates, loads the demo data, creates `.dev.vars` with random local demo passwords, runs the app, and prints the URL and the demo sign-ins. Ctrl+C stops it.
@@ -48,7 +48,10 @@ The demo data (books, members, loans) is restored every night by a Cron Trigger,
 npm test             # unit and integration tests on real PostgreSQL 16 (embedded, or TEST_DATABASE_URL)
 npm run typecheck
 npm run lint:deps    # architecture rules: domain stays pure, no cross-module table access
+npm run e2e          # local Playwright smoke (see below)
 ```
+
+`npm run e2e` runs a local Playwright smoke (3 flows: librarian borrow/return, supervisor read-only, admin reset) against a throwaway database and Worker on free ports; not part of CI. It needs the Playwright Chromium already installed on the machine.
 
 ## Configuration
 | Variable | Purpose | Default |

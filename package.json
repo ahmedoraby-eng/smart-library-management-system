@@ -17,15 +17,17 @@
     "seed": "tsx scripts/seed.ts",
     "reseed": "tsx scripts/seed.ts --reset",
     "db:local": "tsx scripts/local-postgres.ts",
-    "typecheck": "tsc -p contracts && tsc -p api && tsc -p web",
+    "typecheck": "tsc -p contracts && tsc -p api && tsc -p web && tsc -p e2e",
     "test": "vitest run",
     "build": "npm run build -w web",
     "deploy": "npm run build && wrangler deploy",
     "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs",
-    "demo:local": "tsx scripts/demo-local.ts"
+    "demo:local": "tsx scripts/demo-local.ts",
+    "e2e": "tsx e2e/run.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261124.1",
+    "@playwright/test": "1.62.1",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.23.1",
     "dependency-cruiser": "^18.9.0",
