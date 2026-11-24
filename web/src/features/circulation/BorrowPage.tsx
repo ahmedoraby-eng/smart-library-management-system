@@ -240,8 +240,13 @@ export function BorrowPage() {
                   <Button size="sm" variant="ghost" onClick={clearAll} data-testid="new-borrowing">
                     New borrowing
                   </Button>
-                  <Link to="/books/$bookId" params={{ bookId: success.loan.book.id }} className={buttonClasses({ size: "sm", variant: "ghost" })} data-testid="view-book">
-                    View book
+                  <Link
+                    to="/loans"
+                    search={{ memberId: success.loan.member.id, status: "ACTIVE", page: 1, size: 20 }}
+                    className={buttonClasses({ size: "sm", variant: "ghost" })}
+                    data-testid="view-loan"
+                  >
+                    View loan
                   </Link>
                 </div>
               }
