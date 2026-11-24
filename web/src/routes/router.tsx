@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, createRouter, Navigate, Outlet, redirect 
 import { z } from "zod";
 import { AppLayout } from "../app/AppLayout";
 import { ComingSoonPage, ForbiddenPage, NotFoundPage } from "../app/pages";
+import { RequirePermission } from "../app/RequirePermission";
 import { SignInPage } from "../features/auth/SignInPage";
 import { meQueryKey } from "../features/auth/session";
 import { DiscoveryPage } from "../features/discovery/DiscoveryPage";
@@ -81,7 +82,17 @@ const borrowRoute = createRoute({ getParentRoute: () => circulationRoute, path: 
 const returnRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/return", validateSearch: ReturnSearchSchema, component: ReturnPage });
 const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", validateSearch: LoanHistorySearchSchema, component: LoanHistoryPage });
 const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: DiscoveryPage });
-const staffRoute = createRoute({ getParentRoute: () => appRoute, path: "/admin/users", component: () => <ComingSoonPage title="Staff users" /> });
+// Staff users (ux §3.7) lands with its API in SLM-8; the guard is here now (Haya pass 1, S7): a role
+// without STAFF_MANAGE that deep-links here gets /403, not the placeholder.
+const staffRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/admin/users",
+  component: () => (
+    <RequirePermission permission="STAFF_MANAGE">
+      <ComingSoonPage title="Staff users" />
+    </RequirePermission>
+  ),
+});
 
 const forbiddenRoute = createRoute({ getParentRoute: () => appRoute, path: "/403", component: ForbiddenPage });
 const notFoundRoute = createRoute({ getParentRoute: () => appRoute, path: "/404", component: NotFoundPage });
