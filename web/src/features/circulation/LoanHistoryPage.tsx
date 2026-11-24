@@ -202,20 +202,20 @@ function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: strin
           type="button"
           onClick={() => onMember(loan.member.id)}
           title={`Show loans of ${loan.member.fullName}`}
-          className="text-left font-medium text-neutral-900 hover:underline"
+          className="whitespace-nowrap text-left font-medium text-neutral-900 hover:underline"
           data-testid="member-filter-link"
         >
           {loan.member.fullName}
         </button>
-        <div className="text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
+        <div className="whitespace-nowrap text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
       </Td>
-      <Td className="tabular-nums text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
-      <Td className={cn("tabular-nums", overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(loan.dueAt)}</Td>
-      <Td className="tabular-nums text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>
-      <Td>
+      <Td kind="num" className="text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
+      <Td kind="num" className={cn(overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(loan.dueAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>
+      <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>
-      <Td className="text-neutral-700 max-lg:hidden">{loan.processedBy.name}</Td>
+      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>{loan.processedBy.name}</Td>
     </Tr>
   );
 }

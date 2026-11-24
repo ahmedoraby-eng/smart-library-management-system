@@ -9,6 +9,7 @@ import { cn } from "../../lib/cn";
 import { formatDay } from "../../lib/format";
 import { useCan, useMe } from "../auth/session";
 import { BookCover } from "../books/BookCover";
+import { LoanStatusBadge } from "../circulation/LoanStatusBadge";
 import { useDashboard } from "./api";
 import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } from "./model";
 
@@ -168,14 +169,6 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
   );
 }
 
-function LoanStatusBadge({ status, dueAt }: { status: DashboardSummary["recentBorrowings"][number]["status"]; dueAt: string }) {
-  if (status === "OVERDUE") {
-    const d = daysOverdue(dueAt);
-    return <Badge variant="danger">Overdue · {d} {d === 1 ? "day" : "days"}</Badge>;
-  }
-  if (status === "RETURNED") return <Badge variant="neutral" dot={false}>Returned</Badge>;
-  return <Badge variant="info">Active</Badge>;
-}
 
 function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentBorrowings"]; canBorrow: boolean }) {
   return (
@@ -211,9 +204,9 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
                   <div className="font-semibold">{l.member.fullName}</div>
                   <div className="text-sm text-neutral-600">{l.member.memberNumber}</div>
                 </Td>
-                <Td className="whitespace-nowrap">{formatDay(l.borrowedAt)}</Td>
-                <Td className={cn("whitespace-nowrap", l.status === "OVERDUE" && "font-semibold text-danger-700")}>{formatDay(l.dueAt)}</Td>
-                <Td><LoanStatusBadge status={l.status} dueAt={l.dueAt} /></Td>
+                <Td kind="num">{formatDay(l.borrowedAt)}</Td>
+                <Td kind="num" className={cn(l.status === "OVERDUE" && "font-semibold text-danger-700")}>{formatDay(l.dueAt)}</Td>
+                <Td kind="nowrap"><LoanStatusBadge loan={l} /></Td>
               </Tr>
             ))}
           </tbody>

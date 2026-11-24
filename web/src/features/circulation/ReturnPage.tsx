@@ -138,7 +138,7 @@ export function ReturnPage() {
                   <Th className="max-lg:hidden">Borrowed</Th>
                   <Th>Due</Th>
                   <Th>Status</Th>
-                  <Th align="right">
+                  <Th align="right" kind="actions">
                     <span className="sr-only">Actions</span>
                   </Th>
                 </tr>
@@ -166,14 +166,14 @@ export function ReturnPage() {
                       <div className="font-medium">{loan.member.fullName}</div>
                       <div className="text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
                     </Td>
-                    <Td className="tabular-nums text-neutral-700 max-lg:hidden">{formatDay(loan.borrowedAt)}</Td>
-                    <Td className={cn("tabular-nums", loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
+                    <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDay(loan.borrowedAt)}</Td>
+                    <Td kind="num" className={cn(loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
                       {formatDay(loan.dueAt)}
                     </Td>
-                    <Td>
+                    <Td kind="nowrap">
                       <LoanStatusBadge loan={loan} />
                     </Td>
-                    <Td align="right">
+                    <Td align="right" kind="actions">
                       <Button
                         size="sm"
                         ref={(el) => {

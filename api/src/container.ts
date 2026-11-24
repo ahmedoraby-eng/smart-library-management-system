@@ -34,7 +34,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
     discovery: new BookDiscoveryService(new PgCatalogRetrieval(db), selectAiProvider(config, ai), (e) => console.info(JSON.stringify({ level: "info", event: "ai_discovery", ...e }))),
-    dashboard: new DashboardService(new PgDashboardReadModel(db)),
+    dashboard: new DashboardService(new PgDashboardReadModel(db, clock)),
     members: new MemberService(new PgMemberRepository(db)),
   };
 }

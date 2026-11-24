@@ -70,13 +70,13 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
                   <div className="font-medium">{l.member.fullName}</div>
                   <div className="text-sm text-neutral-600 tabular-nums">{l.member.memberNumber}</div>
                 </Td>
-                <Td className="tabular-nums text-neutral-700">{formatDay(l.borrowedAt)}</Td>
-                <Td className={cn("tabular-nums", l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(l.dueAt)}</Td>
-                <Td className="tabular-nums text-neutral-700">{l.returnedAt ? formatDay(l.returnedAt) : "—"}</Td>
-                <Td>
+                <Td kind="num" className="text-neutral-700">{formatDay(l.borrowedAt)}</Td>
+                <Td kind="num" className={cn(l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(l.dueAt)}</Td>
+                <Td kind="num" className="text-neutral-700">{l.returnedAt ? formatDay(l.returnedAt) : "—"}</Td>
+                <Td kind="nowrap">
                   <LoanStatusBadge loan={l} />
                 </Td>
-                <Td className="text-neutral-700 max-lg:hidden">{l.processedBy.name}</Td>
+                <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={l.processedBy.name}>{l.processedBy.name}</Td>
               </Tr>
             ))}
           </tbody>

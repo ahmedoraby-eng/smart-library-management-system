@@ -201,13 +201,13 @@ function LoanRow({ loan }: { loan: LoanDto }) {
         </Link>
         <div className="truncate text-sm text-neutral-600">{loan.book.author}</div>
       </Td>
-      <Td className="whitespace-nowrap text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
-      <Td className={overdue ? "whitespace-nowrap font-semibold text-danger-700" : "whitespace-nowrap text-neutral-700"}>{formatDay(loan.dueAt)}</Td>
-      <Td className="whitespace-nowrap text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>
-      <Td>
+      <Td kind="num" className="text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
+      <Td kind="num" className={overdue ? "font-semibold text-danger-700" : "text-neutral-700"}>{formatDay(loan.dueAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>
+      <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>
-      <Td className="text-neutral-700 max-lg:hidden">{loan.processedBy.name}</Td>
+      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>{loan.processedBy.name}</Td>
     </Tr>
   );
 }
