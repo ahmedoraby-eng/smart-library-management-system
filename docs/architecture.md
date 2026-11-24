@@ -64,7 +64,7 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ## Domain model and invariants
 
-Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names.
+Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`.
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
 - **Stock invariant.** `0 <= available_copies <= total_copies` is a `CHECK` constraint. Available plus on-loan always equals total, where on-loan is the number of open loans of that book.
@@ -135,10 +135,12 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 
 - **Sign-in.** Google OpenID Connect (authorization code with PKCE, state and nonce; the ID token is verified and `email_verified` must be true), or one of two demo accounts. A wrong demo email and a wrong password give the same `401`. Demo sign-in is limited to 5 attempts a minute per IP.
 - **New Google users.** An email in `BOOTSTRAP_ADMIN_EMAILS` becomes Admin on first sign-in. Any other becomes a read-only Supervisor. An Admin can promote them. A disabled user gets `403 USER_DISABLED`.
+- **Google account binding.** A staff user is found by Google's account id (`sub`) first, then by email; the `sub` is stored on the first match, and another Google account with the same email is refused. Google sign-in never opens a demo account, and demo emails must be on a reserved domain (`.test`, `.invalid`, `.example`).
+- **Staff changes under lock.** A role or status change locks the target and every active Admin row, then re-checks that the actor is still an active Admin, that it is not their own row, that the row is not a demo account, and that at least one active Admin remains.
 - **Session.** A signed JWT (HS256) in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production and on https), `Path=/`, 8 hours by default. It holds only the staff id.
 - **Role from the database.** On every request the API loads the staff row and builds the permissions from the stored role. A role change or a disable applies on the next request. A cookie that claims a role has no effect (tested).
 - **CSRF.** Every non-GET request must have an `Origin` equal to the request's origin, and a body, if any, must be JSON.
-- **Rate limits.** Demo login (5 per minute), Google start (10), AI discovery (10 per user), deep health check (10). In production these use Workers Rate Limiting bindings, shared across locations. Without a binding, a per-isolate in-memory limiter is used.
+- **Rate limits.** Demo login (5 per minute per IP), Google start and Google callback (10 each per IP), AI discovery (10 per user), deep health check (10). In production these use Workers Rate Limiting bindings, shared across locations. Without a binding, a per-isolate in-memory limiter is used.
 - **Demo credentials** come from Worker secrets, are compared as SHA-256 digests in constant time, and passwords must be 12+ characters. They are never stored in the database or the repository.
 - **No auth bypass.** There is no flag, header or environment that signs a user in without credentials.
 

@@ -53,6 +53,15 @@ npm run dev                      # http://localhost:8787
 - The two demo accounts are locked: their role and status can't be changed in the Admin screen.
 - The demo data (books, members, loans) is restored every night by a Cron Trigger, and an Admin can reset it at any time. Staff accounts are kept.
 
+## How to try it (5 minutes)
+
+1. Sign in as **Demo Librarian**. The Dashboard shows the totals, overdue loans and recent borrowings.
+2. **Books**: search `tolkein` (typo on purpose) or part of an ISBN; filter by category or "available only".
+3. **Circulation → Borrow book**: pick a member, pick a book, keep the 14-day due date, confirm. The book's available count drops by one.
+4. **Circulation → Return book**: overdue loans are listed first; return one and see it under **Loan history**.
+5. **Book discovery**: type what a member wants in plain words (for example "a short novel about friendship for a teenager") and borrow one of the suggestions.
+6. Sign in as **Demo Admin** to delete or archive a book, manage staff roles, or "Reset demo data". Sign in with Google to see the read-only Supervisor view.
+
 ## Features
 
 Minimum features from the assessment:
@@ -69,7 +78,7 @@ Bonus and extras:
 - [x] **Loan history** with filters (status, member, book, borrowed date range, text) and sorting. Overdue is derived from the due date at read time, never stored.
 - [x] **Members.** Create, edit, deactivate and reactivate (no delete); search by name, member number or email; member page with open, overdue and past loans.
 - [x] **Dashboard.** Totals (titles, copies, available, borrowed), members, active and overdue loans, the 8 most recent borrowings, top 5 books by loans in the last 30 days, and the 3 most recently added books.
-- [x] **Staff management** (Admin only): list staff, change role, disable or enable. Rules: an Admin can't change their own access, the last active Admin can't be demoted or disabled, demo accounts are protected.
+- [x] **Staff management** (Admin only): list staff, change role, disable or enable. Rules: an Admin can't change their own access, the last active Admin can't be demoted or disabled, demo accounts are protected, and an Admin who lost that role mid-request is refused.
 - [x] **Due-soon and overdue badges** on loans ("Due in 2 days", "Due today", "Overdue · 3 days"). The due-soon window is 2 days, a constant in `web/src/lib/loanStatus.ts`.
 - [x] **ISBN lookup from Open Library** on the Add/Edit Book form: fills title, author, publisher, year, description and cover when found. If the service is slow or down (3 second timeout), the form still works.
 - [x] **Nightly demo reset** by a Cloudflare Cron Trigger (00:00 UTC), plus an Admin "Reset demo data" button.
@@ -127,14 +136,14 @@ Set as Worker vars or secrets, or in `.dev.vars` locally. See `.dev.vars.example
 | `SESSION_HOURS` | session length, 1–24 hours | `8` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (secret) | Google OIDC sign-in. Set both or neither (one alone is a startup error). With neither, Google sign-in is off and its button is hidden. Redirect URI to register: `<origin>/api/auth/google/callback` | none |
 | `DEMO_ACCOUNTS_ENABLED` | turns on the two demo accounts | `false` |
-| `DEMO_LIBRARIAN_EMAIL`, `DEMO_LIBRARIAN_PASSWORD` (secret), `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` (secret) | demo account credentials (never in the repo). Required when demo accounts are on; passwords must be 12+ characters | none |
+| `DEMO_LIBRARIAN_EMAIL`, `DEMO_LIBRARIAN_PASSWORD` (secret), `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` (secret) | demo account credentials (never in the repo). Required when demo accounts are on. Emails must be on a reserved domain (`.test`, `.invalid` or `.example`) so a real inbox can never become a demo account; passwords must be 12+ characters | none |
 | `BOOTSTRAP_ADMIN_EMAILS` | comma-separated Google emails that become Admin on first sign-in | none |
 | `LOAN_DAYS`, `MAX_ACTIVE_LOANS` | loan period (1–60 days) and open-loan limit per member (1–50) | `14`, `5` |
 | `AI_MODEL` | Workers AI model id. If empty (and no `AI_FAKE`), discovery uses deterministic ranking | none (`wrangler.toml` sets `@cf/meta/llama-3.2-3b-instruct`) |
 | `AI_FAKE` | deterministic fake AI for local runs and tests (refused when `ENVIRONMENT=production`) | `false` |
 | `DATABASE_URL` | Postgres for scripts and local dev. In production, the `HYPERDRIVE` binding is used instead | none |
 
-Unknown Google accounts start as **Supervisor** (read-only), and an Admin can promote them. The code does not restrict demo account emails to a particular domain.
+Unknown Google accounts start as **Supervisor** (read-only), and an Admin can promote them. A staff user is bound to their Google account id (`sub`) on first sign-in, and Google sign-in never opens a demo account.
 
 ## Repository layout
 
@@ -144,7 +153,8 @@ api/src/        Hono API. Each module (catalog, members, circulation, staff, dis
                 platform/ holds cross-cutting code (config, errors, security)
 api/test/       API tests on real PostgreSQL 16
 contracts/src/  zod request and response schemas, shared with web/
-migrations/     versioned SQL: 0001_init (schema, constraints), 0002_search (full-text and trigram indexes)
+migrations/     versioned SQL: 0001_init (schema, constraints), 0002_search (full-text and trigram indexes),
+                0003_google_sub (Google account id on staff users)
 seed/           demo data (public book metadata, fictional members)
 web/            React SPA (features/, components/, routes/) with component tests
 scripts/        migrate, seed, local Postgres, demo-local
