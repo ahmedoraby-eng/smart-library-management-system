@@ -17,6 +17,7 @@ import { PgDemoDataStore } from "./demo/infrastructure/PgDemoDataStore";
 import type { Clock } from "./platform/clock";
 import type { Config } from "./platform/config";
 import type { Db } from "./platform/db";
+import { StaffAdminService } from "./staff/application/StaffAdminService";
 import { StaffIdentityService } from "./staff/application/StaffIdentityService";
 import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserRepository";
 
@@ -30,6 +31,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     clock,
     staffRepo,
     staffIdentity,
+    staffAdmin: new StaffAdminService(staffRepo),
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),

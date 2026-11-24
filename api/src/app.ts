@@ -15,6 +15,7 @@ import { sameOriginWrites } from "./platform/security/csrf";
 import { limiterFor, MemoryLimiter, RateLimitedError } from "./platform/security/rateLimit";
 import { readSession } from "./platform/security/session";
 import { authRoutes, toMe } from "./staff/api/authRoutes";
+import { staffRoutes } from "./staff/api/staffRoutes";
 
 export type { AppEnv };
 
@@ -106,6 +107,7 @@ export function createApp(openContainer: ContainerFactory) {
   app.route("/dashboard", dashboardRoutes());
   app.route("/members", memberRoutes());
   app.route("/admin", adminRoutes());
+  app.route("/staff-users", staffRoutes());
 
   return app;
 }
