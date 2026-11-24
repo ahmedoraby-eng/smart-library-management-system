@@ -6,6 +6,7 @@ import { loanRoutes } from "./circulation/api/routes";
 import { dashboardRoutes } from "./dashboard/api/routes";
 import { discoveryRoutes } from "./discovery/api/routes";
 import type { Container } from "./container";
+import { memberRoutes } from "./members/api/routes";
 import { adminRoutes } from "./demo/api/routes";
 import type { AppEnv } from "./platform/appEnv";
 import { AppError, UnauthenticatedError, internalProblem, toProblem } from "./platform/errors";
@@ -103,6 +104,7 @@ export function createApp(openContainer: ContainerFactory) {
   app.route("/loans", loanRoutes());
   app.route("/ai", discoveryRoutes((c) => limiterFor(c.env, "DISCOVERY_LIMITER", discoveryFallback, 60)));
   app.route("/dashboard", dashboardRoutes());
+  app.route("/members", memberRoutes());
   app.route("/admin", adminRoutes());
 
   return app;
