@@ -80,6 +80,7 @@ export class GoogleOidcProvider implements OidcProvider {
     }
     if (typeof payload.email !== "string" || payload.email === "") throw new OidcError("ID token has no email");
     return {
+      sub: payload.sub as string,
       email: payload.email,
       emailVerified: payload.email_verified === true || payload.email_verified === "true",
       name: typeof payload.name === "string" ? payload.name : null,

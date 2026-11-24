@@ -1,6 +1,6 @@
 import type { Principal } from "../../platform/security/principal";
 import { OidcError, type OidcProvider } from "../domain/OidcProvider";
-import type { StaffIdentityService } from "./StaffIdentityService";
+import { GoogleAccountRefusedError, type StaffIdentityService } from "./StaffIdentityService";
 
 /** What the browser keeps (in a signed, short-lived cookie) between /start and /callback. */
 export interface PendingGoogleSignIn {
@@ -73,6 +73,11 @@ export class GoogleSignIn {
     }
     if (claims.nonce !== pending.nonce) throw new GoogleSignInError("google", "Nonce mismatch");
     if (!claims.emailVerified) throw new GoogleSignInError("google_unverified", "Google email not verified");
-    return this.identity.signInWithGoogle({ email: claims.email, name: claims.name });
+    try {
+      return await this.identity.signInWithGoogle({ sub: claims.sub, email: claims.email, name: claims.name });
+    } catch (e) {
+      if (e instanceof GoogleAccountRefusedError) throw new GoogleSignInError("google", e.message);
+      throw e;
+    }
   }
 }

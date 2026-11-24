@@ -33,6 +33,7 @@ export function createApp(openContainer: ContainerFactory) {
   const deepHealthFallback = new MemoryLimiter(10, 60_000);
   const discoveryFallback = new MemoryLimiter(10, 60_000);
   const googleStartFallback = new MemoryLimiter(10, 60_000);
+  const googleCallbackFallback = new MemoryLimiter(10, 60_000);
 
   app.use(async (c, next) => {
     const requestId = requestIdFrom(c.req.header("x-request-id"));
@@ -91,6 +92,7 @@ export function createApp(openContainer: ContainerFactory) {
   app.route("/auth", authRoutes(
     (c) => limiterFor(c.env, "DEMO_LOGIN_LIMITER", demoLoginFallback, 60),
     (c) => limiterFor(c.env, "GOOGLE_START_LIMITER", googleStartFallback, 60),
+    (c) => limiterFor(c.env, "GOOGLE_CALLBACK_LIMITER", googleCallbackFallback, 60),
   ));
 
   // Everything below needs a valid session; the role is read from the database on every request.

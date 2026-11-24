@@ -4,7 +4,7 @@ import { loadConfig } from "../src/platform/config";
 import { pkceChallenge } from "../src/staff/application/GoogleSignIn";
 import { OidcError, type OidcIdentity, type OidcProvider } from "../src/staff/domain/OidcProvider";
 import { GOOGLE_AUTHORIZE_URL, GOOGLE_TOKEN_URL, GoogleOidcProvider } from "../src/staff/infrastructure/GoogleOidcProvider";
-import { ORIGIN, pool, resetDb, seedStaff, sessionCookieFrom, testApp, testEnv } from "./support";
+import { DEMO, ORIGIN, pool, resetDb, seedStaff, sessionCookieFrom, testApp, testEnv } from "./support";
 
 afterAll(() => pool.end());
 beforeEach(async () => { await resetDb(); await seedStaff(); });
@@ -18,7 +18,7 @@ class FakeGoogle implements OidcProvider {
   private readonly real = new GoogleOidcProvider(CLIENT);
   calls: { code: string; verifier: string; redirectUri: string }[] = [];
   /** null → exchange fails. A function gets the nonce sent in /start (so the happy path echoes it). */
-  identity: ((nonce: string) => OidcIdentity) | null = (nonce) => ({ email: "reviewer@gmail.test", emailVerified: true, name: "Rita Reviewer", nonce });
+  identity: ((nonce: string) => OidcIdentity) | null = (nonce) => ({ sub: "g-reviewer@gmail.test", email: "reviewer@gmail.test", emailVerified: true, name: "Rita Reviewer", nonce });
   private lastNonce = "";
   authorizeUrl(req: Parameters<OidcProvider["authorizeUrl"]>[0]) {
     this.lastNonce = req.nonce;
@@ -165,7 +165,7 @@ describe("SLM-8 GET /api/auth/google/callback", () => {
 
   it("bootstrap email → ADMIN", async () => {
     const fake = new FakeGoogle();
-    fake.identity = (nonce) => ({ email: "Boss@Example.org", emailVerified: true, name: "The Boss", nonce });
+    fake.identity = (nonce) => ({ sub: "g-boss@example.org", email: "Boss@Example.org", emailVerified: true, name: "The Boss", nonce });
     const { app } = googleApp(fake);
     const s = await start(app);
     const session = sessionCookieFrom(await callback(app, `code=c&state=${s.state}`, s.cookie))!;
@@ -174,7 +174,7 @@ describe("SLM-8 GET /api/auth/google/callback", () => {
 
   it("unverified Google email → error=google_unverified, no session, no row", async () => {
     const fake = new FakeGoogle();
-    fake.identity = (nonce) => ({ email: "new@gmail.test", emailVerified: false, name: null, nonce });
+    fake.identity = (nonce) => ({ sub: "g-new@gmail.test", email: "new@gmail.test", emailVerified: false, name: null, nonce });
     const { app } = googleApp(fake);
     const s = await start(app);
     const res = await callback(app, `code=c&state=${s.state}`, s.cookie);
@@ -222,7 +222,7 @@ describe("SLM-8 GET /api/auth/google/callback", () => {
 
   it("nonce mismatch → error=google", async () => {
     const fake = new FakeGoogle();
-    fake.identity = () => ({ email: "reviewer@gmail.test", emailVerified: true, name: null, nonce: "someone-elses-nonce" });
+    fake.identity = () => ({ sub: "g-reviewer@gmail.test", email: "reviewer@gmail.test", emailVerified: true, name: null, nonce: "someone-elses-nonce" });
     const { app } = googleApp(fake);
     const s = await start(app);
     const res = await callback(app, `code=c&state=${s.state}`, s.cookie);
@@ -242,7 +242,7 @@ describe("SLM-8 GET /api/auth/google/callback", () => {
 
   it("disabled staff user → error=disabled, no session", async () => {
     const fake = new FakeGoogle();
-    fake.identity = (nonce) => ({ email: "disabled@library.test", emailVerified: true, name: null, nonce });
+    fake.identity = (nonce) => ({ sub: "g-disabled@library.test", email: "disabled@library.test", emailVerified: true, name: null, nonce });
     const { app } = googleApp(fake);
     const s = await start(app);
     const res = await callback(app, `code=c&state=${s.state}`, s.cookie);
@@ -285,7 +285,7 @@ describe("SLM-8 GoogleOidcProvider ID-token verification (local key pair)", () =
   const provider = (f?: typeof fetch) => new GoogleOidcProvider(CLIENT, { jwks, fetch: f });
 
   it("accepts a valid token from either Google issuer form", async () => {
-    expect(await provider().verifyIdToken(await idToken())).toEqual({ email: "x@gmail.test", emailVerified: true, name: "X", nonce: "n1" });
+    expect(await provider().verifyIdToken(await idToken())).toEqual({ sub: "google-sub-1", email: "x@gmail.test", emailVerified: true, name: "X", nonce: "n1" });
     expect((await provider().verifyIdToken(await idToken({ iss: "accounts.google.com" }))).email).toBe("x@gmail.test");
     expect((await provider().verifyIdToken(await idToken({ email_verified: false }))).emailVerified).toBe(false);
   });
@@ -324,5 +324,70 @@ describe("SLM-8 GoogleOidcProvider ID-token verification (local key pair)", () =
   it("exchange fails cleanly when Google refuses the code", async () => {
     const fakeFetch = (async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 })) as unknown as typeof fetch;
     await expect(provider(fakeFetch).exchange("c", "v", "r")).rejects.toBeInstanceOf(OidcError);
+  });
+});
+
+describe("SLM-8 follow-up (Yousef): Google never signs in to a demo account; sub binding; callback limit", () => {
+  /** Full browser round trip with the fake provider returning `who`; returns the callback response. */
+  async function googleSignIn(who: { sub: string; email: string }) {
+    const fake = new FakeGoogle();
+    fake.identity = (nonce) => ({ ...who, emailVerified: true, name: null, nonce });
+    const { app } = googleApp(fake);
+    const s = await start(app);
+    return callback(app, `code=c&state=${s.state}`, s.cookie);
+  }
+  const staffRow = async (email: string) =>
+    (await pool.query("SELECT role, status, is_demo, google_sub FROM staff_users WHERE lower(email) = lower($1)", [email])).rows[0];
+
+  it("a configured demo email is refused (no session, no row), even before the demo row exists", async () => {
+    const res = await googleSignIn({ sub: "g-attacker", email: DEMO.admin.email });
+    expect(res.headers.get("location")).toBe("/signin?error=google");
+    expect(sessionCookieFrom(res)).toBeNull();
+    expect(await staffRow(DEMO.admin.email)).toBeUndefined();
+  });
+
+  it("an existing demo row is refused too (e.g. a demo email that config no longer lists)", async () => {
+    await pool.query("INSERT INTO staff_users (email, full_name, role, is_demo) VALUES ('old-demo@demo.test', 'Old Demo', 'ADMIN', true)");
+    const res = await googleSignIn({ sub: "g-old", email: "old-demo@demo.test" });
+    expect(res.headers.get("location")).toBe("/signin?error=google");
+    expect(sessionCookieFrom(res)).toBeNull();
+    expect(await staffRow("old-demo@demo.test")).toMatchObject({ google_sub: null });
+  });
+
+  it("the first Google sign-in binds sub to an existing row; another sub with the same email is refused", async () => {
+    await pool.query("INSERT INTO staff_users (email, full_name, role) VALUES ('nadia@library.test', 'Nadia Karim', 'LIBRARIAN')");
+    const first = await googleSignIn({ sub: "g-nadia", email: "nadia@library.test" });
+    expect(sessionCookieFrom(first)).toBeTruthy();
+    expect(await staffRow("nadia@library.test")).toMatchObject({ role: "LIBRARIAN", google_sub: "g-nadia" });
+    const other = await googleSignIn({ sub: "g-someone-else", email: "nadia@library.test" });
+    expect(other.headers.get("location")).toBe("/signin?error=google");
+    expect(sessionCookieFrom(other)).toBeNull();
+  });
+
+  it("the row is found by sub, so an email change at Google keeps the same staff user", async () => {
+    await googleSignIn({ sub: "g-omar", email: "omar@library.test" });
+    const id = (await pool.query("SELECT id FROM staff_users WHERE google_sub = 'g-omar'")).rows[0].id;
+    const res = await googleSignIn({ sub: "g-omar", email: "omar.nasser@library.test" });
+    expect(sessionCookieFrom(res)).toBeTruthy();
+    expect((await pool.query("SELECT id FROM staff_users WHERE google_sub = 'g-omar'")).rows).toEqual([{ id }]);
+    expect((await pool.query("SELECT count(*)::int n FROM staff_users WHERE email LIKE 'omar%'")).rows[0].n).toBe(1);
+  });
+
+  it("config refuses demo emails outside .test, .invalid or .example", () => {
+    for (const email of ["someone@gmail.com", "admin@demo.test.com", "admin@company.example.org"]) {
+      expect(() => testApp({ env: { DEMO_ADMIN_EMAIL: email } })).toThrow(/DEMO_ADMIN_EMAIL must end in/);
+    }
+    for (const email of ["admin@demo.test", "admin@library.invalid", "admin@x.example"]) {
+      expect(() => testApp({ env: { DEMO_ADMIN_EMAIL: email } })).not.toThrow();
+    }
+  });
+
+  it("the 11th callback in a minute from one IP goes back to sign-in with google_busy, before any exchange", async () => {
+    const { app, fake } = googleApp();
+    const hit = () => app.request("/api/auth/google/callback?code=x&state=y", { headers: { "cf-connecting-ip": "203.0.113.20" } });
+    for (let i = 0; i < 10; i++) expect((await hit()).headers.get("location")).toBe("/signin?error=google");
+    const res = await hit();
+    expect(res.headers.get("location")).toBe("/signin?error=google_busy");
+    expect(fake.calls).toHaveLength(0);
   });
 });

@@ -1,4 +1,5 @@
 import type { Role, StaffUserDto, StaffUserListQuery } from "@slm/contracts";
+import { cn } from "../../lib/cn";
 import { getRouteApi } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -191,7 +192,7 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
 
   return (
     <Tr data-testid="staff-row" data-staff-id={user.id}>
-      <Td>
+      <Td kind="nowrap">
         <div className="flex items-center gap-2">
           {user.isDemo && <LockIcon className="shrink-0 text-neutral-500" data-testid="demo-lock" />}
           <span className="font-semibold text-neutral-900" data-testid="staff-name">{user.fullName}</span>
@@ -205,7 +206,8 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
       </Td>
       <Td kind="truncate" className="text-neutral-700" title={user.email}>{user.email}</Td>
       <Td kind="nowrap">
-        <Tip text={roleTip}>
+        {/* Fixed-width box: the select fills it whether or not it sits in the tooltip wrapper (Haya pass 4). */}
+        <Tip text={roleTip} className="w-36">
           <Select
             label={`Role of ${user.fullName}`}
             hideLabel
@@ -213,7 +215,6 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
             disabled={Boolean(roleTip) || update.isPending}
             onChange={(e) => changeRole(e.target.value as Role)}
             data-testid="role-select"
-            className="w-36"
           >
             <option value="ADMIN">Admin</option>
             <option value="LIBRARIAN">Librarian</option>
@@ -230,11 +231,11 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
       <Td align="right" kind="actions">
         <Tip text={statusTip}>
           {user.status === "ACTIVE" ? (
-            <Button size="sm" variant="ghost" disabled={Boolean(statusTip)} onClick={onDisable} data-testid="disable-user">
+            <Button size="sm" variant="secondary" disabled={Boolean(statusTip)} onClick={onDisable} data-testid="disable-user">
               Disable
             </Button>
           ) : (
-            <Button size="sm" variant="ghost" disabled={Boolean(statusTip)} onClick={onEnable} data-testid="enable-user">
+            <Button size="sm" variant="secondary" disabled={Boolean(statusTip)} onClick={onEnable} data-testid="enable-user">
               Enable
             </Button>
           )}
@@ -245,10 +246,10 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
 }
 
 /** Disabled controls get no hover events, so the tooltip sits on a wrapper; screen readers get the same text. */
-function Tip({ text, children }: { text: string | undefined; children: ReactNode }) {
-  if (!text) return <>{children}</>;
+function Tip({ text, children, className }: { text: string | undefined; children: ReactNode; className?: string }) {
+  if (!text) return <div className={className}>{children}</div>;
   return (
-    <span className="inline-block" title={text} data-testid="control-tip">
+    <span className={cn("inline-block", className)} title={text} data-testid="control-tip">
       {children}
       <span className="sr-only">{text}</span>
     </span>
