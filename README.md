@@ -48,7 +48,7 @@ npm run dev                      # http://localhost:8787
 | Any Google account | Supervisor (read-only) on first sign-in | "Sign in with Google" |
 
 - Locally, the passwords are printed by `npm run demo:local` and stored in `.dev.vars` (`DEMO_LIBRARIAN_*`, `DEMO_ADMIN_*`).
-- For the live demo, the credentials come with the submission. They are never in this repository.
+- For the live demo, reviewers receive the demo passwords with the submission. They are never in this repository.
 - The "Sign in with Google" button shows only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set. The demo form shows only when `DEMO_ACCOUNTS_ENABLED=true`.
 - The two demo accounts are locked: their role and status can't be changed in the Admin screen.
 - The demo data (books, members, loans) is restored every night by a Cron Trigger, and an Admin can reset it at any time. Staff accounts are kept.
@@ -94,7 +94,7 @@ Bonus and extras:
 | Contracts | zod schemas in `contracts/`, shared by the API and the UI |
 | Auth | Sign in with Google (OIDC) in the app, plus two demo staff accounts; HttpOnly session cookie; roles live in our database |
 | AI | Workers AI ranks real catalogue candidates; the app falls back to deterministic results if the AI isn't available |
-| Tests | Vitest on real PostgreSQL 16 (API) and Vitest with Testing Library (UI) |
+| Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), and a local Playwright smoke (`npm run e2e`) |
 
 More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md).
 
@@ -105,9 +105,12 @@ npm test             # API and contract tests on real PostgreSQL 16 (embedded, o
 npm test -w web      # UI component tests (Vitest, jsdom, Testing Library)
 npm run typecheck    # tsc for contracts, api and web
 npm run lint:deps    # architecture rules (dependency-cruiser): domain stays pure, no cross-module table access
+npm run e2e          # local Playwright smoke in a real browser (not part of CI)
 ```
 
-The API tests run against a real PostgreSQL 16, with no database mocks. There are no browser (end-to-end) tests in this repository.
+The API tests run against a real PostgreSQL 16, with no database mocks.
+
+`npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. It is local only (not part of CI) and needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
 
 Named release tests in `api/test`:
 

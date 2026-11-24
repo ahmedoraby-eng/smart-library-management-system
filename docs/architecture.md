@@ -90,7 +90,7 @@ Return (`CirculationService.return`):
 1. `UPDATE loans SET returned_at = ?, returned_by = ? WHERE id = ? AND returned_at IS NULL`. Two parallel returns: one updates a row, the other updates none and gets `409 LOAN_ALREADY_RETURNED`.
 2. `UPDATE books SET available_copies = available_copies + 1`.
 
-Deleting a book locks the book row first, so a borrow running at the same time waits and then finds the book archived or gone.
+Deleting a book locks the book row first, so a borrow running at the same time waits and then finds the book archived or gone; if the borrow takes the row first, the delete then sees the open loan and gets `409 BOOK_HAS_ACTIVE_LOANS`.
 
 The tests run these paths in parallel against real Postgres (for example, 20 borrows of a 3-copy book give 3 successes). The `CHECK` constraint and the unique index are the last line of defence behind the guarded updates.
 
