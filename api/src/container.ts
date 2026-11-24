@@ -1,5 +1,7 @@
 import { BookService } from "./catalog/application/BookService";
 import { PgBookRepository } from "./catalog/infrastructure/PgBookRepository";
+import { DashboardService } from "./dashboard/application/DashboardService";
+import { PgDashboardReadModel } from "./dashboard/infrastructure/PgDashboardReadModel";
 import { DemoDataService } from "./demo/application/DemoDataService";
 import { PgDemoDataStore } from "./demo/infrastructure/PgDemoDataStore";
 import type { Clock } from "./platform/clock";
@@ -20,6 +22,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock) {
     staffIdentity,
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
     books: new BookService(new PgBookRepository(db)),
+    dashboard: new DashboardService(new PgDashboardReadModel(db)),
   };
 }
 export type Container = ReturnType<typeof buildContainer>;
