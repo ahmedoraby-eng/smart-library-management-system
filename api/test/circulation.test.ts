@@ -353,6 +353,56 @@ describe("SLM-4 concurrency (real Postgres, parallel requests)", () => {
   });
 });
 
+/** Waits until a backend is blocked on a row lock while running `pattern` (pg_stat_activity). */
+async function waitForLockWaiter(pattern: string, timeoutMs = 10_000) {
+  const start = Date.now();
+  for (;;) {
+    const { rows } = await pool.query(
+      "SELECT count(*)::int n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE $1",
+      [pattern],
+    );
+    if (rows[0].n > 0) return;
+    if (Date.now() - start > timeoutMs) throw new Error(`no backend waiting on a lock for ${pattern}`);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
+
+describe("SLM-4 member status under the member row lock (architecture review)", () => {
+  it("SLM-4 member-suspend-race: a borrow blocked behind an uncommitted deactivate → 409 MEMBER_INACTIVE, no loan, stock unchanged", async () => {
+    const app = testApp();
+    const [b, m] = [await book(2), await member()];
+    const deactivate = await pool.connect();
+    try {
+      await deactivate.query("BEGIN");
+      await deactivate.query("UPDATE members SET status = 'INACTIVE' WHERE id = $1", [m]);
+      const pending = borrow(app, b, m); // must block on SELECT … FOR UPDATE of the member row
+      await waitForLockWaiter("%FROM members%FOR UPDATE%");
+      await deactivate.query("COMMIT");
+      const { res, json } = await pending;
+      expect(res.status).toBe(409);
+      expect(json.code).toBe("MEMBER_INACTIVE");
+    } finally {
+      await deactivate.query("ROLLBACK").catch(() => undefined);
+      deactivate.release();
+    }
+    expect(await loanCount()).toBe(0);
+    expect(await stock(b)).toMatchObject({ available: 2, open: 0 });
+  });
+
+  it("SLM-4 member-suspend-race (opposite order): the borrow commits first, the deactivate then succeeds, the loan stays returnable", async () => {
+    const app = testApp();
+    const [b, m] = [await book(2), await member()];
+    const loan = await borrow(app, b, m);
+    expect(loan.res.status).toBe(201);
+    const upd = await pool.query("UPDATE members SET status = 'INACTIVE' WHERE id = $1", [m]);
+    expect(upd.rowCount).toBe(1);
+    expect(await stock(b)).toMatchObject({ available: 1, open: 1 });
+    const back = await giveBack(app, loan.json.id);
+    expect(back.res.status).toBe(200);
+    expect(await stock(b)).toMatchObject({ available: 2, open: 0 });
+  });
+});
+
 describe("SLM-4 RBAC (rbac-matrix.md: LOAN_PROCESS = Admin, Librarian)", () => {
   it("SLM-4 Supervisor → 403 on borrow and on return; nothing changes", async () => {
     const app = testApp();
