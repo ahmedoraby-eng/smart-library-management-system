@@ -1,5 +1,5 @@
-import type { Me } from "@slm/contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AuthProviders, Me } from "@slm/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input, BookIcon } from "../../components/ui";
@@ -11,6 +11,7 @@ const route = getRouteApi("/signin");
 const GOOGLE_NOTICES: Record<string, string> = {
   google: "Google sign-in didn't complete. Try again.",
   google_unverified: "Your Google email isn't verified. Verify it with Google, then try again.",
+  disabled: "Your staff account is disabled.",
 };
 
 const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -21,6 +22,15 @@ export function SignInPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const me = useMe();
+  // Which sign-in methods the server has configured; the Google button only shows when it works.
+  const providers = useQuery({
+    queryKey: ["auth-providers"],
+    queryFn: () => api<AuthProviders>("/auth/providers"),
+    retry: false,
+    staleTime: Infinity,
+  });
+  const googleOn = providers.data?.google === true;
+  const demoOn = providers.data?.demo !== false;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +48,11 @@ export function SignInPage() {
   useEffect(() => {
     if (me.data) router.history.replace(target);
   }, [me.data, router, target]);
+
+  // Without Google, the demo form is the main path, so focus starts on Email (ux.md §1.1 focus rule).
+  useEffect(() => {
+    if (providers.isSuccess && !googleOn) emailRef.current?.focus();
+  }, [providers.isSuccess, googleOn]);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -108,34 +123,42 @@ export function SignInPage() {
         )}
 
         <div className="rounded-xl border border-border bg-surface p-7 shadow-card">
-          <Button
-            size="lg"
-            block
-            autoFocus
-            loading={googleBusy}
-            disabled={login.isPending}
-            data-testid="google-signin"
-            icon={<GoogleMark />}
-            onClick={() => {
-              setGoogleBusy(true);
-              window.location.assign("/api/auth/google/start");
-            }}
-          >
-            Sign in with Google
-          </Button>
-          <p className="mt-3 text-center text-sm text-neutral-600">Library staff only. Members don't sign in.</p>
+          {googleOn && (
+            <Button
+              size="lg"
+              block
+              autoFocus
+              loading={googleBusy}
+              disabled={login.isPending}
+              data-testid="google-signin"
+              icon={<GoogleMark />}
+              onClick={() => {
+                setGoogleBusy(true);
+                window.location.assign(`/api/auth/google/start?next=${encodeURIComponent(target)}`);
+              }}
+            >
+              Sign in with Google
+            </Button>
+          )}
+          <p className={googleOn ? "mt-3 text-center text-sm text-neutral-600" : "text-center text-sm text-neutral-600"}>
+            Library staff only. Members don't sign in.
+          </p>
 
-          {demoOff ? (
+          {demoOff || !demoOn ? (
             <InlineAlert variant="info" className="mt-6" testId="demo-off">
-              Demo accounts are turned off. Sign in with Google.
+              {googleOn ? "Demo accounts are turned off. Sign in with Google." : "Sign-in is not available right now."}
             </InlineAlert>
           ) : (
             <>
-              <div className="my-6 flex items-center gap-3 text-sm text-neutral-600" role="separator">
-                <span className="h-px flex-1 bg-border" />
-                or use a demo account
-                <span className="h-px flex-1 bg-border" />
-              </div>
+              {googleOn ? (
+                <div className="my-6 flex items-center gap-3 text-sm text-neutral-600" role="separator" data-testid="signin-divider">
+                  <span className="h-px flex-1 bg-border" />
+                  or use a demo account
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              ) : (
+                <div className="h-6" aria-hidden />
+              )}
 
               {notice && (
                 <InlineAlert variant="danger" className="mb-4" testId="signin-error">
