@@ -7,5 +7,6 @@ export const staffUsers = pgTable("staff_users", {
   role: text("role").$type<"ADMIN" | "LIBRARIAN" | "SUPERVISOR">().notNull(),
   status: text("status").$type<"ACTIVE" | "DISABLED">().notNull().default("ACTIVE"),
   isDemo: boolean("is_demo").notNull().default(false),
+  googleSub: text("google_sub"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

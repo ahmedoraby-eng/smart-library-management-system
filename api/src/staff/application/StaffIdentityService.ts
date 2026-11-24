@@ -11,6 +11,17 @@ export class InvalidCredentialsError extends AppError {
 }
 
 /**
+ * Google may not sign in to a demo account, or to a row bound to another Google subject
+ * (Yousef, SLM-8 review). Otherwise a real address configured as a demo email would get that
+ * account's role with no password. The Google callback turns this into `?error=google`.
+ */
+export class GoogleAccountRefusedError extends AppError {
+  constructor(reason: string) {
+    super(403, "FORBIDDEN", "Forbidden", reason);
+  }
+}
+
+/**
  * Turns a session or a sign-in into a staff principal.
  * The role always comes from our database, never from a token or cookie (architecture §5.2).
  */
@@ -24,13 +35,30 @@ export class StaffIdentityService {
     return this.active(user);
   }
 
-  /** Google sign-in (verified email): bootstrap admins become ADMIN, everyone else read-only SUPERVISOR. */
-  async signInWithGoogle(identity: { email: string; name?: string | null }): Promise<Principal> {
+  /**
+   * Google sign-in (verified email). The row is found by Google's `sub` first, then by email (and the
+   * `sub` is bound on that first match). New people: bootstrap admins become ADMIN, everyone else
+   * read-only SUPERVISOR. Demo accounts never sign in through Google.
+   */
+  async signInWithGoogle(identity: { sub: string; email: string; name?: string | null }): Promise<Principal> {
     const email = identity.email.trim().toLowerCase();
-    let user = await this.repo.findByEmail(email);
+    if (this.config.demoAccounts.some((a) => a.email === email)) throw new GoogleAccountRefusedError("Demo accounts sign in with their password only.");
+    let user = await this.repo.findByGoogleSub(identity.sub);
+    if (!user) {
+      user = await this.repo.findByEmail(email);
+      if (user && !user.isDemo) {
+        if (user.googleSub && user.googleSub !== identity.sub) throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
+        if (!user.googleSub && !(await this.repo.bindGoogleSub(user.id, identity.sub))) {
+          throw new GoogleAccountRefusedError("This staff account was just bound to another Google account.");
+        }
+      }
+    }
+    if (user?.isDemo) throw new GoogleAccountRefusedError("Demo accounts sign in with their password only.");
     if (!user) {
       const role = this.config.bootstrapAdminEmails.includes(email) ? "ADMIN" : "SUPERVISOR";
-      user = await this.repo.provision({ email, fullName: identity.name?.trim() || email.split("@")[0]!, role });
+      user = await this.repo.provision({ email, fullName: identity.name?.trim() || email.split("@")[0]!, role, googleSub: identity.sub });
+      // A concurrent first sign-in with the same email but another subject inserted first.
+      if (user.googleSub !== identity.sub) throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
     }
     return this.active(user);
   }

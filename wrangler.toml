@@ -46,6 +46,11 @@ name = "GOOGLE_START_LIMITER"
 namespace_id = "1004"
 simple = { limit = 10, period = 60 }
 
+[[ratelimits]]
+name = "GOOGLE_CALLBACK_LIMITER"
+namespace_id = "1005"
+simple = { limit = 10, period = 60 }
+
 # Postgres (Neon) through Hyperdrive, query cache OFF. Basel fills in the id.
 # [[hyperdrive]]
 # binding = "HYPERDRIVE"

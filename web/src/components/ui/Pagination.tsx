@@ -11,14 +11,15 @@ export function Pagination({ page, size, total, onPage }: { page: number; size: 
       <p className="text-sm text-neutral-600 tabular-nums" data-testid="pagination-summary">
         Showing {from}–{to} of {total}
       </p>
-      <div className="flex gap-2">
+      {/* One page: the summary stays, Previous/Next are hidden (Haya pass 4). */}
+      {lastPage > 1 && <div className="flex gap-2">
         <Button size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} data-testid="page-prev">
           Previous
         </Button>
         <Button size="sm" disabled={page >= lastPage} onClick={() => onPage(page + 1)} data-testid="page-next">
           Next
         </Button>
-      </div>
+      </div>}
     </nav>
   );
 }

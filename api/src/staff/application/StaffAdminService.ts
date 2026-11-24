@@ -1,10 +1,11 @@
 import type { StaffUserListQuery } from "@slm/contracts";
-import { ConflictError, NotFoundError } from "../../platform/errors";
+import { ConflictError, ForbiddenError, NotFoundError, type AppError } from "../../platform/errors";
 import { accessViolation, type AccessChange, type AccessViolation } from "../domain/accessRules";
 import type { StaffAccessStore, StaffUser } from "../domain/StaffUser";
 
 /** ux.md §3.7 sentences: the UI shows `detail` as the toast. */
-const refusal: Record<AccessViolation, () => ConflictError> = {
+const refusal: Record<AccessViolation, () => AppError> = {
+  actor_not_admin: () => new ForbiddenError("FORBIDDEN", "You are no longer an active Admin."),
   protected_demo: () => new ConflictError("PROTECTED_DEMO_ACCOUNT", "Demo account", "Demo accounts are protected so every reviewer can use them."),
   self: () => new ConflictError("CANNOT_CHANGE_SELF", "Own account", "You can't change your own role or status."),
   last_admin: () => new ConflictError("LAST_ADMIN", "Last Admin", "This is the last active Admin. Make someone else an Admin first."),
