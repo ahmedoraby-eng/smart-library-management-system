@@ -1,0 +1,37 @@
+{
+  "name": "smart-library-management-system",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "contracts",
+    "api",
+    "web"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run build -w web && wrangler dev",
+    "dev:web": "npm run dev -w web",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "seed": "tsx scripts/seed.ts",
+    "reseed": "tsx scripts/seed.ts --reset",
+    "db:local": "tsx scripts/local-postgres.ts",
+    "typecheck": "tsc -p contracts && tsc -p api && tsc -p web",
+    "test": "vitest run",
+    "build": "npm run build -w web",
+    "deploy": "npm run build && wrangler deploy",
+    "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261124.1",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
+    "dependency-cruiser": "^18.9.0",
+    "embedded-postgres": "16.16.0-beta.19",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.168.0"
+  }
+}

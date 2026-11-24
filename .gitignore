@@ -4,8 +4,11 @@ dist/
 .dev.vars
 .env
 .env.*
+!.env.example
 !.dev.vars.example
+.pgdata/
 coverage/
 playwright-report/
 test-results/
+*.log
 .DS_Store

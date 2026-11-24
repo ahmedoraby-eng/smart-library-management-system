@@ -1,0 +1,16 @@
+# Local PostgreSQL 16 (same major version as production on Neon).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: library
+      POSTGRES_PASSWORD: library
+      POSTGRES_DB: library
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U library"]
+      interval: 2s
+      retries: 20
+volumes:
+  pgdata:
