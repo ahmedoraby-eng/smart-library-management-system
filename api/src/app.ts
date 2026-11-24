@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
 import type { Container } from "./container";
+import { memberRoutes } from "./members/api/routes";
 import { adminRoutes } from "./demo/api/routes";
 import type { AppEnv } from "./platform/appEnv";
 import { AppError, UnauthenticatedError, internalProblem, toProblem } from "./platform/errors";
@@ -96,6 +97,7 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
+  app.route("/members", memberRoutes());
   app.route("/admin", adminRoutes());
 
   return app;
