@@ -10,6 +10,10 @@ import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookDetailPage } from "../features/books/BookDetailPage";
 import { BookEditPage, BookNewPage } from "../features/books/BookFormPages";
 import { BooksPage } from "../features/books/BooksPage";
+import { BorrowPage } from "../features/circulation/BorrowPage";
+import { CirculationLayout } from "../features/circulation/CirculationLayout";
+import { ReturnPage } from "../features/circulation/ReturnPage";
+import { BorrowSearchSchema, ReturnSearchSchema } from "../features/circulation/searchSchemas";
 import { MemberDetailPage } from "../features/members/MemberDetailPage";
 import { MembersPage } from "../features/members/MembersPage";
 import { ApiError } from "../lib/apiClient";
@@ -62,8 +66,18 @@ const membersRoute = createRoute({
 });
 const memberDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/members/$memberId", component: MemberDetailPage });
 
-// Sidebar targets built in later stories (circulation SLM-4, loans SLM-5, discovery SLM-9, staff SLM-8).
-const circulationRoute = createRoute({ getParentRoute: () => appRoute, path: "/circulation", component: () => <ComingSoonPage title="Circulation" /> });
+// Sidebar targets built in later stories (loans SLM-5, staff SLM-8).
+// Circulation (SLM-4): two tabs; /circulation → borrow.
+const circulationRoute = createRoute({ getParentRoute: () => appRoute, path: "/circulation", component: CirculationLayout });
+const circulationIndexRoute = createRoute({
+  getParentRoute: () => circulationRoute,
+  path: "/",
+  beforeLoad: () => {
+    throw redirect({ to: "/circulation/borrow" });
+  },
+});
+const borrowRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/borrow", validateSearch: BorrowSearchSchema, component: BorrowPage });
+const returnRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/return", validateSearch: ReturnSearchSchema, component: ReturnPage });
 const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", component: () => <ComingSoonPage title="Loan history" /> });
 const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: DiscoveryPage });
 const staffRoute = createRoute({ getParentRoute: () => appRoute, path: "/admin/users", component: () => <ComingSoonPage title="Staff users" /> });
@@ -82,7 +96,7 @@ const routeTree = rootRoute.addChildren([
     bookEditRoute,
     membersRoute,
     memberDetailRoute,
-    circulationRoute,
+    circulationRoute.addChildren([circulationIndexRoute, borrowRoute, returnRoute]),
     loansRoute,
     discoverRoute,
     staffRoute,

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
+import { loanRoutes } from "./circulation/api/routes";
 import { dashboardRoutes } from "./dashboard/api/routes";
 import { discoveryRoutes } from "./discovery/api/routes";
 import type { Container } from "./container";
@@ -100,6 +101,7 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
+  app.route("/loans", loanRoutes());
   app.route("/ai", discoveryRoutes((c) => limiterFor(c.env, "DISCOVERY_LIMITER", discoveryFallback, 60)));
   app.route("/dashboard", dashboardRoutes());
   app.route("/members", memberRoutes());

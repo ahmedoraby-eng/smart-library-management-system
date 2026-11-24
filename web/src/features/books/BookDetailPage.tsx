@@ -99,7 +99,21 @@ function BookDetail({ book }: { book: BookDto }) {
         </div>
         {writable && (
           <div className="flex items-center gap-2">
-            {/* SLM-4: Borrow action (primary; disabled with tooltip "No copies available" at 0). */}
+            {can("LOAN_PROCESS") &&
+              (book.availableCopies > 0 ? (
+                <Link to="/circulation/borrow" search={{ book: book.id }} className={buttonClasses({ variant: "primary" })} data-testid="detail-borrow">
+                  Borrow
+                </Link>
+              ) : (
+                <span title="No copies available" data-testid="detail-borrow-disabled">
+                  <Button variant="primary" disabled aria-describedby="borrow-disabled-reason">
+                    Borrow
+                  </Button>
+                  <span id="borrow-disabled-reason" className="sr-only">
+                    No copies available
+                  </span>
+                </span>
+              ))}
             {can("BOOK_WRITE") && (
               <Link to="/books/$bookId/edit" params={{ bookId: book.id }} className={buttonClasses()} data-testid="edit-book">
                 <EditIcon size={16} /> Edit
