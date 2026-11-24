@@ -6,6 +6,7 @@ import {
   Table, Td, Th, Thead, Tr, useToast,
 } from "../../components/ui";
 import { api, ApiError } from "../../lib/apiClient";
+import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
 import { formatDay } from "../../lib/format";
 import { useLoans, useReturn } from "./api";
@@ -164,11 +165,11 @@ export function ReturnPage() {
                     </Td>
                     <Td>
                       <div className="font-medium">{loan.member.fullName}</div>
-                      <div className="text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
+                      <div className="text-sm text-neutral-600"><MemberNumber value={loan.member.memberNumber} /></div>
                     </Td>
-                    <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDay(loan.borrowedAt)}</Td>
+                    <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(loan.borrowedAt)}</Td>
                     <Td kind="num" className={cn(loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
-                      {formatDay(loan.dueAt)}
+                      {formatDate(loan.dueAt)}
                     </Td>
                     <Td kind="nowrap">
                       <LoanStatusBadge loan={loan} />

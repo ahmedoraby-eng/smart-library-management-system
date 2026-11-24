@@ -1,11 +1,10 @@
 import type { LoanDto } from "@slm/contracts";
+import { formatDate } from "../../lib/format";
 
 const DAY_MS = 86_400_000;
-const fullDay = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-/** "8 Dec 2026". */
-export const formatDate = (d: Date | string) => fullDay.format(typeof d === "string" ? new Date(d) : d);
+export { formatDate };
 export const formatTime = (d: Date | string) => time.format(typeof d === "string" ? new Date(d) : d);
 
 /** Local calendar day as YYYY-MM-DD (the value of an <input type="date">). */

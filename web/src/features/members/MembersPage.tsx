@@ -6,7 +6,8 @@ import {
   Skeleton, SortableTh, Table, Td, Th, Thead, Tr, UsersIcon,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
-import { formatDay } from "../../lib/format";
+import { MemberNumber } from "../../components/MemberNumber";
+import { formatDate } from "../../lib/format";
 import { useCan } from "../auth/session";
 import { useMembers } from "./api";
 import { MemberStatusBadge } from "./badges";
@@ -211,7 +212,7 @@ function MemberRow({ member, onEdit }: { member: MemberDto; onEdit: (m: MemberDt
         </Link>
         <div className="truncate text-sm text-neutral-600">{member.email}</div>
       </Td>
-      <Td kind="num" className="text-neutral-700" data-testid="member-number-cell">{member.memberNumber}</Td>
+      <Td kind="nowrap" className="text-neutral-700" data-testid="member-number-cell"><MemberNumber value={member.memberNumber} /></Td>
       <Td kind="num" className="text-neutral-700 max-lg:hidden">{member.phone ?? "—"}</Td>
       <Td kind="nowrap">
         <MemberStatusBadge status={member.status} />
@@ -226,7 +227,7 @@ function MemberRow({ member, onEdit }: { member: MemberDto; onEdit: (m: MemberDt
           )}
         </div>
       </Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDay(member.registeredAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(member.registeredAt)}</Td>
       <Td align="right" kind="actions">
         <div className="flex items-center justify-end gap-2">
           {/* SLM-4: Borrow action (secondary button, only for ACTIVE members, role with LOAN_PROCESS). */}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { BookDto } from "@slm/contracts";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../test/render";
@@ -22,10 +22,12 @@ describe("DeleteBookDialog variants (ux.md §3.4)", () => {
     expect(screen.getByRole("button", { name: "View active loans" })).toBeInTheDocument();
   });
 
-  it("past loans only → archive wording, focus on the safe button", async () => {
+  it("past loans only → archive wording with the past-loan count, focus on the safe button", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ items: [], total: 14, page: 1, size: 1 }), { status: 200, headers: { "content-type": "application/json" } })));
     await renderWithProviders(<DeleteBookDialog book={book({ hasLoanHistory: true })} onClose={() => undefined} />);
     const dialog = await screen.findByTestId("delete-dialog-archive");
     expect(dialog).toHaveTextContent("archived");
+    await waitFor(() => expect(dialog).toHaveTextContent("It has 14 past loans"));
     expect(screen.getByRole("button", { name: "Archive book" })).toBeInTheDocument();
     expect(screen.getByTestId("dialog-cancel")).toHaveFocus();
   });
@@ -46,7 +48,8 @@ describe("DeleteBookDialog variants (ux.md §3.4)", () => {
   });
 
   it("confirming calls DELETE and reports the archived toast", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ result: "archived" }), { status: 200, headers: { "content-type": "application/json" } }));
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, init?: { method?: string }) =>
+      new Response(JSON.stringify(init?.method === "DELETE" ? { result: "archived" } : { items: [], total: 1, page: 1, size: 1 }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
     await renderWithProviders(<DeleteBookDialog book={book({ hasLoanHistory: true })} onClose={() => undefined} />);
     await userEvent.click(await screen.findByRole("button", { name: "Archive book" }));

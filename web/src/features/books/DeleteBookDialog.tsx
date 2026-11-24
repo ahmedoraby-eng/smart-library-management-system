@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRef } from "react";
 import { Button, ConfirmDialog, Modal, useToast } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
+import { useLoans } from "../circulation/api";
 import { useDeleteBook } from "./api";
 
 /**
@@ -14,6 +15,9 @@ export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onC
   const toast = useToast();
   const del = useDeleteBook();
   const closeRef = useRef<HTMLButtonElement>(null);
+  // ux §3.4: the archive dialog states how many past loans the book has (one cheap count query).
+  const past = useLoans({ bookId: book.id, size: 1 }, { enabled: book.activeLoans === 0 && book.hasLoanHistory });
+  const pastCount = past.data?.total;
 
   if (book.activeLoans > 0) {
     return <BlockedDialog book={book} onClose={onClose} closeRef={closeRef} />;
@@ -52,7 +56,7 @@ export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onC
       testId="delete-dialog-archive"
     >
       <p>
-        It has past loans, so it will be <strong>archived</strong>: hidden from Books and search, still shown in Loan history.
+        It has {pastCount === undefined ? "past loans" : `${pastCount} past ${pastCount === 1 ? "loan" : "loans"}`}, so it will be <strong>archived</strong>: hidden from Books and search, still shown in Loan history.
       </p>
     </ConfirmDialog>
   ) : (
