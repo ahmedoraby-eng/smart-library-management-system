@@ -2,6 +2,8 @@
 
 /* Design tokens: decisions/ux.md §2. Tailwind 4, CSS-first. */
 @theme {
+  /* 1440 px: wide desktop (ISBN column shows from here; Haya pass 1, M1). */
+  --breakpoint-wide: 90rem;
   --color-neutral-0: #ffffff;
   --color-neutral-25: #fcfcfd;
   --color-neutral-50: #f7f8fa;

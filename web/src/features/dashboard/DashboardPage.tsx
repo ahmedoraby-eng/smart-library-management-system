@@ -5,16 +5,17 @@ import {
   AvailabilityBadge, Badge, BookIcon, Button, buttonClasses, Card, CardHeader, EmptyState, HistoryIcon, InlineAlert, PlusIcon,
   Skeleton, SwapIcon, Table, Td, Th, Thead, Tr, UsersIcon,
 } from "../../components/ui";
+import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
-import { formatDay } from "../../lib/format";
+import { formatDate, formatDay } from "../../lib/format";
 import { useCan, useMe } from "../auth/session";
 import { BookCover } from "../books/BookCover";
+import { LoanStatusBadge } from "../circulation/LoanStatusBadge";
 import { useDashboard } from "./api";
 import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } from "./model";
 
-// The circulation routes arrive with SLM-4; until then the typed router only knows "/circulation".
-const BORROW_TO = "/circulation/borrow" as "/circulation";
-const RETURN_TO = "/circulation/return" as "/circulation";
+/** Card-header links: brand-700, semibold. */
+const cardLink = "text-base font-semibold text-brand-700";
 
 type Kpis = DashboardSummary["kpis"];
 const today = () => new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
@@ -35,10 +36,10 @@ export function DashboardPage() {
         </div>
         {can("LOAN_PROCESS") && (
           <div className="flex gap-2">
-            <Link to={RETURN_TO} className={buttonClasses({ variant: "secondary" })} data-testid="dash-return">
+            <Link to="/circulation/return" className={buttonClasses({ variant: "secondary" })} data-testid="dash-return">
               <SwapIcon size={16} /> Return book
             </Link>
-            <Link to={BORROW_TO} className={buttonClasses({ variant: "primary" })} data-testid="dash-borrow">
+            <Link to="/circulation/borrow" className={buttonClasses({ variant: "primary" })} data-testid="dash-borrow">
               <PlusIcon size={16} /> Borrow book
             </Link>
           </div>
@@ -121,7 +122,7 @@ function KpiCards({ k }: { k: Kpis }) {
           {k.overdueLoans > 0 ? (
             <>
               <Badge variant="danger" data-testid="kpi-overdue">{k.overdueLoans} overdue</Badge>
-              <Link to="/loans" search={{ status: "overdue" } as never} className="text-base font-medium" data-testid="view-overdue">View overdue</Link>
+              <Link to="/loans" search={{ status: "OVERDUE", page: 1, size: 20 }} className={cardLink} data-testid="view-overdue">View overdue</Link>
             </>
           ) : (
             <span className="text-base text-neutral-600" data-testid="kpi-overdue-none">None overdue</span>
@@ -156,7 +157,7 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
           <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
         ))}
       </div>
-      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-600">
+      <ul className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 whitespace-nowrap text-xs text-neutral-600">
         {items.map((i) => (
           <li key={i.key} className="flex items-center gap-1.5">
             <span className={cn("h-1.5 w-1.5 rounded-full", i.dot)} aria-hidden="true" />
@@ -168,26 +169,18 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
   );
 }
 
-function LoanStatusBadge({ status, dueAt }: { status: DashboardSummary["recentBorrowings"][number]["status"]; dueAt: string }) {
-  if (status === "OVERDUE") {
-    const d = daysOverdue(dueAt);
-    return <Badge variant="danger">Overdue · {d} {d === 1 ? "day" : "days"}</Badge>;
-  }
-  if (status === "RETURNED") return <Badge variant="neutral" dot={false}>Returned</Badge>;
-  return <Badge variant="info">Active</Badge>;
-}
 
 function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentBorrowings"]; canBorrow: boolean }) {
   return (
     <Card data-testid="recent-borrowings">
-      <CardHeader title="Recent borrowings" action={<Link to="/loans" className="text-base font-medium">View loan history</Link>} />
+      <CardHeader title="Recent borrowings" action={<Link to="/loans" search={{ page: 1, size: 20 }} className={cardLink}>View loan history</Link>} />
       {rows.length === 0 ? (
         <EmptyState
           testId="recent-empty"
           icon={<HistoryIcon size={40} />}
           title="No loans yet"
           text="Borrowings you record will show here."
-          action={canBorrow ? <Link to={BORROW_TO} className={buttonClasses({ variant: "primary" })}>Borrow book</Link> : undefined}
+          action={canBorrow ? <Link to="/circulation/borrow" className={buttonClasses({ variant: "primary" })}>Borrow book</Link> : undefined}
         />
       ) : (
         <Table aria-label="Recent borrowings" data-testid="recent-table">
@@ -195,7 +188,7 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
             <tr>
               <Th>Book</Th>
               <Th>Member</Th>
-              <Th>Borrowed</Th>
+              <Th className="max-wide:hidden">Borrowed</Th>
               <Th>Due</Th>
               <Th>Status</Th>
             </tr>
@@ -209,11 +202,11 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
                 </Td>
                 <Td>
                   <div className="font-semibold">{l.member.fullName}</div>
-                  <div className="text-sm text-neutral-600">{l.member.memberNumber}</div>
+                  <div className="text-sm text-neutral-600"><MemberNumber value={l.member.memberNumber} /></div>
                 </Td>
-                <Td className="whitespace-nowrap">{formatDay(l.borrowedAt)}</Td>
-                <Td className={cn("whitespace-nowrap", l.status === "OVERDUE" && "font-semibold text-danger-700")}>{formatDay(l.dueAt)}</Td>
-                <Td><LoanStatusBadge status={l.status} dueAt={l.dueAt} /></Td>
+                <Td kind="num" className="max-wide:hidden">{formatDate(l.borrowedAt)}</Td>
+                <Td kind="num" className={cn(l.status === "OVERDUE" && "font-semibold text-danger-700")}>{formatDate(l.dueAt)}</Td>
+                <Td kind="nowrap"><LoanStatusBadge loan={l} /></Td>
               </Tr>
             ))}
           </tbody>
@@ -250,7 +243,7 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
 function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) {
   return (
     <Card data-testid="recently-added">
-      <CardHeader title="Recently added" action={<Link to="/books" search={{ page: 1, size: 20, sort: "-createdAt" }} className="text-base font-medium">All books</Link>} />
+      <CardHeader title="Recently added" action={<Link to="/books" search={{ page: 1, size: 20, sort: "-createdAt" }} className={cardLink}>All books</Link>} />
       {books.length === 0 ? (
         <p className="px-5 py-8 text-center text-base text-neutral-600" data-testid="added-empty">No books yet.</p>
       ) : (

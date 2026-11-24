@@ -185,9 +185,9 @@ export function BooksPage() {
                       onSort={(s) => setSearch({ sort: s })}
                       className="max-lg:hidden"
                     />
-                    <Th className="max-lg:hidden">ISBN</Th>
+                    <Th className="max-wide:hidden">ISBN</Th>
                     <SortableTh label="Availability" sortKey="availableCopies" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
-                    <Th align="right">
+                    <Th align="right" kind="actions">
                       <span className="sr-only">Actions</span>
                     </Th>
                   </tr>
@@ -255,13 +255,13 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
           </div>
         </div>
       </Td>
-      <Td className="text-neutral-700">{book.category}</Td>
-      <Td className="tabular-nums text-neutral-700 max-lg:hidden">{book.publicationYear ?? "—"}</Td>
-      <Td className="tabular-nums text-neutral-700 max-lg:hidden">{book.isbn ?? "—"}</Td>
-      <Td>
+      <Td kind="nowrap" className="text-neutral-700">{book.category}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">{book.publicationYear ?? "—"}</Td>
+      <Td kind="num" className="text-neutral-700 max-wide:hidden">{book.isbn ?? "—"}</Td>
+      <Td kind="nowrap">
         <AvailabilityBadge book={book} showNextDue />
       </Td>
-      <Td align="right">
+      <Td align="right" kind="actions">
         <div className="flex items-center justify-end gap-2">
           {can("LOAN_PROCESS") && book.availableCopies > 0 && (
             <Link to="/circulation/borrow" search={{ book: book.id }} className={buttonClasses({ size: "sm" })} data-testid="row-borrow">

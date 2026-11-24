@@ -7,7 +7,7 @@ import {
 } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { api, ApiError } from "../../lib/apiClient";
-import { formatDay, initials } from "../../lib/format";
+import { formatDay, formatWeekdayDate, initials } from "../../lib/format";
 import { useMe } from "../auth/session";
 import { BookCover } from "../books/BookCover";
 import { useBookSearch, useBorrow, useLoans, useMember, useMemberSearch } from "./api";
@@ -59,6 +59,7 @@ export function BorrowPage() {
   const memberInput = useRef<HTMLInputElement>(null);
   const bookInput = useRef<HTMLInputElement>(null);
   const confirmBtn = useRef<HTMLButtonElement>(null);
+  const dueInput = useRef<HTMLInputElement>(null);
 
   // Prefill from ?member= / ?book= (book row, book detail, member detail, AI result).
   const prefMember = useMember(search.member);
@@ -104,6 +105,7 @@ export function BorrowPage() {
   const today = new Date();
   const dueDays = daysUntil(dueDay, today);
   const lastDay = addDays(today, 60);
+  const dueLabel = Number.isNaN(dueDays) ? "Choose a date" : formatWeekdayDate(addDays(today, dueDays));
   const dueError = dueServerError ?? (dueDays < 1 || dueDays > 60 || Number.isNaN(dueDays)
     ? `Choose a due date between tomorrow and ${formatDate(lastDay)}.`
     : null);
@@ -230,8 +232,9 @@ export function BorrowPage() {
             <InlineAlert
               variant="success"
               testId="borrow-success"
-              action={
-                <div className="flex flex-wrap justify-end gap-2">
+            >
+              <SuccessText loan={success.loan} available={success.available} total={success.total} />
+              <div className="mt-2.5 flex flex-wrap gap-2">
                   {member && (
                     <Button size="sm" onClick={borrowAnother} data-testid="borrow-another">
                       Borrow another for {firstName(member)}
@@ -248,10 +251,7 @@ export function BorrowPage() {
                   >
                     View loan
                   </Link>
-                </div>
-              }
-            >
-              <SuccessText loan={success.loan} available={success.available} total={success.total} />
+              </div>
             </InlineAlert>
           )}
           {notice?.target === "form" && (
@@ -356,25 +356,43 @@ export function BorrowPage() {
               <label htmlFor="due-date" className="sr-only">
                 Due date
               </label>
-              <input
-                id="due-date"
-                type="date"
-                value={dueDay}
-                min={toDayInput(addDays(today, 1))}
-                max={toDayInput(lastDay)}
-                onChange={(e) => {
-                  setDueDay(e.target.value);
-                  setDueTouched(true);
-                  setDueServerError(null);
-                }}
-                aria-invalid={dueError ? true : undefined}
-                aria-describedby="due-help"
-                data-testid="due-date"
-                className={cn(
-                  "h-10 w-48 rounded-md border bg-surface px-3 text-base focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 focus:outline-none",
-                  dueError ? "border-danger-500" : "border-border-strong",
-                )}
-              />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => dueInput.current?.showPicker?.()}
+                  aria-label={`Due date: ${dueLabel}. Change`}
+                  aria-describedby="due-help"
+                  data-testid="due-date-display"
+                  className={cn(
+                    "flex h-10 w-52 items-center justify-between gap-2 rounded-md border bg-surface px-3 text-base tabular-nums focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 focus:outline-none",
+                    dueError ? "border-danger-500" : "border-border-strong",
+                  )}
+                >
+                  <span>{dueLabel}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-neutral-500">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                </button>
+                {/* The native picker stays behind the formatted text: it holds the value and opens from the button. */}
+                <input
+                  ref={dueInput}
+                  id="due-date"
+                  type="date"
+                  tabIndex={-1}
+                  value={dueDay}
+                  min={toDayInput(addDays(today, 1))}
+                  max={toDayInput(lastDay)}
+                  onChange={(e) => {
+                    setDueDay(e.target.value);
+                    setDueTouched(true);
+                    setDueServerError(null);
+                  }}
+                  aria-invalid={dueError ? true : undefined}
+                  data-testid="due-date"
+                  className="sr-only"
+                />
+              </div>
               {DUE_CHIPS.map((d) => (
                 <button
                   key={d}

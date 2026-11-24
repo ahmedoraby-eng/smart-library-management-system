@@ -6,8 +6,9 @@ import {
   Table, Td, Th, Thead, Tr,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
+import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
-import { formatDay } from "../../lib/format";
+import { formatDate } from "../../lib/format";
 import { useLoans } from "./api";
 import { LoanStatusBadge } from "./LoanStatusBadge";
 import type { LoanHistorySearch } from "./searchSchemas";
@@ -78,7 +79,7 @@ export function LoanHistoryPage() {
       </header>
 
       <Card>
-        <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <div className="min-w-64 flex-1">
             <Input
               label="Search loans"
@@ -86,7 +87,7 @@ export function LoanHistoryPage() {
               compact
               leading={<SearchIcon size={16} />}
               type="search"
-              placeholder="Search book title, ISBN, member name or number"
+              placeholder="Search book or member"
               value={qText}
               onChange={(e) => setQText(e.target.value)}
               data-testid="loan-search"
@@ -106,8 +107,8 @@ export function LoanHistoryPage() {
               </option>
             ))}
           </Select>
-          <DateFilter label="Borrowed from" value={search.from} onChange={(from) => setSearch({ from })} testId="filter-from" />
-          <DateFilter label="Borrowed to" value={search.to} onChange={(to) => setSearch({ to })} testId="filter-to" />
+          <DateFilter label="Borrowed from" inline="From" value={search.from} onChange={(from) => setSearch({ from })} testId="filter-from" />
+          <DateFilter label="Borrowed to" inline="To" value={search.to} onChange={(to) => setSearch({ to })} testId="filter-to" />
         </div>
 
         {(search.memberId || search.bookId) && (
@@ -202,36 +203,40 @@ function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: strin
           type="button"
           onClick={() => onMember(loan.member.id)}
           title={`Show loans of ${loan.member.fullName}`}
-          className="text-left font-medium text-neutral-900 hover:underline"
+          className="whitespace-nowrap text-left font-medium text-neutral-900 hover:underline"
           data-testid="member-filter-link"
         >
           {loan.member.fullName}
         </button>
-        <div className="text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
+        <div className="whitespace-nowrap text-sm text-neutral-600"><MemberNumber value={loan.member.memberNumber} /></div>
       </Td>
-      <Td className="tabular-nums text-neutral-700">{formatDay(loan.borrowedAt)}</Td>
-      <Td className={cn("tabular-nums", overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(loan.dueAt)}</Td>
-      <Td className="tabular-nums text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDay(loan.returnedAt) : "—"}</Td>
-      <Td>
+      <Td kind="num" className="text-neutral-700">{formatDate(loan.borrowedAt)}</Td>
+      <Td kind="num" className={cn(overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDate(loan.dueAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDate(loan.returnedAt) : "—"}</Td>
+      <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>
-      <Td className="text-neutral-700 max-lg:hidden">{loan.processedBy.name}</Td>
+      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>{loan.processedBy.name}</Td>
     </Tr>
   );
 }
 
-function DateFilter({ label, value, onChange, testId }: { label: string; value: string | undefined; onChange: (v: string | undefined) => void; testId: string }) {
+function DateFilter({ label, inline, value, onChange, testId }: { label: string; inline: string; value: string | undefined; onChange: (v: string | undefined) => void; testId: string }) {
   // The URL holds a day (YYYY-MM-DD); a full date-time from an old link shows as its day.
   return (
-    <Input
-      label={label}
-      type="date"
-      compact
-      value={value?.slice(0, 10) ?? ""}
-      onChange={(e) => onChange(e.target.value || undefined)}
-      data-testid={testId}
-      className="w-40"
-    />
+    <div className="flex items-center gap-2">
+      <span aria-hidden="true" className="text-sm font-medium text-neutral-600">{inline}</span>
+      <Input
+        label={label}
+        hideLabel
+        type="date"
+        compact
+        value={value?.slice(0, 10) ?? ""}
+        onChange={(e) => onChange(e.target.value || undefined)}
+        data-testid={testId}
+        className="w-40"
+      />
+    </div>
   );
 }
 

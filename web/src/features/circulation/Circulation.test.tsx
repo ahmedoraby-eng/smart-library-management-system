@@ -79,6 +79,21 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
     expect(screen.getByTestId("confirm-borrow")).toBeDisabled();
   });
 
+  it("SLM-7 S1/S2 the active tab carries aria-current; the due date shows as 'Tue, 8 Dec 2026' over the native input", async () => {
+    await renderApp(`/circulation/borrow?member=${MEMBER_ID}&book=${BOOK_ID}`, ({ url }) => {
+      if (url.pathname === `/api/members/${MEMBER_ID}`) return { body: member() };
+      if (url.pathname === `/api/books/${BOOK_ID}`) return { body: book() };
+      if (url.pathname === "/api/loans") return { body: page([]) };
+      return undefined;
+    });
+    expect(await screen.findByTestId("tab-borrow")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("tab-return")).not.toHaveAttribute("aria-current");
+    const input = screen.getByTestId("due-date") as HTMLInputElement;
+    const [y, m, d] = input.value.split("-").map(Number) as [number, number, number];
+    const expected = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d)).replace(/^(\w{3}),? /, "$1, ").replace("Sept", "Sep");
+    expect(screen.getByTestId("due-date-display")).toHaveTextContent(expected);
+  });
+
   it("SLM-4 AC3 race: 409 BOOK_UNAVAILABLE → notice under Book, book field reset", async () => {
     const user = userEvent.setup();
     await renderApp(`/circulation/borrow?member=${MEMBER_ID}&book=${BOOK_ID}`, ({ method, url }) => {

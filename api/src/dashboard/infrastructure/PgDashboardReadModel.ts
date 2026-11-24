@@ -1,5 +1,7 @@
 import type { DashboardSummary, LoanStatus } from "@slm/contracts";
 import { sql } from "drizzle-orm";
+import { isOverdueSql, loanStatusSql } from "../../circulation/infrastructure/loanSql";
+import type { Clock } from "../../platform/clock";
 import type { Db } from "../../platform/db";
 import type { DashboardReadModel } from "../domain/Dashboard";
 
@@ -9,30 +11,32 @@ const isoOrNull = (v: unknown) => (v ? iso(v) : null);
 
 /**
  * Read model over books, members and loans, read by table name in raw SQL (architecture §2.1: the
- * dashboard owns no tables). OVERDUE is derived exactly as `returned_at IS NULL AND due_at < now()`.
+ * dashboard owns no tables). OVERDUE comes from circulation's `isOverdueSql(clock())`, the one derivation
+ * every screen uses, with the injected clock (no SQL `now()`).
  * Archived books are excluded from counts, popular and recently added; loan history keeps them.
  */
 export class PgDashboardReadModel implements DashboardReadModel {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: Db, private readonly clock: Clock) {}
 
   async summary(): Promise<DashboardSummary> {
+    const now = this.clock();
     const [kpis, members, loans, recent, popular, added] = await Promise.all([
       this.db.execute(sql`SELECT count(*)::int AS titles, coalesce(sum(total_copies), 0)::int AS total,
           coalesce(sum(available_copies), 0)::int AS available
         FROM books WHERE archived_at IS NULL`),
       this.db.execute(sql`SELECT count(*) FILTER (WHERE status = 'ACTIVE')::int AS active,
           count(*) FILTER (WHERE status = 'INACTIVE')::int AS inactive FROM members`),
-      this.db.execute(sql`SELECT count(*)::int AS active, count(*) FILTER (WHERE due_at < now())::int AS overdue
-        FROM loans WHERE returned_at IS NULL`),
+      this.db.execute(sql`SELECT count(*)::int AS active, count(*) FILTER (WHERE ${isOverdueSql(now)})::int AS overdue
+        FROM loans l WHERE l.returned_at IS NULL`),
       this.db.execute(sql`SELECT l.id, l.borrowed_at, l.due_at,
-          CASE WHEN l.returned_at IS NOT NULL THEN 'RETURNED' WHEN l.due_at < now() THEN 'OVERDUE' ELSE 'ACTIVE' END AS status,
+          ${loanStatusSql(now)} AS status,
           b.id AS book_id, b.title, b.author, m.id AS member_id, m.member_number, m.full_name
         FROM loans l JOIN books b ON b.id = l.book_id JOIN members m ON m.id = l.member_id
         ORDER BY l.borrowed_at DESC, l.id DESC LIMIT 8`),
       this.db.execute(sql`SELECT b.id, b.title, b.author, b.cover_image_url, b.total_copies, b.available_copies,
           pop.loans_30d, nd.next_due_at
         FROM (SELECT book_id, count(*)::int AS loans_30d FROM loans
-               WHERE borrowed_at >= now() - interval '30 days' GROUP BY book_id) pop
+               WHERE borrowed_at >= ${now.toISOString()}::timestamptz - interval '30 days' GROUP BY book_id) pop
         JOIN books b ON b.id = pop.book_id AND b.archived_at IS NULL
         LEFT JOIN LATERAL (SELECT min(due_at) AS next_due_at FROM loans WHERE book_id = b.id AND returned_at IS NULL) nd ON true
         ORDER BY pop.loans_30d DESC, lower(b.title) ASC, b.id ASC LIMIT 5`),

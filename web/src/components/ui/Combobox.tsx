@@ -1,4 +1,4 @@
-import { type ReactNode, type Ref, useId, useState } from "react";
+import { type ReactNode, type Ref, useId, useState, useEffect } from "react";
 import { cn } from "../../lib/cn";
 import { SearchIcon, Spinner } from "./icons";
 
@@ -34,6 +34,11 @@ export function Combobox<T>({
   const shown = (options ?? []).slice(0, 8);
   const reasonOf = (o: T) => disabledReason?.(o) ?? null;
   const expanded = open && value.trim().length > 0 && (options !== undefined || loading);
+  // New results: highlight the first option that can be picked, so Enter selects it (Haya pass 2).
+  const firstPickable = shown.findIndex((o) => !reasonOf(o));
+  useEffect(() => {
+    setActive(Math.max(firstPickable, 0));
+  }, [options, firstPickable]);
 
   const pick = (o: T | undefined) => {
     if (!o || reasonOf(o)) return;

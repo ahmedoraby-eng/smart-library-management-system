@@ -2,14 +2,15 @@ import type { BookDto, LoanDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Button, buttonClasses, Card, ConfirmDialog, EmptyState, HistoryIcon, InlineAlert, Input, Pagination, SearchIcon, Skeleton,
+  Button, buttonClasses, Card, EmptyState, HistoryIcon, InlineAlert, Input, Pagination, SearchIcon, Skeleton,
   Table, Td, Th, Thead, Tr, useToast,
 } from "../../components/ui";
-import { api, ApiError } from "../../lib/apiClient";
+import { api } from "../../lib/apiClient";
+import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
-import { formatDay } from "../../lib/format";
+import { formatDate } from "../../lib/format";
 import { useLoans, useReturn } from "./api";
-import { formatDate, formatTime, overdueDays } from "./loanFormat";
+import { ReturnConfirmDialog, returnErrorMessage } from "./ReturnConfirmDialog";
 import { LoanStatusBadge } from "./LoanStatusBadge";
 
 const route = getRouteApi("/app/circulation/return");
@@ -66,15 +67,8 @@ export function ReturnPage() {
       },
       onError: (err) => {
         setConfirming(null);
-        if (err instanceof ApiError && err.code === "LOAN_ALREADY_RETURNED") {
-          const ctx = err.problem.context as { returnedAt?: string; returnedBy?: string | null } | undefined;
-          const when = ctx?.returnedAt ? ` on ${formatDate(ctx.returnedAt)} at ${formatTime(ctx.returnedAt)}` : "";
-          toast.error(`This loan was already returned${when}${ctx?.returnedBy ? ` by ${ctx.returnedBy}` : ""}.`);
-        } else if (err instanceof ApiError && err.status === 404) {
-          toast.error("This loan no longer exists. The list has been refreshed.");
-        } else if (!(err instanceof ApiError) || err.status >= 500) {
-          toast.error("Couldn't record the return. Nothing was saved. Try again.");
-        }
+        const message = returnErrorMessage(err);
+        if (message) toast.error(message);
       },
     });
 
@@ -138,7 +132,7 @@ export function ReturnPage() {
                   <Th className="max-lg:hidden">Borrowed</Th>
                   <Th>Due</Th>
                   <Th>Status</Th>
-                  <Th align="right">
+                  <Th align="right" kind="actions">
                     <span className="sr-only">Actions</span>
                   </Th>
                 </tr>
@@ -164,16 +158,16 @@ export function ReturnPage() {
                     </Td>
                     <Td>
                       <div className="font-medium">{loan.member.fullName}</div>
-                      <div className="text-sm text-neutral-600 tabular-nums">{loan.member.memberNumber}</div>
+                      <div className="text-sm text-neutral-600"><MemberNumber value={loan.member.memberNumber} /></div>
                     </Td>
-                    <Td className="tabular-nums text-neutral-700 max-lg:hidden">{formatDay(loan.borrowedAt)}</Td>
-                    <Td className={cn("tabular-nums", loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
-                      {formatDay(loan.dueAt)}
+                    <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(loan.borrowedAt)}</Td>
+                    <Td kind="num" className={cn(loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
+                      {formatDate(loan.dueAt)}
                     </Td>
-                    <Td>
+                    <Td kind="nowrap">
                       <LoanStatusBadge loan={loan} />
                     </Td>
-                    <Td align="right">
+                    <Td align="right" kind="actions">
                       <Button
                         size="sm"
                         ref={(el) => {
@@ -196,17 +190,7 @@ export function ReturnPage() {
       )}
 
       {confirming && (
-        <ConfirmDialog
-          testId="return-dialog"
-          title={`Return ${confirming.book.title} from ${confirming.member.fullName}?`}
-          confirmLabel="Confirm return"
-          loading={giveBack.isPending}
-          onCancel={() => setConfirming(null)}
-          onConfirm={() => confirm(confirming)}
-        >
-          Return date: today, {formatDate(new Date())} · was due {formatDay(confirming.dueAt)}
-          {confirming.status === "OVERDUE" && ` (${overdueDays(confirming)} ${overdueDays(confirming) === 1 ? "day" : "days"} overdue)`}.
-        </ConfirmDialog>
+        <ReturnConfirmDialog loan={confirming} loading={giveBack.isPending} onCancel={() => setConfirming(null)} onConfirm={() => confirm(confirming)} />
       )}
     </Card>
   );

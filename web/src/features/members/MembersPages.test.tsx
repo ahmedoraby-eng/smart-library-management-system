@@ -124,10 +124,68 @@ describe("Member detail /members/:id", () => {
     expect(screen.getByTestId("profile-number")).toHaveTextContent("M-000001");
     expect(screen.getByTestId("profile-phone")).toHaveTextContent("+20 100");
     const rows = await screen.findAllByTestId("loan-row");
-    expect(rows.map((r) => within(r).getByTestId("loan-book").textContent)).toEqual(["Book 1", "Book 2", "Book 3"]);
+    expect(rows.map((r) => within(r).getByTestId("loan-book").textContent)).toEqual(["Book 1", "Book 2"]);
     expect(within(rows[0]!).getByTestId("loan-status")).toHaveTextContent("Overdue · 4 days");
     expect(within(rows[1]!).getByTestId("loan-status")).toHaveTextContent("Active");
-    expect(within(rows[2]!).getByTestId("loan-status")).toHaveTextContent("Returned");
+  });
+
+  it("tabs: On loan (n of 5) and History; arrow keys move between them; History has no Return buttons", async () => {
+    stubApi(LIBRARIAN, { "/members/m1/loans": loans, "/members/m1": member({ activeLoans: 2 }) });
+    await visit("/members/m1");
+    const onLoan = await screen.findByRole("tab", { name: "On loan (2 of 5)" });
+    expect(onLoan).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toBeInTheDocument();
+    expect(screen.getAllByTestId("return-button")).toHaveLength(2);
+    onLoan.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    const history = screen.getByRole("tab", { name: "History (1)" });
+    expect(history).toHaveAttribute("aria-selected", "true");
+    expect(history).toHaveFocus();
+    const rows = screen.getAllByTestId("loan-row");
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]!).getByTestId("loan-status")).toHaveTextContent("Returned");
+    expect(screen.queryByTestId("return-button")).not.toBeInTheDocument();
+  });
+
+  it("inline Return opens the confirm dialog, then posts the return and refreshes the member's loans", async () => {
+    let returned = false;
+    const calls = stubApi(LIBRARIAN, {
+      "/loans/1/return": () => { returned = true; return loan("1", "RETURNED", -4, true); },
+      "/members/m1/loans": () => (returned ? [loans[1]!, loan("1", "RETURNED", -4, true), loans[2]!] : loans),
+      "/members/m1": member({ activeLoans: 2 }),
+    });
+    await visit("/members/m1");
+    const rows = await screen.findAllByTestId("loan-row");
+    await userEvent.click(within(rows[0]!).getByTestId("return-button"));
+    const dialog = await screen.findByTestId("return-dialog");
+    expect(dialog).toHaveTextContent("Return Book 1 from Sara Haddad?");
+    expect(calls.some((c) => c.startsWith("POST"))).toBe(false);
+    await userEvent.click(within(dialog).getByTestId("dialog-confirm"));
+    await waitFor(() => expect(calls).toContain("POST /loans/1/return"));
+    await waitFor(() => expect(screen.getAllByTestId("loan-row")).toHaveLength(1));
+    expect(screen.queryByTestId("return-dialog")).not.toBeInTheDocument();
+  });
+
+  it("[Borrow a book] links to Borrow with the member prefilled", async () => {
+    stubApi(LIBRARIAN, { "/members/m1/loans": [], "/members/m1": member({}) });
+    await visit("/members/m1");
+    expect(await screen.findByTestId("borrow-for-member")).toHaveAttribute("href", expect.stringContaining("/circulation/borrow?member=m1"));
+  });
+
+  it("[Borrow a book] is disabled with the reason for an inactive member, and absent without LOAN_PROCESS", async () => {
+    stubApi(LIBRARIAN, { "/members/m1/loans": [], "/members/m1": member({ status: "INACTIVE" }) });
+    await visit("/members/m1");
+    const btn = await screen.findByTestId("borrow-for-member");
+    expect(btn).toBeDisabled();
+    expect(screen.getByTestId("borrow-disabled-reason")).toHaveAttribute("title", "Inactive members can't borrow. Reactivate them first.");
+  });
+
+  it("Supervisor: no [Borrow a book]", async () => {
+    stubApi(SUPERVISOR, { "/members/m1/loans": [], "/members/m1": member({}) });
+    const qc = await visit("/members/m1");
+    await screen.findByTestId("member-detail-name");
+    await waitFor(() => expect(qc.getQueryData(["me"])).toBeDefined());
+    expect(screen.queryByTestId("borrow-for-member")).not.toBeInTheDocument();
   });
 
   it("deactivate asks for confirmation, then sends the guarded PUT", async () => {
@@ -156,7 +214,8 @@ describe("Member detail /members/:id", () => {
     expect(await screen.findByTestId("member-detail-name")).toBeInTheDocument();
     expect(screen.queryByTestId("edit-member")).not.toBeInTheDocument();
     expect(screen.queryByTestId("detail-actions")).not.toBeInTheDocument();
-    expect((await screen.findAllByTestId("loan-row")).length).toBe(3);
+    expect((await screen.findAllByTestId("loan-row")).length).toBe(2);
+    expect(screen.queryByTestId("return-button")).not.toBeInTheDocument();
   });
 
   it("an unknown member shows the not-found state", async () => {

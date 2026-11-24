@@ -72,6 +72,20 @@ describe("SLM-12 dashboard", () => {
     expect(statuses).toEqual(["ACTIVE", "ACTIVE", "OVERDUE"]);
   });
 
+  it("SLM-7 (Yousef, #8) OVERDUE follows the injected clock, the same derivation as loan history", async () => {
+    const a = await book("Alpha", 2, 0);
+    const m1 = await member("Ann"), m2 = await member("Bob");
+    await loan(a, m1, { daysAgo: 1, dueIn: 3 }); // not overdue by wall clock
+    await loan(a, m2, { daysAgo: 1, dueIn: 10 });
+    const fiveDaysOn = () => new Date(Date.now() + 5 * 86_400_000);
+    const req = await as(staff.librarian);
+    const dash = (await (await testApp({ clock: fiveDaysOn }).request("/api/dashboard/summary", req)).json()) as Json;
+    expect(dash.kpis.overdueLoans).toBe(1);
+    expect((dash.recentBorrowings as Json[]).map((l) => l.status).sort()).toEqual(["ACTIVE", "OVERDUE"]);
+    const hist = (await (await testApp({ clock: fiveDaysOn }).request("/api/loans?status=OVERDUE", req)).json()) as Json;
+    expect(hist.total).toBe(1);
+  });
+
   it("SLM-12 AC2 archived books are excluded from KPIs, popular and recently added", async () => {
     await book("Visible", 2, 2);
     const gone = await book("Archived", 9, 9, { archived: true });

@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { EmptyState, Skeleton, Table, Td, Th, Thead, Tr } from "../../components/ui";
+import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
-import { formatDay } from "../../lib/format";
+import { formatDate } from "../../lib/format";
 import { useLoans } from "./api";
 import { LoanStatusBadge } from "./LoanStatusBadge";
 
@@ -68,15 +69,15 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
               <Tr key={l.id} data-testid="book-loan-row" className={cn(l.status === "OVERDUE" && "bg-[#FFFBFA]")}>
                 <Td>
                   <div className="font-medium">{l.member.fullName}</div>
-                  <div className="text-sm text-neutral-600 tabular-nums">{l.member.memberNumber}</div>
+                  <div className="text-sm text-neutral-600"><MemberNumber value={l.member.memberNumber} /></div>
                 </Td>
-                <Td className="tabular-nums text-neutral-700">{formatDay(l.borrowedAt)}</Td>
-                <Td className={cn("tabular-nums", l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDay(l.dueAt)}</Td>
-                <Td className="tabular-nums text-neutral-700">{l.returnedAt ? formatDay(l.returnedAt) : "—"}</Td>
-                <Td>
+                <Td kind="num" className="text-neutral-700">{formatDate(l.borrowedAt)}</Td>
+                <Td kind="num" className={cn(l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDate(l.dueAt)}</Td>
+                <Td kind="num" className="text-neutral-700">{l.returnedAt ? formatDate(l.returnedAt) : "—"}</Td>
+                <Td kind="nowrap">
                   <LoanStatusBadge loan={l} />
                 </Td>
-                <Td className="text-neutral-700 max-lg:hidden">{l.processedBy.name}</Td>
+                <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={l.processedBy.name}>{l.processedBy.name}</Td>
               </Tr>
             ))}
           </tbody>

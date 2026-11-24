@@ -18,7 +18,7 @@ const sameLocalDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
  * ux.md §2 status mapping. The API sends the derived status (RETURNED / OVERDUE / ACTIVE);
  * this adds the texts: "Overdue · 3 days", "Due in 2 days" / "Due today", "Active", "Returned".
  */
-export function loanBadge(loan: Pick<LoanDto, "status" | "dueAt">, now: Date = new Date()): LoanBadgeModel {
+export function loanStatus(loan: Pick<LoanDto, "status" | "dueAt">, now: Date = new Date()): LoanBadgeModel {
   if (loan.status === "RETURNED") return { kind: "returned", variant: "neutral", label: "Returned" };
   const due = new Date(loan.dueAt);
   if (loan.status === "OVERDUE") {
@@ -30,3 +30,6 @@ export function loanBadge(loan: Pick<LoanDto, "status" | "dueAt">, now: Date = n
   }
   return { kind: "active", variant: "info", label: "Active" };
 }
+
+/** @deprecated name kept for older call sites; use `loanStatus`. */
+export const loanBadge = loanStatus;
