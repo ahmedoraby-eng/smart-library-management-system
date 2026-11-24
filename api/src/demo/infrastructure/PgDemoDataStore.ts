@@ -7,7 +7,7 @@ export class PgDemoDataStore {
 
   async replaceWithSeed(): Promise<void> {
     await inRawTransaction(this.db, async (client) => {
-      await client.query("TRUNCATE loans, members, books RESTART IDENTITY");
+      await client.query("TRUNCATE loans, members, books");
       await client.query("ALTER SEQUENCE member_number_seq RESTART WITH 1");
       await client.query(demoSql);
     });

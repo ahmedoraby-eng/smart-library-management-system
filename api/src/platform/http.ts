@@ -28,6 +28,7 @@ export function parseSort<K extends string>(raw: string | undefined, allowed: re
   return out.length ? out : fallback;
 }
 
-export function newRequestId(): string {
-  return crypto.randomUUID();
+/** A client-supplied request id is kept only if it is short and safe for logs and headers. */
+export function requestIdFrom(header: string | undefined): string {
+  return header && /^[A-Za-z0-9_-]{1,64}$/.test(header) ? header : crypto.randomUUID();
 }

@@ -1,9 +1,9 @@
 import { DemoLoginSchema, type Me } from "@slm/contracts";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { AppEnv } from "../../platform/appEnv";
 import { NotFoundError } from "../../platform/errors";
 import { parseOr400 } from "../../platform/http";
-import type { RateLimiter } from "../../platform/security/rateLimit";
+import type { Limiter } from "../../platform/security/rateLimit";
 import type { Principal } from "../../platform/security/principal";
 import { clearSession, issueSession } from "../../platform/security/session";
 
@@ -12,13 +12,13 @@ export const toMe = (p: Principal): Me => ({
 });
 
 /** Public sign-in routes. They set or clear the session cookie; no other auth state exists. */
-export function authRoutes(demoLoginLimiter: RateLimiter) {
+export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter) {
   const r = new Hono<AppEnv>();
 
   r.post("/demo-login", async (c) => {
     const { config, staffIdentity } = c.var.container;
     if (!config.demoAccountsEnabled) throw new NotFoundError("Demo sign-in");
-    demoLoginLimiter.check(c.req.header("cf-connecting-ip") ?? "local");
+    await demoLoginLimiter(c).check(`demo-login:${c.req.header("cf-connecting-ip") ?? "local"}`);
     const body = parseOr400(DemoLoginSchema, await c.req.json().catch(() => null));
     const principal = await staffIdentity.signInWithDemo(body.email, body.password);
     await issueSession(c, config, principal.id);

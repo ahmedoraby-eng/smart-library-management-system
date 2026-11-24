@@ -31,11 +31,11 @@ export const testEnv: RawEnv = {
 export function testApp(opts: { env?: RawEnv; clock?: Clock } = {}) {
   const config = loadConfig({ ...testEnv, ...opts.env });
   const container = buildContainer(createDb(pool), config, opts.clock ?? (() => new Date()));
-  return Object.assign(createApp(() => container), { container });
+  return Object.assign(createApp(async () => ({ container })), { container });
 }
 
 export async function resetDb(): Promise<void> {
-  await pool.query("TRUNCATE loans, members, books, staff_users RESTART IDENTITY CASCADE");
+  await pool.query("TRUNCATE loans, members, books, staff_users CASCADE");
 }
 
 /** Staff fixtures (one per role + a disabled one). Returns ids by key. */

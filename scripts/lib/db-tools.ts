@@ -24,7 +24,7 @@ export async function seed(databaseUrl: string, opts: { reset: boolean }): Promi
   try {
     await client.query("BEGIN");
     if (opts.reset) {
-      await client.query("TRUNCATE loans, members, books RESTART IDENTITY");
+      await client.query("TRUNCATE loans, members, books");
       await client.query("ALTER SEQUENCE member_number_seq RESTART WITH 1");
     } else {
       const { rows } = await client.query<{ n: number }>("SELECT count(*)::int AS n FROM books");
