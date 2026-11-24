@@ -10,6 +10,8 @@ import { BookDiscoveryService } from "./discovery/application/BookDiscoveryServi
 import { PgCatalogRetrieval } from "./discovery/infrastructure/PgCatalogRetrieval";
 import { selectAiProvider } from "./discovery/infrastructure/selectProvider";
 import type { AiBinding } from "./discovery/infrastructure/WorkersAiProvider";
+import { MemberService } from "./members/application/MemberService";
+import { PgMemberRepository } from "./members/infrastructure/PgMemberRepository";
 import { DemoDataService } from "./demo/application/DemoDataService";
 import { PgDemoDataStore } from "./demo/infrastructure/PgDemoDataStore";
 import type { Clock } from "./platform/clock";
@@ -33,6 +35,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
     discovery: new BookDiscoveryService(new PgCatalogRetrieval(db), selectAiProvider(config, ai), (e) => console.info(JSON.stringify({ level: "info", event: "ai_discovery", ...e }))),
     dashboard: new DashboardService(new PgDashboardReadModel(db)),
+    members: new MemberService(new PgMemberRepository(db)),
   };
 }
 export type Container = ReturnType<typeof buildContainer>;
