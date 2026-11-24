@@ -3,11 +3,13 @@ import { createApp } from "./app";
 import { buildContainer } from "./container";
 import { systemClock } from "./platform/clock";
 import { loadConfig } from "./platform/config";
+import type { AiBinding } from "./discovery/infrastructure/WorkersAiProvider";
 import { createDb } from "./platform/db";
 
 interface Env {
   HYPERDRIVE?: Hyperdrive;
   DATABASE_URL?: string;
+  AI?: AiBinding;
   [key: string]: unknown;
 }
 
@@ -18,7 +20,7 @@ async function openContainer(env: Env) {
   if (!connectionString) throw new Error("No database binding (HYPERDRIVE or DATABASE_URL)");
   const client = new Client({ connectionString });
   await client.connect();
-  return { container: buildContainer(createDb(client), config, systemClock), close: () => client.end() };
+  return { container: buildContainer(createDb(client), config, systemClock, env.AI), close: () => client.end() };
 }
 
 /** Built once per isolate, so in-memory state (fallback rate limiters) survives across requests. */

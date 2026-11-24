@@ -5,6 +5,7 @@ import { AppLayout } from "../app/AppLayout";
 import { ComingSoonPage, ForbiddenPage, NotFoundPage } from "../app/pages";
 import { SignInPage } from "../features/auth/SignInPage";
 import { meQueryKey } from "../features/auth/session";
+import { DiscoveryPage } from "../features/discovery/DiscoveryPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { BookDetailPage } from "../features/books/BookDetailPage";
 import { BookEditPage, BookNewPage } from "../features/books/BookFormPages";
@@ -55,7 +56,7 @@ const bookEditRoute = createRoute({ getParentRoute: () => appRoute, path: "/book
 const membersRoute = createRoute({ getParentRoute: () => appRoute, path: "/members", component: () => <ComingSoonPage title="Members" /> });
 const circulationRoute = createRoute({ getParentRoute: () => appRoute, path: "/circulation", component: () => <ComingSoonPage title="Circulation" /> });
 const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", component: () => <ComingSoonPage title="Loan history" /> });
-const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: () => <ComingSoonPage title="Book discovery" /> });
+const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: DiscoveryPage });
 const staffRoute = createRoute({ getParentRoute: () => appRoute, path: "/admin/users", component: () => <ComingSoonPage title="Staff users" /> });
 
 const forbiddenRoute = createRoute({ getParentRoute: () => appRoute, path: "/403", component: ForbiddenPage });
