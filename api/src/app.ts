@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
+import { dashboardRoutes } from "./dashboard/api/routes";
 import type { Container } from "./container";
 import { adminRoutes } from "./demo/api/routes";
 import type { AppEnv } from "./platform/appEnv";
@@ -96,6 +97,7 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
+  app.route("/dashboard", dashboardRoutes());
   app.route("/admin", adminRoutes());
 
   return app;
