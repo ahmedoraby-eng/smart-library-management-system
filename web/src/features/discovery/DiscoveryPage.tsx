@@ -1,12 +1,16 @@
-import type { DiscoveryItem, DiscoveryRequest, DiscoveryResponse } from "@slm/contracts";
+import type { DiscoveryItem, DiscoveryRequest, DiscoveryResponse, MemberDto } from "@slm/contracts";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
-  AvailabilityBadge, Badge, Button, buttonClasses, Card, EmptyState, InlineAlert, SearchIcon, Skeleton, SparkIcon, Textarea,
+  AvailabilityBadge, Badge, Button, buttonClasses, Card, Combobox, EmptyState, InlineAlert, SearchIcon, Skeleton, SparkIcon, Textarea,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
+import { initials } from "../../lib/format";
+import { useDebounced } from "../../lib/useDebounced";
 import { useCan } from "../auth/session";
 import { BookCover } from "../books/BookCover";
+import { useMemberSearch } from "../circulation/api";
+import { MemberStatusBadge } from "../members/badges";
 import { useDiscover } from "./api";
 
 // The circulation routes arrive with SLM-4; until then the typed router only knows "/circulation".
@@ -22,6 +26,11 @@ export function DiscoveryPage() {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [touched, setTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // Optional "For member": its id goes to the API (recent titles only) and into each [Borrow] link.
+  const [member, setMember] = useState<MemberDto | null>(null);
+  const [memberText, setMemberText] = useState("");
+  const memberQ = useDebounced(memberText.trim());
+  const members = useMemberSearch(memberQ);
 
   // 429: the button stays disabled for Retry-After seconds.
   useEffect(() => {
@@ -36,7 +45,7 @@ export function DiscoveryPage() {
   const run = () => {
     setTouched(true);
     if (trimmed.length < 3 || trimmed.length > MAX || cooldown > 0 || discover.isPending) return;
-    const body: DiscoveryRequest = { query: trimmed, ...(availableOnly ? { availableOnly: true } : {}) };
+    const body: DiscoveryRequest = { query: trimmed, ...(availableOnly ? { availableOnly: true } : {}), ...(member ? { memberId: member.id } : {}) };
     discover.mutate(body, {
       onError: (e) => {
         if (e instanceof ApiError && e.status === 429) setCooldown(e.retryAfter ?? 10);
@@ -78,6 +87,46 @@ export function DiscoveryPage() {
             placeholder="For example: beginner-friendly books about software architecture for someone who already programs"
             data-testid="discovery-query"
           />
+          {can("MEMBER_READ") && (
+            <div className="mt-4 max-w-md">
+              {member ? (
+                <div data-testid="discovery-member">
+                  <span className="mb-1 block text-sm font-medium text-neutral-700">For member (optional)</span>
+                  <div className="flex items-center gap-3 rounded-md border border-border bg-neutral-25 px-3 py-2">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{initials(member.fullName)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{member.fullName}</div>
+                      <div className="truncate text-sm text-neutral-600">{member.memberNumber}</div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => { setMember(null); setMemberText(""); }} data-testid="clear-member">Clear</Button>
+                  </div>
+                </div>
+              ) : (
+                <Combobox
+                  label="For member (optional)"
+                  placeholder="Search name, member number or email"
+                  value={memberText}
+                  onValueChange={setMemberText}
+                  options={memberQ ? members.data?.items : undefined}
+                  loading={members.isFetching && Boolean(memberQ)}
+                  getKey={(m) => m.id}
+                  onSelect={(m) => { setMember(m); setMemberText(""); }}
+                  testId="discovery-member-combobox"
+                  emptyText="No members match. Check the spelling or the member number."
+                  hint="Helps the AI skip books they have just read."
+                  renderOption={(m) => (
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-700">{initials(m.fullName)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 font-medium">{m.fullName}<MemberStatusBadge status={m.status} /></div>
+                        <div className="truncate text-sm text-neutral-600">{m.memberNumber} · {m.email}</div>
+                      </div>
+                    </div>
+                  )}
+                />
+              )}
+            </div>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Examples">
               <span className="text-sm text-neutral-600">Try</span>
@@ -116,7 +165,7 @@ export function DiscoveryPage() {
             Couldn't search the catalog. Try again.
           </InlineAlert>
         ) : discover.data ? (
-          <Results data={discover.data} canBorrow={can("LOAN_PROCESS")} />
+          <Results data={discover.data} canBorrow={can("LOAN_PROCESS")} memberId={member?.id} />
         ) : null}
       </section>
     </>
@@ -139,7 +188,7 @@ function Loading() {
   );
 }
 
-function Results({ data, canBorrow }: { data: DiscoveryResponse; canBorrow: boolean }) {
+function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBorrow: boolean; memberId: string | undefined }) {
   if (data.items.length === 0) {
     return (
       <Card>
@@ -169,7 +218,7 @@ function Results({ data, canBorrow }: { data: DiscoveryResponse; canBorrow: bool
       <Card>
         <ol>
           {data.items.map((item, i) => (
-            <ResultRow key={item.book.id} item={item} rank={i + 1} canBorrow={canBorrow} mode={data.mode} />
+            <ResultRow key={item.book.id} item={item} rank={i + 1} canBorrow={canBorrow} mode={data.mode} memberId={memberId} />
           ))}
         </ol>
       </Card>
@@ -177,7 +226,7 @@ function Results({ data, canBorrow }: { data: DiscoveryResponse; canBorrow: bool
   );
 }
 
-function ResultRow({ item, rank, canBorrow, mode }: { item: DiscoveryItem; rank: number; canBorrow: boolean; mode: DiscoveryResponse["mode"] }) {
+function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryItem; rank: number; canBorrow: boolean; mode: DiscoveryResponse["mode"]; memberId: string | undefined }) {
   const { book } = item;
   const [open, setOpen] = useState(false);
   const long = item.reason.length > 180;
@@ -204,7 +253,7 @@ function ResultRow({ item, rank, canBorrow, mode }: { item: DiscoveryItem; rank:
         <div className="flex gap-2">
           <Link to="/books/$bookId" params={{ bookId: book.id }} className={buttonClasses({ variant: "secondary", size: "sm" })}>View</Link>
           {canBorrow && book.availableCopies > 0 && (
-            <Link to={BORROW_TO} search={{ book: book.id } as never} className={buttonClasses({ variant: "primary", size: "sm" })} data-testid="borrow-from-result">Borrow</Link>
+            <Link to={BORROW_TO} search={{ book: book.id, ...(memberId ? { member: memberId } : {}) } as never} className={buttonClasses({ variant: "primary", size: "sm" })} data-testid="borrow-from-result">Borrow</Link>
           )}
         </div>
       </div>
