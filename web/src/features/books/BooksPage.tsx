@@ -263,7 +263,11 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
       </Td>
       <Td align="right">
         <div className="flex items-center justify-end gap-2">
-          {/* SLM-4: Borrow action (secondary button, only when availableCopies > 0 and the role has LOAN_PROCESS). */}
+          {can("LOAN_PROCESS") && book.availableCopies > 0 && (
+            <Link to="/circulation/borrow" search={{ book: book.id }} className={buttonClasses({ size: "sm" })} data-testid="row-borrow">
+              Borrow
+            </Link>
+          )}
           <ActionMenu label={`Actions for ${book.title}`} items={items} testId="row-actions" />
         </div>
       </Td>
