@@ -9,6 +9,8 @@ export const ProblemSchema = z.object({
   detail: z.string().optional(),
   errors: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
   requestId: z.string().optional(),
+  /** Extra facts for the UI, e.g. DUPLICATE_ISBN → { bookId, title } of the other book. */
+  context: z.record(z.string(), z.unknown()).optional(),
 });
 export type Problem = z.infer<typeof ProblemSchema>;
 
