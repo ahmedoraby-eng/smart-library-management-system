@@ -105,3 +105,22 @@ export const BookDeleteResultSchema = z.object({ result: z.enum(["archived", "de
 export type BookDeleteResult = z.infer<typeof BookDeleteResultSchema>;
 
 export const CategoriesSchema = z.object({ items: z.array(z.string()) });
+
+/** GET /api/books/isbn-lookup (SLM-13): suggestions from Open Library to prefill the book form. Never saved by itself. */
+export const IsbnLookupQuerySchema = z.object({
+  isbn: z.string({ error: "Enter a valid ISBN-10 or ISBN-13." }).trim().refine((v) => normalizeIsbn(v) !== null, "Enter a valid ISBN-10 or ISBN-13."),
+});
+export const IsbnLookupBookSchema = z.object({
+  title: z.string().nullable(),
+  author: z.string().nullable(),
+  publisher: z.string().nullable(),
+  publicationYear: z.number().int().nullable(),
+  description: z.string().nullable(),
+  coverImageUrl: z.string().nullable(),
+});
+export type IsbnLookupBook = z.infer<typeof IsbnLookupBookSchema>;
+export const IsbnLookupResultSchema = z.discriminatedUnion("found", [
+  z.object({ found: z.literal(true), book: IsbnLookupBookSchema }),
+  z.object({ found: z.literal(false), reason: z.enum(["not_found", "timeout", "unavailable"]) }),
+]);
+export type IsbnLookupResult = z.infer<typeof IsbnLookupResultSchema>;

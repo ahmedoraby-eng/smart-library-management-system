@@ -15,6 +15,7 @@ const MATRIX: Record<string, Who[]> = {
   "GET /api/me": ["A", "L", "S"],
   "GET /api/books": ["A", "L", "S"],
   "GET /api/books/categories": ["A", "L", "S"],
+  "GET /api/books/isbn-lookup": ["A", "L"],
   "GET /api/books/:id": ["A", "L", "S"],
   "POST /api/books": ["A", "L"],
   "PUT /api/books/:id": ["A", "L"],

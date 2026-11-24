@@ -1,4 +1,4 @@
-import type { BookDeleteResult, BookDto, BookInput, BookListQuery, Page } from "@slm/contracts";
+import type { BookDeleteResult, BookDto, BookInput, BookListQuery, IsbnLookupResult, Page } from "@slm/contracts";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, toQuery } from "../../lib/apiClient";
 
@@ -46,4 +46,9 @@ export function useDeleteBook() {
     mutationFn: (id: string) => api<BookDeleteResult>(`/books/${encodeURIComponent(id)}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: booksKey }),
   });
+}
+
+/** SLM-13: suggestions from Open Library for the book form. Not cached: each click asks again. */
+export function lookupIsbn(isbn: string) {
+  return api<IsbnLookupResult>(`/books/isbn-lookup${toQuery({ isbn })}`);
 }

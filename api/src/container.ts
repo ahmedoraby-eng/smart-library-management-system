@@ -1,5 +1,7 @@
 import { BookService } from "./catalog/application/BookService";
 import { PgBookRepository } from "./catalog/infrastructure/PgBookRepository";
+import type { IsbnLookup } from "./catalog/domain/IsbnLookup";
+import { OpenLibraryIsbnLookup } from "./catalog/infrastructure/OpenLibraryIsbnLookup";
 import { pgBookStockFor } from "./catalog/infrastructure/PgBookStock";
 import { CirculationService } from "./circulation/application/CirculationService";
 import { PgCirculationStore } from "./circulation/infrastructure/PgCirculationStore";
@@ -25,7 +27,7 @@ import { GoogleOidcProvider } from "./staff/infrastructure/GoogleOidcProvider";
 import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserRepository";
 
 /** Manual wiring: env bindings → repositories → services. One place, no DI framework. */
-export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding, overrides: { oidc?: OidcProvider } = {}) {
+export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding, overrides: { oidc?: OidcProvider; isbnLookup?: IsbnLookup } = {}) {
   const staffRepo = new PgStaffUserRepository(db);
   const staffIdentity = new StaffIdentityService(staffRepo, config);
   return {
@@ -38,6 +40,7 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     googleSignIn: config.google ? new GoogleSignIn(overrides.oidc ?? new GoogleOidcProvider(config.google), staffIdentity) : null,
     staffAdmin: new StaffAdminService(staffRepo),
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
+    isbnLookup: overrides.isbnLookup ?? new OpenLibraryIsbnLookup(),
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
     discovery: new BookDiscoveryService(new PgCatalogRetrieval(db), selectAiProvider(config, ai), (e) => console.info(JSON.stringify({ level: "info", event: "ai_discovery", ...e }))),

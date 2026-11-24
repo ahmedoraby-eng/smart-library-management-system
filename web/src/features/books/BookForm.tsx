@@ -1,8 +1,9 @@
-import type { BookDto, BookInput } from "@slm/contracts";
+import { type BookDto, type BookInput, normalizeIsbn } from "@slm/contracts";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button, InlineAlert, Input, Textarea } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
+import { lookupIsbn } from "./api";
 import { BookCover } from "./BookCover";
 import {
   type BookField, type BookFormValues, emptyValues, FIELD_ORDER, isDirty, isHttpsUrl, valuesFromBook, validateBook,
@@ -35,6 +36,7 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
   const [general, setGeneral] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lookup, setLookup] = useState<"idle" | "loading" | "filled" | "failed">("idle");
 
   const { data: parsed, errors } = useMemo(() => validateBook(values), [values]);
   const dirty = isDirty(values, initial);
@@ -108,6 +110,32 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
     }
   };
 
+  const isbnValid = normalizeIsbn(values.isbn) !== null;
+  const runLookup = async () => {
+    const isbn = normalizeIsbn(values.isbn);
+    if (!isbn || lookup === "loading") return;
+    setLookup("loading");
+    try {
+      const res = await lookupIsbn(isbn);
+      if (!res.found) return setLookup("failed");
+      const b = res.book;
+      const found: Partial<BookFormValues> = {
+        title: b.title ?? "", author: b.author ?? "", publisher: b.publisher ?? "",
+        publicationYear: b.publicationYear === null ? "" : String(b.publicationYear),
+        description: b.description ?? "", coverImageUrl: b.coverImageUrl ?? "",
+      };
+      // Only empty fields: typed text is never overwritten.
+      setValues((v) => {
+        const next = { ...v };
+        for (const [k, val] of Object.entries(found) as [BookField, string][]) if (val && v[k].trim() === "") next[k] = val;
+        return next;
+      });
+      setLookup("filled");
+    } catch {
+      setLookup("failed");
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving || stale) return;
@@ -138,7 +166,23 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
       <Input label="Title" autoComplete="off" {...props("title")} />
       <Input label="Author" autoComplete="off" {...props("author")} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Input label="ISBN" optional autoComplete="off" hint="ISBN-10 or ISBN-13; hyphens are fine." {...props("isbn")} />
+        <div>
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <Input label="ISBN" optional autoComplete="off" hint="ISBN-10 or ISBN-13; hyphens are fine." {...props("isbn")} />
+            </div>
+            <div className="pt-8">
+              <Button onClick={runLookup} loading={lookup === "loading"} disabled={!isbnValid} data-testid="isbn-lookup">
+                Look up
+              </Button>
+            </div>
+          </div>
+          {(lookup === "filled" || lookup === "failed") && (
+            <p className="mt-1.5 text-sm text-neutral-600" role="status" data-testid="isbn-lookup-hint">
+              {lookup === "filled" ? "Filled from Open Library — check before saving." : "No details found for this ISBN. Fill the fields in by hand."}
+            </p>
+          )}
+        </div>
         <div>
           <Input label="Category" list="book-categories" autoComplete="off" {...props("category")} />
           <datalist id="book-categories">

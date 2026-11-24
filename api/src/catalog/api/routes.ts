@@ -1,4 +1,4 @@
-import { BookInputSchema, BookListQuerySchema, BookUpdateSchema, type BookDto } from "@slm/contracts";
+import { BookInputSchema, BookListQuerySchema, BookUpdateSchema, IsbnLookupQuerySchema, normalizeIsbn, type BookDto } from "@slm/contracts";
 import { Hono } from "hono";
 import type { AppEnv } from "../../platform/appEnv";
 import { parseOr400 } from "../../platform/http";
@@ -29,6 +29,12 @@ export function bookRoutes() {
 
   r.get("/categories", requirePermission("BOOK_READ"), async (c) =>
     c.json({ items: await c.var.container.books.categories() }));
+
+  // SLM-13: registered before /:id so "isbn-lookup" isn't read as an id. Always 200 for a valid ISBN.
+  r.get("/isbn-lookup", requirePermission("BOOK_WRITE"), async (c) => {
+    const { isbn } = parseOr400(IsbnLookupQuerySchema, c.req.query());
+    return c.json(await c.var.container.isbnLookup.lookup(normalizeIsbn(isbn)!));
+  });
 
   r.get("/:id", requirePermission("BOOK_READ"), async (c) =>
     c.json(toBookDto(await c.var.container.books.get(c.req.param("id")))));
