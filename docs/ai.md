@@ -62,8 +62,8 @@ Order of checks: permission, then a rate limit of 10 requests per minute per sta
 
 - **Model:** `@cf/baai/bge-base-en-v1.5` (768 dimensions, `EMBEDDING_MODEL`; `off` turns vector search off). It's called through the `AI` binding: `env.AI.run(model, { text: [...] })`. Vectors are L2-normalised. Search queries get bge's retrieval instruction prefix.
 - **Chunking** (`domain/Chunking.ts`): the source text is title, author, category and description. The description is split into sentences and packed into windows of at most 120 words, with one sentence of overlap. Every chunk starts with a `Title — Author (Category)` header, so it stands on its own. Today's descriptions are short, so most books make one chunk; the windowing is there for long text.
-- **Index** (migration `0004_book_chunks.sql`): one row per chunk with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (CI, the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. That's fine for a demo-size catalogue.
-- **Query:** embed the request, take the nearest chunks, keep each live book's best chunk, drop anything below the model's minimum similarity (0.5 for bge), top 20. `availableOnly` applies here too.
+- **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (CI, the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
+- **Query:** embed the request, take the nearest chunks, keep each live book's best chunk, drop anything below the minimum similarity (`EMBEDDING_MIN_SIMILARITY`, default 0.72: bge-base cosines sit high, and unrelated texts often score 0.6–0.7), top 20. Every request logs the top similarity (a number only), so the value can be checked against live queries and changed in config. `availableOnly` applies here too.
 - `book_chunks` belongs to the discovery module. It's a derived index that can be rebuilt at any time, with no foreign key to `books`: search joins live books, and the sync removes orphans.
 
 ### 3. Fusion: Reciprocal Rank Fusion
@@ -76,13 +76,13 @@ Each candidate carries its id, title, author, category, year, a description cut 
 
 ### When chunks are embedded
 
-`BookIndexSync` re-chunks and re-embeds only books whose text, or the model, changed (sha-256 of model plus text). It runs:
+`BookIndexSync` re-chunks and re-embeds only books whose text, or the model, changed (sha-256 of model plus text). A book whose ids changed but whose text didn't (the demo reset) **copies** the vectors of the identical text, so it costs 0 Neurons. Copies, new rows and orphan removal happen in one transaction. It runs:
 
 | When | How |
 |---|---|
 | A book is created, edited or archived | Inline in the same request, 2 s budget. A failure never fails the save; the next sync catches up |
 | Demo reset (Admin button and nightly cron) | `syncAll` after the seed, since the seed gives books new ids |
-| Backfill (after the migration, or a model change) | `POST /api/admin/discovery/reindex` (Admin), which returns the counts |
+| Backfill (after the migration, or a model change) | `POST /api/admin/discovery/reindex` (Admin, 2 a minute), which returns the counts |
 | Local runs and e2e (`AI_FAKE`) | `demo:local` and `npm run e2e` index the seed with the deterministic fake embedder |
 
 Embedding happens inside the Worker through its binding, so no Cloudflare token is needed in scripts or the repository.
@@ -132,6 +132,9 @@ The model's answer is untrusted. `RecommendationValidator` is the guard:
 | `PROVIDER_ERROR` | The provider threw |
 | `INVALID_OUTPUT` | The answer has no usable shape |
 | `NO_VALID_ITEMS` | The model returned ids, but every one was dropped |
+| `SINGLE_CANDIDATE` | Only one book matched: the model is skipped on purpose (shown as an info note, not a warning) |
+| `QUOTA_EXCEEDED` | This staff user has used today's AI searches (see Cost controls) |
+| `BUDGET_EXHAUSTED` | The library's daily Neuron cap is reached (see Cost controls) |
 
 If retrieval finds no candidates, the model is not called. The response is an empty list with the note "No matching books in the catalog."
 
@@ -145,7 +148,9 @@ If the model answers with a valid but empty list, the response is `mode: "AI"` w
                     availableCopies, totalCopies, nextDueAt },
             reason, matchedTerms, foundBy? }],      // foundBy: lexical | semantic | both | related
   note: string | null,
-  retrieval?: "hybrid" | "lexical" }
+  retrieval?: "hybrid" | "lexical",
+  fallbackReason?: string,          // FALLBACK only
+  cached?: boolean }                // ranking reused from the result cache
 ```
 
 - `book` always comes from a fresh database read, after the model has answered. A copy borrowed in the meantime shows up.
@@ -161,12 +166,42 @@ If the model answers with a valid but empty list, the response is `mode: "AI"` w
 - Embeddings are made from public catalogue text only (title, author, category, description). The request text is embedded but not stored.
 - Workers AI is called through a Worker binding, so there is no AI key in the code or the configuration.
 
-## Cost and limits
+## Cost controls (SLM-16)
 
-- Each request makes at most one ranking call (none when there are no candidates) and **one embedding call** for the query (one short text).
-- Indexing: **one embedding call per book saved** (its 1–2 chunks in one batch). A full backfill or demo reset of about 65 books and 70 chunks is **2 calls** (batches of 50). With the nightly reset, that's about 2 calls a day.
-- bge-base is one of the cheapest Workers AI models; demo volume stays within the free daily allocation.
-- The per-user rate limit (10 per minute) keeps usage bounded. Usage counts against the Cloudflare account's Workers AI allocation.
+AI spend is bounded by design. Every step below costs nothing when it isn't needed, and every limit ends in the keyword ranking with a clear note, never in an error.
+
+| Control | What it does |
+|---|---|
+| Submit-only search | One request per submit: no search-as-you-type, the button is disabled while a request runs, and a cooldown follows a 429. The query is capped at 500 characters. |
+| Burst limit | 10 discovery requests a minute per staff user (Workers Rate Limiting). |
+| Embed only on change | Book chunks are embedded only when their text or the model changes (source hash). A demo reset reuses vectors, so it costs **0 Neurons**. |
+| Query embedding cache | One embedding call per new normalised query. The vector is cached for 24 h (key: model + normalised text). |
+| Result cache | The ranked ids and reasons are reused for **15 minutes** for the same normalised query, `availableOnly`, limit and catalogue version. The books are always re-read from the database, and a missing book forces a fresh run. **Never cached when `memberId` is set.** Only AI rankings are cached. |
+| Skip the model | At 0 candidates, and at exactly 1 (`SINGLE_CANDIDATE`). With 2 or more the model always runs: the reasons are the product. |
+| Per-user quota | **50 AI searches per staff user per UTC day** (`AI_USER_DAILY_SEARCHES`), counted with an atomic conditional upsert. Cache hits and fallbacks don't count. Past it: `QUOTA_EXCEEDED`. |
+| Global cap | **8,000 Neurons per UTC day** (`AI_DAILY_NEURON_CAP`, 80 % of the free 10,000). Past it: `BUDGET_EXHAUSTED` for everyone, and query embeddings stop too (full-text only). A burst can overshoot by a few calls, which the 20 % headroom absorbs. |
+| `max_tokens` 600 | Caps the output of a ranking call. |
+| Reindex | Admin only, 2 a minute, embeds only missing or stale chunks. |
+
+**Where it lives:** Postgres, in `ai_usage(day, scope)` and `ai_cache(key, value, expires_at)` (migration `0005_ai_cost.sql`). Days are UTC. The nightly cron purges expired cache rows. The Workers Cache API isn't used because it's a no-op on `*.workers.dev` hosts. The AI Gateway isn't used either: the caches and caps above already cover it, inside our own code and tests.
+
+**Price model.** Rates are from the Cloudflare pricing page (read 25/11/2026), in Neurons per million tokens:
+- Llama 3.2 3B: 4,625 input and 30,475 output.
+- bge-base: 6,058 input.
+
+The token `usage` the model returns is used when present; otherwise text length ÷ 4. A timed-out call is charged the worst case, 26 Neurons.
+
+| Event | Neurons |
+|---|---|
+| One AI search | ≈ 16 typical, ≤ 26 at worst, plus ≈ 0.1 for the query embedding (0 on a cache hit) |
+| One book saved | ≈ 1 (its chunk) |
+| Full reindex of the seed | ≈ 70 the first time; 0 after a reset |
+| Daily ceiling | 8,000 ≈ 300+ AI searches at worst |
+
+**Visibility.** Every discovery log line has `neurons` (embedding + ranking), `cacheHit`, `neuronsToday`, the retrieval mode and the fallback reason, never the request text. The retrieval log adds `embeddingCacheHit` and `topSimilarity`. Admins see one line on the dashboard ("AI usage today: N / 8,000 Neurons · M AI searches") from `GET /api/admin/discovery/usage`.
+
+## Isolation
+
 - The rest of the app never imports the discovery module, so an AI outage can't affect borrowing, returns or search.
 
 ## Honest limits

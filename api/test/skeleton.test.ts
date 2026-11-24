@@ -16,7 +16,7 @@ describe("SL-06 health and errors", () => {
 
   it("GET /api/health?deep=1 checks the database", async () => {
     const res = await testApp().request("/api/health?deep=1");
-    expect(await res.json()).toEqual({ status: "ok", db: "ok" });
+    expect(await res.json()).toEqual({ status: "ok", db: "ok", vector: "off" }); // SLM-16: no embedder in this env
   });
 
   it("SL-06 AC3 unknown endpoints return Problem Details with a request id", async () => {

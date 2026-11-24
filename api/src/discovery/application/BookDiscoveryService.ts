@@ -1,15 +1,41 @@
 import type { DiscoveryRequest, DiscoveryResponse } from "@slm/contracts";
-import { MAX_CANDIDATES, MAX_ITEMS, MEMBER_CONTEXT_LOANS, type AiProvider, type Candidate, type CatalogRetrieval } from "../domain/Discovery";
+import { neuronsFor, normaliseQuery, sha256, WORST_CASE_RANK_NEURONS, type AiBudget, type AiCache, type TokenUsage } from "../domain/Cost";
+import { MAX_CANDIDATES, MAX_ITEMS, MEMBER_CONTEXT_LOANS, type AiProvider, type Candidate, type CatalogRetrieval, type FoundBy } from "../domain/Discovery";
 import { fallbackRank } from "../domain/FallbackRanker";
 import { validateRecommendations, type ValidRecommendation } from "../domain/RecommendationValidator";
 
 export const AI_TIMEOUT_MS = 8000;
+/** Ranked results (ids + reasons, never book data) are reused this long for the same request. */
+export const RESULT_CACHE_TTL_SECONDS = 15 * 60;
 export const NO_MATCH_NOTE = "No matching books in the catalog.";
 const NO_PROVIDER_NOTE = "Basic search mode: AI ranking isn't set up here. Showing keyword matches from the catalog. Every result is a real catalog record.";
 const FAILED_NOTE = "AI ranking is unavailable right now. Showing keyword matches from the catalog instead. Every result is a real catalog record.";
+export const SINGLE_NOTE = "Only one book in the catalog matches, so it's shown without AI ranking.";
+export const quotaNote = (quota: number) =>
+  `You've used today's ${quota} AI searches. Showing catalog matches without AI ranking; the limit resets at midnight UTC.`;
+export const BUDGET_NOTE = "Today's AI budget for the library is used up. Showing catalog matches without AI ranking; it resets at midnight UTC.";
 
-export type FallbackReason = "NO_PROVIDER" | "TIMEOUT" | "PROVIDER_ERROR" | "INVALID_OUTPUT" | "NO_VALID_ITEMS";
-export type DiscoveryLog = (entry: { mode: "AI" | "FALLBACK"; latencyMs: number; candidates: number; fallbackReason: FallbackReason | null; provider: string | null; dropped: number; retrieval?: "hybrid" | "lexical" }) => void;
+export type FallbackReason =
+  | "NO_PROVIDER" | "TIMEOUT" | "PROVIDER_ERROR" | "INVALID_OUTPUT" | "NO_VALID_ITEMS"
+  | "SINGLE_CANDIDATE" | "QUOTA_EXCEEDED" | "BUDGET_EXHAUSTED";
+export type DiscoveryLog = (entry: {
+  mode: "AI" | "FALLBACK"; latencyMs: number; candidates: number; fallbackReason: FallbackReason | null; provider: string | null; dropped: number;
+  retrieval?: "hybrid" | "lexical"; cacheHit?: boolean; neurons?: number; neuronsToday?: number;
+}) => void;
+
+export interface CostControls {
+  cache?: AiCache | null;
+  budget?: AiBudget | null;
+  userQuota?: number;
+}
+
+interface CachedRanking {
+  v: 1;
+  mode: "AI" | "FALLBACK";
+  note: string | null;
+  retrieval?: "hybrid" | "lexical";
+  picks: Array<{ id: string; reason: string; matchedTerms: string[]; foundBy?: FoundBy }>;
+}
 
 class ProviderTimeout extends Error {}
 
@@ -18,7 +44,9 @@ class ProviderTimeout extends Error {}
  * The catalog is the source of truth: candidates come from retrieval, the validator keeps only
  * candidate ids, and title, author and availability are re-read from the database. Any provider
  * trouble ends in the deterministic ranking; core library flows never import this module.
- * Logs mode, latency, candidate count and fallback reason, never the request text.
+ * SLM-16 cost controls: a result cache (not for member-specific requests), no model call for 0 or 1
+ * candidate, a per-user daily quota and a global daily Neuron cap, each ending in the fallback with a
+ * clear note (never an error). Logs mode, latency, candidates, Neurons and reasons, never the request text.
  */
 export class BookDiscoveryService {
   constructor(
@@ -26,12 +54,28 @@ export class BookDiscoveryService {
     private readonly provider: AiProvider | null,
     private readonly log: DiscoveryLog = () => undefined,
     private readonly timeoutMs: number = AI_TIMEOUT_MS,
+    private readonly cost: CostControls = {},
   ) {}
 
-  async discover(input: DiscoveryRequest): Promise<DiscoveryResponse> {
+  async discover(input: DiscoveryRequest, ctx: { userId?: string } = {}): Promise<DiscoveryResponse> {
     const started = Date.now();
     const limit = Math.min(input.limit ?? MAX_ITEMS, MAX_ITEMS);
+    const { cache, budget } = this.cost;
+
+    // 1. Result cache. Never for a member: the prompt then holds that member's reading.
+    const cacheKey = cache && !input.memberId && this.catalog.catalogueVersion
+      ? `rank:${await sha256([normaliseQuery(input.query), input.availableOnly ? 1 : 0, limit, this.provider?.name ?? "none", await this.catalog.catalogueVersion()].join("␟"))}`
+      : null;
+    if (cacheKey) {
+      const hit = await this.fromCache(cacheKey);
+      if (hit) {
+        this.log({ mode: hit.mode, latencyMs: Date.now() - started, candidates: hit.items.length, fallbackReason: null, provider: this.provider?.name ?? null, dropped: 0, cacheHit: true, neurons: 0, ...(hit.retrieval ? { retrieval: hit.retrieval } : {}) });
+        return { ...hit, cached: true };
+      }
+    }
+
     const candidates = await this.catalog.candidates(input.query, { limit: MAX_CANDIDATES, availableOnly: input.availableOnly ?? false });
+    let rankNeurons = 0;
 
     const finish = async (
       mode: "AI" | "FALLBACK", picks: ValidRecommendation[], note: string | null,
@@ -43,20 +87,48 @@ export class BookDiscoveryService {
         return book ? [{ book, reason: p.reason, matchedTerms: p.candidate.matchedTerms, ...(p.candidate.foundBy ? { foundBy: p.candidate.foundBy } : {}) }] : [];
       });
       const retrieval = this.catalog.lastMode?.();
-      this.log({ mode, latencyMs: Date.now() - started, candidates: candidates.length, fallbackReason, provider: this.provider?.name ?? null, dropped, ...(retrieval ? { retrieval } : {}) });
-      return { mode, items, note: items.length === 0 ? note ?? NO_MATCH_NOTE : note, ...(retrieval ? { retrieval } : {}) };
+      const neurons = Math.round(((this.catalog.lastNeurons?.() ?? 0) + rankNeurons) * 1000) / 1000;
+      const neuronsToday = budget ? (await budget.today().catch(() => null))?.neurons : undefined;
+      this.log({
+        mode, latencyMs: Date.now() - started, candidates: candidates.length, fallbackReason, provider: this.provider?.name ?? null, dropped,
+        cacheHit: false, neurons, ...(neuronsToday !== undefined ? { neuronsToday } : {}), ...(retrieval ? { retrieval } : {}),
+      });
+      const response: DiscoveryResponse = {
+        mode, items, note: items.length === 0 ? note ?? NO_MATCH_NOTE : note,
+        ...(retrieval ? { retrieval } : {}), ...(fallbackReason ? { fallbackReason } : {}),
+      };
+      // Only a real AI ranking is worth keeping; fallbacks are free to recompute and may recover.
+      if (cacheKey && mode === "AI" && items.length > 0) {
+        const value: CachedRanking = { v: 1, mode, note: response.note, ...(retrieval ? { retrieval } : {}), picks: items.map((i) => ({ id: i.book.id, reason: i.reason, matchedTerms: i.matchedTerms, ...(i.foundBy ? { foundBy: i.foundBy } : {}) })) };
+        await cache!.set(cacheKey, value, RESULT_CACHE_TTL_SECONDS).catch(() => undefined);
+      }
+      return response;
     };
 
     if (candidates.length === 0) return finish(this.provider ? "AI" : "FALLBACK", [], NO_MATCH_NOTE, null);
     if (!this.provider) return finish("FALLBACK", fallbackRank(candidates, limit), NO_PROVIDER_NOTE, "NO_PROVIDER");
+    // 2. One candidate: nothing to rank, the model would only add a sentence.
+    if (candidates.length === 1) return finish("FALLBACK", fallbackRank(candidates, limit), SINGLE_NOTE, "SINGLE_CANDIDATE");
+
+    // 3. Daily budget: per-user quota of AI searches, then the global Neuron cap.
+    if (budget && ctx.userId) {
+      const verdict = await budget.reserveSearch(ctx.userId);
+      if (verdict === "QUOTA_EXCEEDED") return finish("FALLBACK", fallbackRank(candidates, limit), quotaNote(this.cost.userQuota ?? 0), verdict);
+      if (verdict === "BUDGET_EXHAUSTED") return finish("FALLBACK", fallbackRank(candidates, limit), BUDGET_NOTE, verdict);
+    } else if (budget && !(await budget.underCap())) {
+      return finish("FALLBACK", fallbackRank(candidates, limit), BUDGET_NOTE, "BUDGET_EXHAUSTED");
+    }
 
     let raw: unknown;
+    let usage: TokenUsage | null = null;
     try {
       const recent = input.memberId ? await this.catalog.recentLoanTitles(input.memberId, MEMBER_CONTEXT_LOANS) : [];
-      raw = await this.rankWithTimeout(this.provider, input.query, candidates, recent);
+      raw = await this.rankWithTimeout(this.provider, input.query, candidates, recent, (u) => { usage = u; });
     } catch (e) {
+      rankNeurons = await this.charge(usage, ctx.userId);
       return finish("FALLBACK", fallbackRank(candidates, limit), FAILED_NOTE, e instanceof ProviderTimeout ? "TIMEOUT" : "PROVIDER_ERROR");
     }
+    rankNeurons = await this.charge(usage, ctx.userId);
 
     const valid = validateRecommendations(raw, candidates, limit);
     if (!valid) return finish("FALLBACK", fallbackRank(candidates, limit), FAILED_NOTE, "INVALID_OUTPUT");
@@ -66,14 +138,33 @@ export class BookDiscoveryService {
     return finish("AI", valid.items, valid.note, null, valid.dropped);
   }
 
-  private async rankWithTimeout(provider: AiProvider, query: string, candidates: Candidate[], recent: string[]): Promise<unknown> {
+  /** The call happened, so it costs: the model's own token count, or the worst case when there is none (timeout). */
+  private async charge(usage: TokenUsage | null, userId?: string): Promise<number> {
+    const neurons = usage ? neuronsFor(usage) : WORST_CASE_RANK_NEURONS;
+    await this.cost.budget?.addNeurons(neurons, userId).catch(() => undefined);
+    return neurons;
+  }
+
+  /** A cached ranking, re-read from the catalogue; a book that's gone (or now unavailable) means a fresh run. */
+  private async fromCache(key: string): Promise<(DiscoveryResponse & { retrieval?: "hybrid" | "lexical" }) | null> {
+    const value = (await this.cost.cache!.get(key).catch(() => null)) as CachedRanking | null;
+    if (!value || value.v !== 1 || !Array.isArray(value.picks) || value.picks.length === 0) return null;
+    const books = await this.catalog.summaries(value.picks.map((p) => p.id));
+    if (books.size !== value.picks.length) return null;
+    return {
+      mode: value.mode, note: value.note, ...(value.retrieval ? { retrieval: value.retrieval } : {}),
+      items: value.picks.map((p) => ({ book: books.get(p.id)!, reason: p.reason, matchedTerms: p.matchedTerms, ...(p.foundBy ? { foundBy: p.foundBy } : {}) })),
+    };
+  }
+
+  private async rankWithTimeout(provider: AiProvider, query: string, candidates: Candidate[], recent: string[], onUsage: (u: TokenUsage) => void): Promise<unknown> {
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => { abort.abort(); reject(new ProviderTimeout()); }, this.timeoutMs);
     });
     try {
-      return await Promise.race([provider.rank({ query, candidates, memberRecentTitles: recent, signal: abort.signal }), timeout]);
+      return await Promise.race([provider.rank({ query, candidates, memberRecentTitles: recent, signal: abort.signal, onUsage }), timeout]);
     } finally {
       clearTimeout(timer);
     }

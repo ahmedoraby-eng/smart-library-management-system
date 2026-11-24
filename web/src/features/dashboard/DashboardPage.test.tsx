@@ -25,6 +25,7 @@ function stubApi(role: Role, dash: DashboardSummary | "error") {
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
     if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Test User", role, permissions: ROLE_PERMISSIONS[role], isDemo: false });
+    if (url === "/api/admin/discovery/usage") return json({ day: "2026-11-25", searches: 14, neurons: 312.4, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
     if (url === "/api/dashboard/summary") return dash === "error" ? json({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }, 500) : json(dash);
     return json({}, 404);
   }));
@@ -117,6 +118,21 @@ describe("SLM-12 dashboard page (ux.md §3.1)", () => {
 });
 
 describe("dashboard model", () => {
+  it("SLM-16: Admin sees today's AI usage against the cap", async () => {
+    stubApi("ADMIN", summary());
+    await renderWithProviders(<DashboardPage />);
+    expect(await screen.findByTestId("ai-usage-today")).toHaveTextContent("AI usage today: 312 / 8,000 Neurons · 14 AI searches");
+  });
+
+  it("SLM-16: a Librarian sees no AI usage line and never calls the endpoint", async () => {
+    stubApi("LIBRARIAN", summary());
+    await renderWithProviders(<DashboardPage />);
+    await screen.findAllByTestId("kpi-titles");
+    expect(screen.queryByTestId("ai-usage-today")).toBeNull();
+    const calls = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => c[0]);
+    expect(calls).not.toContain("/api/admin/discovery/usage");
+  });
+
   it("availability segments split on-loan into on-loan and overdue", () => {
     expect(availabilitySegments({ totalCopies: 412, availableCopies: 341, borrowedCopies: 71, overdueLoans: 6 })).toEqual({ available: 341, onLoan: 65, overdue: 6, total: 412 });
   });

@@ -94,6 +94,13 @@ export class PgCatalogRetrieval implements LexicalRetrieval {
     return more.rows.map((r) => toCandidate(r, terms, true));
   }
 
+  async catalogueVersion(): Promise<string> {
+    const { rows } = await this.db.execute(sql`SELECT count(*)::int AS n, coalesce(max(updated_at), 'epoch'::timestamptz) AS at, coalesce(sum(available_copies), 0)::int AS avail
+      FROM books WHERE archived_at IS NULL`);
+    const r = rows[0] ?? {};
+    return `${r.n}:${new Date(r.at as string | Date).getTime()}:${r.avail}`;
+  }
+
   async summaries(ids: string[]): Promise<Map<string, DiscoveryBook>> {
     const valid = ids.filter((i) => UUID.test(i));
     const map = new Map<string, DiscoveryBook>();

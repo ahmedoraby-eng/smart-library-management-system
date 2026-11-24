@@ -1,3 +1,4 @@
+import type { TokenUsage } from "./Cost";
 import type { DiscoveryBookSchema } from "@slm/contracts";
 import type { z } from "zod";
 
@@ -28,6 +29,10 @@ export interface CatalogRetrieval {
   candidates(query: string, opts: { limit: number; availableOnly: boolean }): Promise<Candidate[]>;
   /** How the last `candidates` call retrieved (hybrid retrieval reports a lexical-only fallback). Optional. */
   lastMode?(): RetrievalMode;
+  /** Neurons the last `candidates` call spent (query embedding). Optional. */
+  lastNeurons?(): number;
+  /** See LexicalRetrieval. Optional: without it, results are not cached. */
+  catalogueVersion?(): Promise<string>;
   /** Fresh title, author, availability... for these ids (archived or missing ids are absent from the result). */
   summaries(ids: string[]): Promise<Map<string, DiscoveryBook>>;
   /** Titles only of the member's last `limit` loans (no names, no email). */
@@ -42,6 +47,8 @@ export interface LexicalRetrieval extends CatalogRetrieval {
   byIds(ids: string[], query: string, opts: { availableOnly: boolean }): Promise<Candidate[]>;
   /** Related-category books not in `have`, to fill up to `limit`. */
   topUp(query: string, have: Candidate[], opts: { limit: number; availableOnly: boolean }): Promise<Candidate[]>;
+  /** Changes whenever a live book is added, edited, archived or its stock changes (result-cache key). */
+  catalogueVersion(): Promise<string>;
 }
 
 export interface RankRequest {
@@ -49,6 +56,8 @@ export interface RankRequest {
   candidates: Candidate[];
   memberRecentTitles: string[];
   signal: AbortSignal;
+  /** Called with the call's token usage (reported by the model, or estimated) for the cost budget. */
+  onUsage?: (usage: TokenUsage) => void;
 }
 
 /**

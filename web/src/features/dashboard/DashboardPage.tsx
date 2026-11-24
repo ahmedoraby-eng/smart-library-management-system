@@ -11,7 +11,7 @@ import { formatDate, formatDay } from "../../lib/format";
 import { useCan, useMe } from "../auth/session";
 import { BookCover } from "../books/BookCover";
 import { LoanStatusBadge } from "../circulation/LoanStatusBadge";
-import { useDashboard } from "./api";
+import { useAiUsageToday, useDashboard } from "./api";
 import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } from "./model";
 
 /** Card-header links: brand-700, semibold. */
@@ -33,6 +33,7 @@ export function DashboardPage() {
         <div>
           <h1 className="font-book text-title plain:tracking-tight">Dashboard</h1>
           <p className="mt-1 text-neutral-600" data-testid="today">{today()}</p>
+          <AiUsageLine enabled={can("STAFF_MANAGE")} />
         </div>
         {can("LOAN_PROCESS") && (
           <div className="flex gap-2">
@@ -87,6 +88,19 @@ export function DashboardPage() {
  * Reading Room: one ledger strip, figures split by hairlines, label as an eyebrow (no icon).
  * Plain: four separate cards with an icon, as before.
  */
+/** Admin only: one quiet line with today's AI spend against the daily Neuron cap (SLM-16 cost controls). */
+function AiUsageLine({ enabled }: { enabled: boolean }) {
+  const usage = useAiUsageToday(enabled);
+  if (!enabled || !usage.data) return null;
+  const u = usage.data;
+  const n = (x: number) => Math.round(x).toLocaleString("en-GB");
+  return (
+    <p className="mt-0.5 text-sm text-neutral-500 tabular-nums" data-testid="ai-usage-today">
+      AI usage today: {n(u.neurons)} / {n(u.neuronCap)} Neurons · {u.searches} AI {u.searches === 1 ? "search" : "searches"}
+    </p>
+  );
+}
+
 function KpiCard({ icon, label, testId, children }: { icon: ReactNode; label: string; testId: string; children: ReactNode }) {
   return (
     <div

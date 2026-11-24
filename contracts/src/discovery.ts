@@ -42,7 +42,22 @@ export const DiscoveryResponseSchema = z.object({
   })),
   /** SLM-16: "hybrid" = full-text + vector fused; "lexical" = full-text only (embeddings off or failed). */
   retrieval: z.enum(["hybrid", "lexical"]).optional(),
+  /** Why the model wasn't used (FALLBACK only), e.g. SINGLE_CANDIDATE, QUOTA_EXCEEDED, BUDGET_EXHAUSTED. */
+  fallbackReason: z.string().optional(),
+  /** SLM-16 cost control: this ranking came from the result cache (books re-read from the catalog). */
+  cached: z.boolean().optional(),
   note: z.string().nullable(), // fallback notice, "no match" text, or the model's own remark (plain text)
 });
 export type DiscoveryResponse = z.infer<typeof DiscoveryResponseSchema>;
 export type DiscoveryItem = DiscoveryResponse["items"][number];
+
+/** GET /api/admin/discovery/usage (Admin): today's AI spend against the caps (UTC day). */
+export const AiUsageTodaySchema = z.object({
+  day: z.string(),
+  searches: z.number().int(),
+  neurons: z.number(),
+  neuronCap: z.number(),
+  userQuota: z.number().int(),
+  vectorPath: z.enum(["hnsw", "brute-force"]).nullable(),
+});
+export type AiUsageToday = z.infer<typeof AiUsageTodaySchema>;

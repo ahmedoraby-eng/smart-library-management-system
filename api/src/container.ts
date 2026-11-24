@@ -11,6 +11,7 @@ import { PgDashboardReadModel } from "./dashboard/infrastructure/PgDashboardRead
 import { BookDiscoveryService } from "./discovery/application/BookDiscoveryService";
 import { BookIndexSync } from "./discovery/application/BookIndexSync";
 import { HybridCatalogRetrieval } from "./discovery/application/HybridCatalogRetrieval";
+import { PgAiBudget, PgAiCache } from "./discovery/infrastructure/PgAiCost";
 import { PgChunkStore } from "./discovery/infrastructure/PgChunkStore";
 import { PgCatalogRetrieval } from "./discovery/infrastructure/PgCatalogRetrieval";
 import { selectAiProvider, selectEmbedder } from "./discovery/infrastructure/selectProvider";
@@ -36,6 +37,9 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
   // SLM-16 hybrid retrieval: one embedder and one chunk store for indexing and search.
   const embedder = selectEmbedder(config, ai);
   const chunkStore = new PgChunkStore(db);
+  // SLM-16 cost controls: daily budget (global Neuron cap + per-user quota) and a TTL cache, in Postgres.
+  const aiBudget = new PgAiBudget(db, clock, config.aiDailyNeuronCap, config.aiUserDailySearches);
+  const aiCache = new PgAiCache(db, clock);
   const logJson = (e: Record<string, unknown>) => console.info(JSON.stringify({ level: "info", ...e }));
   return {
     db,
@@ -51,11 +55,15 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
     discovery: new BookDiscoveryService(
-      new HybridCatalogRetrieval(new PgCatalogRetrieval(db), chunkStore, embedder, (e) => logJson({ event: "ai_retrieval", ...e })),
+      new HybridCatalogRetrieval(new PgCatalogRetrieval(db), chunkStore, embedder, (e) => logJson({ event: "ai_retrieval", ...e }), undefined, { cache: aiCache, budget: aiBudget }),
       selectAiProvider(config, ai),
       (e) => logJson({ event: "ai_discovery", ...e }),
+      undefined,
+      { cache: aiCache, budget: aiBudget, userQuota: config.aiUserDailySearches },
     ),
-    bookIndex: new BookIndexSync(chunkStore, embedder, (e) => logJson(e)),
+    bookIndex: new BookIndexSync(chunkStore, embedder, (e) => logJson(e), aiBudget),
+    aiBudget,
+    aiCache,
     dashboard: new DashboardService(new PgDashboardReadModel(db, clock)),
     members: new MemberService(new PgMemberRepository(db)),
   };

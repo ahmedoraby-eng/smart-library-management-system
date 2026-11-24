@@ -23,6 +23,10 @@ DEMO_ACCOUNTS_ENABLED = "true"
 AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
 # SLM-16 hybrid retrieval (768-dim, matches migration 0004). "off" = full-text only.
 EMBEDDING_MODEL = "@cf/baai/bge-base-en-v1.5"
+EMBEDDING_MIN_SIMILARITY = "0.72"
+# SLM-16 cost controls (UTC day): global Neurons (free allowance 10,000) and AI searches per staff user.
+AI_DAILY_NEURON_CAP = "8000"
+AI_USER_DAILY_SEARCHES = "50"
 # Set per deployment (public, not secret): GOOGLE_CLIENT_ID, BOOTSTRAP_ADMIN_EMAILS, DEMO_LIBRARIAN_EMAIL, DEMO_ADMIN_EMAIL
 # Secrets (wrangler secret put): SESSION_SECRET, GOOGLE_CLIENT_SECRET, DEMO_LIBRARIAN_PASSWORD, DEMO_ADMIN_PASSWORD
 
@@ -52,6 +56,12 @@ simple = { limit = 10, period = 60 }
 name = "GOOGLE_CALLBACK_LIMITER"
 namespace_id = "1005"
 simple = { limit = 10, period = 60 }
+
+# SLM-16: the discovery reindex can spend Neurons; Admin only, 2 per minute.
+[[ratelimits]]
+name = "REINDEX_LIMITER"
+namespace_id = "1006"
+simple = { limit = 2, period = 60 }
 
 # Postgres (Neon) through Hyperdrive, query cache OFF. Basel fills in the id.
 # [[hyperdrive]]

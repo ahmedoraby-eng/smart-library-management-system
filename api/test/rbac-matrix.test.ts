@@ -33,6 +33,7 @@ const MATRIX: Record<string, Who[]> = {
   "POST /api/ai/book-discovery": ["A", "L", "S"],
   "POST /api/admin/reset-demo": ["A"],
   "POST /api/admin/discovery/reindex": ["A"],
+  "GET /api/admin/discovery/usage": ["A"],
   "GET /api/staff-users": ["A"],
   "PUT /api/staff-users/:id": ["A"],
 };

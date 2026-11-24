@@ -14,6 +14,11 @@ export interface Config {
   aiModel: string | null;
   /** SLM-16: Workers AI embedding model for hybrid retrieval; null = vector search off (EMBEDDING_MODEL=off). */
   embeddingModel: string | null;
+  /** SLM-16: cosine below this is noise for the embedding model (bge-base scores sit high). */
+  embeddingMinSimilarity: number;
+  /** SLM-16 cost controls: global Neurons per UTC day (free allowance is 10,000) and AI searches per user per day. */
+  aiDailyNeuronCap: number;
+  aiUserDailySearches: number;
   aiFake: boolean;
 }
 
@@ -28,6 +33,13 @@ const int = (env: RawEnv, key: string, fallback: number, min: number, max: numbe
   if (raw === null) return fallback;
   const n = Number(raw);
   if (!Number.isInteger(n) || n < min || n > max) throw new Error(`Config ${key} must be an integer ${min}–${max}`);
+  return n;
+};
+const num = (env: RawEnv, key: string, fallback: number, min: number, max: number): number => {
+  const raw = str(env, key);
+  if (raw === null) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < min || n > max) throw new Error(`Config ${key} must be a number ${min}–${max}`);
   return n;
 };
 const bool = (env: RawEnv, key: string): boolean => str(env, key)?.toLowerCase() === "true";
@@ -76,5 +88,8 @@ export function loadConfig(env: RawEnv): Config {
     aiModel: str(env, "AI_MODEL"),
     embeddingModel: str(env, "EMBEDDING_MODEL")?.toLowerCase() === "off" ? null : (str(env, "EMBEDDING_MODEL") ?? "@cf/baai/bge-base-en-v1.5"),
     aiFake,
+    embeddingMinSimilarity: num(env, "EMBEDDING_MIN_SIMILARITY", 0.72, 0, 1),
+    aiDailyNeuronCap: int(env, "AI_DAILY_NEURON_CAP", 8000, 0, 1_000_000),
+    aiUserDailySearches: int(env, "AI_USER_DAILY_SEARCHES", 50, 0, 10_000),
   };
 }

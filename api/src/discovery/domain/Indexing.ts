@@ -26,10 +26,17 @@ export interface ChunkStore {
   liveBooks(ids?: string[]): Promise<IndexableBook[]>;
   /** source_hash per indexed book (for the given model). */
   indexedHashes(model: string): Promise<Map<string, string>>;
-  /** Replaces all chunks of one book (one transaction). */
-  replaceBook(bookId: string, chunks: ChunkRow[], sourceHash: string, model: string): Promise<void>;
-  /** Removes chunks of books that are gone or archived, and chunks made with another model. Returns rows removed. */
-  removeOrphans(model: string): Promise<number>;
+  /** Of these source hashes, those that some chunk already has (vectors that can be copied, not re-embedded). */
+  knownHashes(hashes: string[], model: string): Promise<Set<string>>;
+  /**
+   * One transaction: replace the chunks of `embedded` books with the new rows, give `copied` books the
+   * chunks of another book with the same source hash, then drop orphan chunks (gone/archived books,
+   * other models). Returns the number of orphan rows removed.
+   */
+  apply(model: string, change: {
+    embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>;
+    copied: Array<{ bookId: string; hash: string }>;
+  }): Promise<number>;
   /** Books whose best chunk is closest to the query vector, best first. */
   nearest(query: number[], opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean }): Promise<VectorHit[]>;
   /** True when the server has pgvector (the HNSW path). */

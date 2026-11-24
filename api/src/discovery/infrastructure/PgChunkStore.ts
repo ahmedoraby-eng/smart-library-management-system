@@ -5,6 +5,7 @@ import type { ChunkRow, ChunkStore, IndexableBook, VectorHit } from "../domain/I
 
 /** How many nearest chunks the vector query reads before grouping by book. */
 const CHUNK_POOL_FACTOR = 2;
+let pathLogged = false;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const vectorLiteral = (v: number[]) => `[${v.join(",")}]`;
 /** Postgres array literal: one parameter (Drizzle would spread a JS array into a tuple). */
@@ -23,7 +24,14 @@ export class PgChunkStore implements ChunkStore {
   usesPgvector(): Promise<boolean> {
     this.pgvector ??= this.db
       .execute(sql`SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'`)
-      .then((r) => r.rows.length > 0);
+      .then((r) => {
+        const yes = r.rows.length > 0;
+        if (!pathLogged) {
+          pathLogged = true;
+          console.info(JSON.stringify({ level: "info", event: "vector_search_path", path: yes ? "hnsw" : "brute-force" }));
+        }
+        return yes;
+      });
     return this.pgvector;
   }
 
@@ -43,26 +51,43 @@ export class PgChunkStore implements ChunkStore {
     return new Map(rows.map((r) => [r.book_id as string, r.source_hash as string]));
   }
 
-  async replaceBook(bookId: string, chunks: ChunkRow[], sourceHash: string, model: string): Promise<void> {
-    const pgvector = await this.usesPgvector();
-    await this.db.transaction(async (tx) => {
-      await tx.execute(sql`DELETE FROM book_chunks WHERE book_id = ${bookId}::uuid`);
-      if (chunks.length === 0) return;
-      const values = chunks.map((c) => pgvector
-        ? sql`(${bookId}::uuid, ${c.index}, ${c.content}, ${sourceHash}, ${model}, ${arrayLiteral(c.embedding)}::real[], ${vectorLiteral(c.embedding)}::vector)`
-        : sql`(${bookId}::uuid, ${c.index}, ${c.content}, ${sourceHash}, ${model}, ${arrayLiteral(c.embedding)}::real[])`);
-      const cols = pgvector
-        ? sql`(book_id, chunk_index, content, source_hash, model, embedding, embedding_v)`
-        : sql`(book_id, chunk_index, content, source_hash, model, embedding)`;
-      await tx.execute(sql`INSERT INTO book_chunks ${cols} VALUES ${sql.join(values, sql`, `)}`);
-    });
+  async knownHashes(hashes: string[], model: string): Promise<Set<string>> {
+    if (hashes.length === 0) return new Set();
+    const { rows } = await this.db.execute(sql`SELECT DISTINCT source_hash FROM book_chunks
+      WHERE model = ${model} AND source_hash IN (${sql.join(hashes.map((h) => sql`${h}`), sql`, `)})`);
+    return new Set(rows.map((r) => r.source_hash as string));
   }
 
-  async removeOrphans(model: string): Promise<number> {
-    const r = await this.db.execute(sql`DELETE FROM book_chunks c
-      WHERE c.model <> ${model}
-         OR NOT EXISTS (SELECT 1 FROM books b WHERE b.id = c.book_id AND b.archived_at IS NULL)`);
-    return r.rowCount ?? 0;
+  async apply(model: string, change: { embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>; copied: Array<{ bookId: string; hash: string }> }): Promise<number> {
+    const pgvector = await this.usesPgvector();
+    const cols = pgvector
+      ? sql`(book_id, chunk_index, content, source_hash, model, embedding, embedding_v)`
+      : sql`(book_id, chunk_index, content, source_hash, model, embedding)`;
+    return this.db.transaction(async (tx) => {
+      // Copies first: their donor rows may belong to books that are about to be removed as orphans (demo reset).
+      for (const c of change.copied) {
+        await tx.execute(sql`DELETE FROM book_chunks WHERE book_id = ${c.bookId}::uuid`);
+        const src = pgvector ? sql`embedding, embedding_v` : sql`embedding`;
+        await tx.execute(sql`INSERT INTO book_chunks ${cols}
+          SELECT ${c.bookId}::uuid, chunk_index, content, source_hash, model, ${src} FROM book_chunks
+          WHERE model = ${model} AND book_id = (
+            SELECT book_id FROM book_chunks WHERE source_hash = ${c.hash} AND model = ${model} AND book_id <> ${c.bookId}::uuid LIMIT 1)
+          ON CONFLICT (book_id, chunk_index, model) DO NOTHING`);
+      }
+      for (const e of change.embedded) {
+        await tx.execute(sql`DELETE FROM book_chunks WHERE book_id = ${e.bookId}::uuid`);
+        if (e.rows.length === 0) continue;
+        const values = e.rows.map((c) => pgvector
+          ? sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[], ${vectorLiteral(c.embedding)}::vector)`
+          : sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[])`);
+        await tx.execute(sql`INSERT INTO book_chunks ${cols} VALUES ${sql.join(values, sql`, `)}
+          ON CONFLICT (book_id, chunk_index, model) DO UPDATE SET content = EXCLUDED.content, source_hash = EXCLUDED.source_hash, embedding = EXCLUDED.embedding`);
+      }
+      const r = await tx.execute(sql`DELETE FROM book_chunks c
+        WHERE c.model <> ${model}
+           OR NOT EXISTS (SELECT 1 FROM books b WHERE b.id = c.book_id AND b.archived_at IS NULL)`);
+      return r.rowCount ?? 0;
+    });
   }
 
   async nearest(query: number[], opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean }): Promise<VectorHit[]> {

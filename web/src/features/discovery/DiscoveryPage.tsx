@@ -210,7 +210,10 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
   const n = data.items.length;
   return (
     <>
-      {data.mode === "FALLBACK" && data.note && <InlineAlert variant="warning" className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>}
+      {data.mode === "FALLBACK" && data.note && (
+        // A single match is not a failure (the model is skipped on purpose to save cost): info, not warning.
+        <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
+      )}
       <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
         <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>
         {data.mode === "AI" ? (

@@ -18,9 +18,12 @@ export class WorkersAiEmbedder implements Embedder {
   readonly dimensions: number;
   /** bge v1.5: short queries against passages work best with this instruction. */
   readonly queryPrefix = "Represent this sentence for searching relevant passages: ";
-  /** Tunable: bge cosine scores sit high; below this a chunk is not about the request. */
-  readonly minSimilarity = 0.5;
-  constructor(private readonly ai: AiBinding, readonly model: string = DEFAULT_EMBEDDING_MODEL) {
+  constructor(
+    private readonly ai: AiBinding,
+    readonly model: string = DEFAULT_EMBEDDING_MODEL,
+    /** EMBEDDING_MIN_SIMILARITY: bge cosine scores sit high (unrelated texts ≈ 0.6–0.7); below this a chunk is noise. */
+    readonly minSimilarity = 0.72,
+  ) {
     this.dimensions = DIMENSIONS[model] ?? 768;
   }
 

@@ -130,7 +130,9 @@ describe("SLM-16 indexing (book_chunks)", () => {
   it("chunks made with another model are stale and replaced", async () => {
     await new BookIndexSync(store(), new FakeEmbedder()).syncAll();
     const other: Embedder = Object.assign(new FakeEmbedder(), { model: "fake-embedding-v2" });
-    expect(await new BookIndexSync(store(), other).syncAll()).toMatchObject({ embeddedBooks: 4, removed: 4 });
+    expect(await new BookIndexSync(store(), other).syncAll()).toMatchObject({ embeddedBooks: 4, chunks: 4 });
+    const { rows } = await pool.query("SELECT DISTINCT model FROM book_chunks");
+    expect(rows.map((r) => r.model)).toEqual(["fake-embedding-v2"]);
   });
 
   it("a failing embedder never fails a book save (syncBookSafely swallows and logs)", async () => {

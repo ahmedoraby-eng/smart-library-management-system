@@ -11,9 +11,11 @@ CREATE TABLE book_chunks (
   model       text        NOT NULL,
   embedding   real[]      NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (book_id, chunk_index)
+  UNIQUE (book_id, chunk_index, model)
 );
 CREATE INDEX book_chunks_book_id_idx ON book_chunks (book_id);
+-- Reuse vectors across demo resets: same text + model → same hash → copy, no AI call.
+CREATE INDEX book_chunks_source_hash_idx ON book_chunks (source_hash, model);
 
 -- pgvector where the server has it (Neon). Without it (CI, embedded Postgres) search falls back to
 -- brute-force cosine over `embedding` in the app; nothing else changes.
