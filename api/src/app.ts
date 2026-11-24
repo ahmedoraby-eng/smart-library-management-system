@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
 import { dashboardRoutes } from "./dashboard/api/routes";
+import { discoveryRoutes } from "./discovery/api/routes";
 import type { Container } from "./container";
 import { adminRoutes } from "./demo/api/routes";
 import type { AppEnv } from "./platform/appEnv";
@@ -27,6 +28,7 @@ export function createApp(openContainer: ContainerFactory) {
   const app = new Hono<AppEnv>().basePath("/api");
   const demoLoginFallback = new MemoryLimiter(5, 60_000);
   const deepHealthFallback = new MemoryLimiter(10, 60_000);
+  const discoveryFallback = new MemoryLimiter(10, 60_000);
 
   app.use(async (c, next) => {
     const requestId = requestIdFrom(c.req.header("x-request-id"));
@@ -97,6 +99,7 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
+  app.route("/ai", discoveryRoutes((c) => limiterFor(c.env, "DISCOVERY_LIMITER", discoveryFallback, 60)));
   app.route("/dashboard", dashboardRoutes());
   app.route("/admin", adminRoutes());
 
