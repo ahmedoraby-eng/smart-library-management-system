@@ -99,9 +99,9 @@ function MemberDetail({ member }: { member: MemberDto }) {
   return (
     <>
       <BackToMembers />
-      <header className="mb-6 flex items-start justify-between gap-6">
+      <header className="page-head mb-6 flex items-start justify-between gap-6">
         <div>
-          <h1 className="flex flex-wrap items-center gap-3 text-xl font-semibold tracking-tight" data-testid="member-detail-name">
+          <h1 className="flex flex-wrap items-center gap-3 font-book text-title plain:tracking-tight" data-testid="member-detail-name">
             {member.fullName}
             <MemberStatusBadge status={member.status} />
           </h1>
@@ -293,9 +293,9 @@ function LoanTable({ loans, history, empty }: { loans: LoanDto[]; history: boole
 function LoanRow({ loan, history, onReturn }: { loan: LoanDto; history: boolean; onReturn?: (() => void) | undefined }) {
   const overdue = loan.status === "OVERDUE";
   return (
-    <Tr data-testid="loan-row" data-loan-status={loan.status} className={overdue ? "bg-[#FFFBFA]" : undefined}>
+    <Tr data-testid="loan-row" data-loan-status={loan.status} className={overdue ? "bg-overdue" : undefined}>
       <Td>
-        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="block font-semibold text-neutral-900 no-underline hover:underline" data-testid="loan-book">
+        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base" data-testid="loan-book">
           {loan.book.title}
         </Link>
         <div className="truncate text-sm text-neutral-600">{loan.book.author}</div>

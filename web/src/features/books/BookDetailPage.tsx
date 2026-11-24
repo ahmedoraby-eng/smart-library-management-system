@@ -77,11 +77,11 @@ function BookDetail({ book }: { book: BookDto }) {
   return (
     <>
       <BackToBooks />
-      <header className="mb-6 flex items-start justify-between gap-6">
+      <header className="page-head mb-6 flex items-start justify-between gap-6">
         <div className="flex items-start gap-6">
           <BookCover title={book.title} url={book.coverImageUrl} size="lg" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight" data-testid="book-detail-title">
+            <h1 className="font-book text-title plain:tracking-tight" data-testid="book-detail-title">
               {book.title}
               {book.archived && (
                 <Badge variant="neutral" dot={false} className="ml-3 align-middle" data-testid="archived-tag">
@@ -171,7 +171,7 @@ function Stat({ label, value, testId }: { label: string; value: number; testId: 
   return (
     <div>
       <dt className="text-xs font-medium text-neutral-600">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums" data-testid={testId}>
+      <dd className="mt-1 font-book text-2xl tabular-nums plain:tracking-tight" data-testid={testId}>
         {value}
       </dd>
     </div>

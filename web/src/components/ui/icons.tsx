@@ -2,7 +2,7 @@ import type { ReactNode, SVGProps } from "react";
 
 type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & { size?: number };
 
-/** Minimal stroke icon set (24px grid, 1.8 stroke) so the app needs no icon dependency. */
+/** Minimal stroke icon set (24px grid) so the app needs no icon dependency. Stroke 1.5 square (Reading Room) or 1.8 round (plain), from CSS `.slm-icon`. */
 function Icon({ size = 18, children, ...rest }: IconProps & { children: ReactNode }) {
   return (
     <svg
@@ -16,7 +16,7 @@ function Icon({ size = 18, children, ...rest }: IconProps & { children: ReactNod
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
-      className="shrink-0"
+      className="slm-icon shrink-0"
       {...rest}
     >
       {children}
@@ -31,10 +31,8 @@ export const BookIcon = (p: IconProps) => (
 );
 export const DashboardIcon = (p: IconProps) => (
   <Icon {...p}>
-    <rect x="3" y="3" width="7" height="9" rx="1.5" />
-    <rect x="14" y="3" width="7" height="5" rx="1.5" />
-    <rect x="14" y="12" width="7" height="9" rx="1.5" />
-    <rect x="3" y="16" width="7" height="5" rx="1.5" />
+    <path d="M4 5h16M4 12h16M4 19h10" />
+    <path d="M17 17l2 2 3-4" />
   </Icon>
 );
 export const UsersIcon = (p: IconProps) => (
@@ -50,12 +48,24 @@ export const SwapIcon = (p: IconProps) => (
 );
 export const HistoryIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" />
+    <rect x="4" y="3" width="16" height="18" rx="1" />
+    <path d="M8 8h8M8 12h8M8 16h5" />
   </Icon>
 );
-export const SparkIcon = (p: IconProps) => (
+/** Reading lamp: the reference desk (Book discovery) in the nav. */
+export const LampIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3ZM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" />
+    <path d="M8 4h8l3 7H5l3-7Z" />
+    <path d="M12 11v8M8 20h8" />
+    <path d="M9.5 14.5l-1.5 1.5M14.5 14.5l1.5 1.5" opacity=".6" />
+  </Icon>
+);
+/** Member card, for Members in the nav (UsersIcon stays for people elsewhere). */
+export const MemberCardIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="1" />
+    <circle cx="9" cy="11" r="2.2" />
+    <path d="M5.8 16.5c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3" />
   </Icon>
 );
 export const ShieldIcon = (p: IconProps) => (

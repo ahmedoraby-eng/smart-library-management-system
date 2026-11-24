@@ -68,9 +68,9 @@ export function StaffUsersPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-end justify-between gap-4">
+      <header className="page-head mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Staff users</h1>
+          <h1 className="font-book text-title plain:tracking-tight">Staff users</h1>
           <p className="mt-1 text-neutral-600" data-testid="staff-caption">
             People appear here after their first Google sign-in.
           </p>

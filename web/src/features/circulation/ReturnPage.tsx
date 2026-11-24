@@ -145,13 +145,13 @@ export function ReturnPage() {
                     data-loan-id={loan.id}
                     className={cn(
                       "motion-safe:transition-opacity",
-                      loan.status === "OVERDUE" && "bg-[#FFFBFA]",
+                      loan.status === "OVERDUE" && "bg-overdue",
                       fading.has(loan.id) && "pointer-events-none opacity-0",
                     )}
                     style={{ transitionDuration: `${FADE_MS}ms` }}
                   >
                     <Td>
-                      <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-semibold text-neutral-900 no-underline hover:underline">
+                      <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">
                         {loan.book.title}
                       </Link>
                       <div className="text-sm text-neutral-600">{loan.book.author}</div>

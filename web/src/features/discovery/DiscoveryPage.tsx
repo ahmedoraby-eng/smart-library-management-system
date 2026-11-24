@@ -2,7 +2,7 @@ import type { DiscoveryItem, DiscoveryRequest, DiscoveryResponse, MemberDto } fr
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
-  AvailabilityBadge, Badge, Button, buttonClasses, Card, Combobox, EmptyState, InlineAlert, SearchIcon, Skeleton, SparkIcon, Textarea,
+  AvailabilityBadge, Badge, Button, buttonClasses, Card, Combobox, EmptyState, InlineAlert, SearchIcon, Skeleton, Textarea,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { initials } from "../../lib/format";
@@ -68,12 +68,13 @@ export function DiscoveryPage() {
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Book discovery</h1>
+      <header className="page-head mb-6">
+        <h1 className="font-book text-title plain:tracking-tight">Book discovery</h1>
         <p className="mt-1 text-neutral-600">Describe what the member is looking for. Results come only from your catalog.</p>
       </header>
 
-      <Card className="p-5">
+      {/* Reading Room: the reference desk, marked by a brass top edge. */}
+      <Card className="border-t-[3px] border-t-brass-500 p-5 plain:border-t plain:border-t-border">
         <form onSubmit={onSubmit} noValidate data-testid="discovery-form">
           <Textarea
             label="What does the member need?"
@@ -84,6 +85,7 @@ export function DiscoveryPage() {
             onBlur={() => query && setTouched(true)}
             error={problem}
             rows={3}
+            className="rr:rounded-none rr:border-x-0 rr:border-t-0 rr:bg-transparent rr:px-0 rr:font-display rr:text-[20px] rr:leading-[30px] rr:italic"
             placeholder="For example: beginner-friendly books about software architecture for someone who already programs"
             data-testid="discovery-query"
           />
@@ -132,13 +134,13 @@ export function DiscoveryPage() {
           )}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Examples">
-              <span className="text-sm text-neutral-600">Try</span>
+              <span className="eyebrow plain:text-sm">Try</span>
               {EXAMPLES.map((ex) => (
                 <button
                   key={ex}
                   type="button"
                   onClick={() => { setQuery(ex); setTouched(false); }}
-                  className="rounded-full border border-border-strong bg-surface px-3 py-1 text-sm text-neutral-700 hover:bg-neutral-50"
+                  className="rounded-xs border border-border-strong bg-surface px-3 py-1 font-display text-sm text-neutral-700 book-italic hover:bg-neutral-50"
                   data-testid="example-chip"
                 >
                   {ex}
@@ -150,7 +152,7 @@ export function DiscoveryPage() {
                 <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} className="h-4 w-4 accent-brand-600" data-testid="available-only" />
                 Available only
               </label>
-              <Button type="submit" variant="primary" icon={<SparkIcon size={16} />} loading={discover.isPending} disabled={cooldown > 0} data-testid="discovery-submit">
+              <Button type="submit" variant="primary" icon={<SearchIcon size={16} />} loading={discover.isPending} disabled={cooldown > 0} data-testid="discovery-submit">
                 {cooldown > 0 ? `Try again in ${cooldown}s` : "Find books"}
               </Button>
             </div>
@@ -209,10 +211,10 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
   return (
     <>
       {data.mode === "FALLBACK" && data.note && <InlineAlert variant="warning" className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>}
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="text-md font-semibold" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>
+      <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
+        <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>
         {data.mode === "AI" ? (
-          <Badge variant="brand" dot={false} data-testid="mode-badge" data-mode="AI"><SparkIcon size={12} /> AI-ranked</Badge>
+          <Badge variant="brass" dot={false} data-testid="mode-badge" data-mode="AI">AI-ranked</Badge>
         ) : (
           <Badge variant="neutral" dot={false} data-testid="mode-badge" data-mode="FALLBACK">Keyword match</Badge>
         )}
@@ -236,20 +238,26 @@ function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryI
   const meta = [book.author, book.category, book.publicationYear].filter(Boolean).join(" · ");
   return (
     <li className="flex gap-4 border-b border-border p-4 last:border-b-0" data-testid="discovery-item" data-book-id={book.id}>
-      <span className="w-4 pt-1 text-sm text-neutral-600 tabular-nums">{rank}</span>
+      <span className="w-11 shrink-0 text-right font-book text-[30px] leading-8 text-brass-500 tabular-nums book-italic plain:w-4 plain:pt-1 plain:text-left plain:text-sm plain:leading-[18px] plain:font-normal plain:text-neutral-600">{rank}</span>
       <BookCover title={book.title} url={book.coverImageUrl} size="md" />
       <div className="min-w-0 flex-1">
-        <Link to="/books/$bookId" params={{ bookId: book.id }} className="text-md font-semibold text-neutral-900 no-underline hover:underline">{book.title}</Link>
+        <Link to="/books/$bookId" params={{ bookId: book.id }} className="font-book text-[19px] leading-6 text-neutral-900 no-underline hover:underline plain:text-md">{book.title}</Link>
         <p className="text-sm text-neutral-600">{meta}</p>
-        <p className="mt-2 rounded-md border-l-2 border-brand-200 bg-neutral-25 px-3 py-2 text-base" data-testid="reason">
-          {mode === "AI" && <><span className="font-semibold">Why this book</span>{" "}</>}
-          <span className={long && !open ? "line-clamp-3" : undefined}>{item.reason}</span>
-          {long && (
-            <button type="button" className="ml-1 text-sm font-medium text-brand-700" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-              {open ? "less" : "more"}
-            </button>
-          )}
-        </p>
+        {/* Reading Room: a librarian's note in italic serif under a brass hairline; plain: the tinted box with an inline label. */}
+        <div
+          className="mt-2.5 max-w-[72ch] border-l-2 border-brass-200 pl-3.5 plain:max-w-none plain:rounded-md plain:border-brand-200 plain:bg-neutral-25 plain:px-3 plain:py-2 plain:text-base"
+          data-testid="reason"
+        >
+          {mode === "AI" && <><span className="eyebrow mb-1 block rr:text-brass-700 plain:inline plain:text-base plain:font-semibold plain:text-neutral-900">Why this book</span>{" "}</>}
+          <span className="block font-display text-[16px] leading-[23px] text-neutral-700 book-italic plain:inline plain:text-base plain:text-neutral-900">
+            <span className={long && !open ? "line-clamp-3" : undefined}>{item.reason}</span>
+            {long && (
+              <button type="button" className="ml-1 font-sans text-sm font-medium text-brand-700 not-italic" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+                {open ? "less" : "more"}
+              </button>
+            )}
+          </span>
+        </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
         <AvailabilityBadge book={book} showNextDue />

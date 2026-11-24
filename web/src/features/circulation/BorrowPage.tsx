@@ -313,7 +313,7 @@ export function BorrowPage() {
               <PickedRow testId="picked-book" onChange={() => { setBook(null); setTimeout(() => bookInput.current?.focus(), 0); }}>
                 <BookCover title={book.title} url={book.coverImageUrl} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{book.title}</div>
+                  <div className="font-book text-md plain:text-base">{book.title}</div>
                   <div className="truncate text-sm text-neutral-600">
                     {book.author}
                     {book.isbn ? ` · ISBN ${book.isbn}` : ""}
