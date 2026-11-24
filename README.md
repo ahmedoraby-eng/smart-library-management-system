@@ -20,6 +20,9 @@ A staff-facing library operations app: catalogue, members, **Borrow Book** / **R
 | Tests | Vitest on real PostgreSQL 16, Playwright for the main user journeys |
 
 ## Run locally
+**Quickest:** `npm install` then `npm run demo:local`. It starts an embedded PostgreSQL 16 on a free port, migrates, loads the demo data, creates `.dev.vars` with random local demo passwords, runs the app, and prints the URL and the demo sign-ins. Ctrl+C stops it.
+
+Step by step:
 Prerequisites: Node 20 or newer, and either Docker **or** nothing else (an embedded PostgreSQL 16 is included).
 
 ```bash
