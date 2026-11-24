@@ -21,7 +21,8 @@
     "test": "vitest run",
     "build": "npm run build -w web",
     "deploy": "npm run build && wrangler deploy",
-    "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs"
+    "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs",
+    "demo:local": "tsx scripts/demo-local.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261124.1",
