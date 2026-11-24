@@ -10,6 +10,7 @@ export class AppError extends Error {
     readonly title: string,
     detail?: string,
     readonly fieldErrors?: FieldError[],
+    readonly context?: Record<string, unknown>,
   ) {
     super(detail ?? title);
   }
@@ -33,7 +34,9 @@ export class NotFoundError extends AppError {
 }
 /** Business-rule conflicts (409): unavailable book, loan limit, stale version… */
 export class ConflictError extends AppError {
-  constructor(code: ErrorCode, title: string, detail: string) { super(409, code, title, detail); }
+  constructor(code: ErrorCode, title: string, detail: string, context?: Record<string, unknown>) {
+    super(409, code, title, detail, undefined, context);
+  }
 }
 
 export function toProblem(err: AppError, requestId: string): Problem {
@@ -44,6 +47,7 @@ export function toProblem(err: AppError, requestId: string): Problem {
     code: err.code,
     detail: err.message,
     ...(err.fieldErrors?.length ? { errors: err.fieldErrors } : {}),
+    ...(err.context ? { context: err.context } : {}),
     requestId,
   };
 }
