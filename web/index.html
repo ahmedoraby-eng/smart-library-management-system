@@ -1,9 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="reading-room">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Library</title>
+    <!-- Theme before first paint (no flash). Same key and values as src/lib/theme.ts. -->
+    <script>
+      try {
+        if (localStorage.getItem("slm-theme") === "plain") document.documentElement.dataset.theme = "plain";
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

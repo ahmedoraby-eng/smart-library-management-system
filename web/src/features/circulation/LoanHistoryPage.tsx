@@ -66,8 +66,8 @@ export function LoanHistoryPage() {
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Loan history</h1>
+      <header className="page-head mb-6">
+        <h1 className="font-book text-title plain:tracking-tight">Loan history</h1>
         <p className="mt-1 text-neutral-600" data-testid="result-line" aria-live="polite">
           {data ? `${data.total} ${data.total === 1 ? "loan" : "loans"}${filtered ? " match these filters" : ""}` : " "}
           {data && filtered && (
@@ -191,9 +191,9 @@ export function LoanHistoryPage() {
 function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: string) => void }) {
   const overdue = loan.status === "OVERDUE";
   return (
-    <Tr data-testid="history-row" data-status={loan.status} className={cn(overdue && "bg-[#FFFBFA]")}>
+    <Tr data-testid="history-row" data-status={loan.status} className={cn(overdue && "bg-overdue")}>
       <Td>
-        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-semibold text-neutral-900 no-underline hover:underline">
+        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">
           {loan.book.title}
         </Link>
         <div className="text-sm text-neutral-600">{loan.book.author}</div>

@@ -79,7 +79,7 @@ function FormScreen({ title, book, onReload }: { title: string; book?: BookDto; 
   return (
     <>
       <BackToBooks />
-      <h1 className="mb-6 text-xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="page-head mb-6 font-book text-title plain:tracking-tight">{title}</h1>
       <BookForm
         book={book}
         categories={categories.data ?? []}

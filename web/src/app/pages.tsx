@@ -4,8 +4,8 @@ import { useMe } from "../features/auth/session";
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <header className="mb-6">
-      <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+    <header className="page-head mb-6">
+      <h1 className="font-book text-title plain:tracking-tight">{title}</h1>
       {subtitle && <p className="mt-1 text-neutral-600">{subtitle}</p>}
     </header>
   );

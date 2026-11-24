@@ -70,9 +70,9 @@ export function BooksPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-end justify-between gap-4">
+      <header className="page-head mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Books</h1>
+          <h1 className="font-book text-title plain:tracking-tight">Books</h1>
           <p className="mt-1 text-neutral-600" data-testid="result-line" aria-live="polite">
             {data ? resultLine(data.total, search.q) : " "}
             {data && filtered && (
@@ -246,7 +246,7 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
             <Link
               to="/books/$bookId"
               params={{ bookId: book.id }}
-              className="block font-semibold text-neutral-900 no-underline hover:underline"
+              className="block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
               data-testid="book-title"
             >
               {book.title}
@@ -257,7 +257,7 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
       </Td>
       <Td kind="nowrap" className="text-neutral-700">{book.category}</Td>
       <Td kind="num" className="text-neutral-700 max-lg:hidden">{book.publicationYear ?? "—"}</Td>
-      <Td kind="num" className="text-neutral-700 max-wide:hidden">{book.isbn ?? "—"}</Td>
+      <Td kind="num" className="font-mono text-[12.5px] text-neutral-700 max-wide:hidden plain:text-base">{book.isbn ?? "—"}</Td>
       <Td kind="nowrap">
         <AvailabilityBadge book={book} showNextDue />
       </Td>

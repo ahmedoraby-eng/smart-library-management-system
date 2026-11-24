@@ -50,7 +50,7 @@ describe("SLM-12 dashboard page (ux.md §3.1)", () => {
     const rows = screen.getAllByTestId("recent-row");
     expect(rows).toHaveLength(3);
     expect(rows[1]).toHaveAttribute("data-status", "OVERDUE");
-    expect(rows[1]).toHaveClass("bg-[#FFFBFA]");
+    expect(rows[1]).toHaveClass("bg-overdue");
     expect(within(rows[1]!).getByText("Overdue · 3 days")).toBeInTheDocument();
     expect(within(rows[0]!).getByText("Active")).toBeInTheDocument();
     expect(within(rows[2]!).getByText("Returned")).toBeInTheDocument();

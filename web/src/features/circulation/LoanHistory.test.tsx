@@ -32,7 +32,7 @@ describe("SLM-5 Loan history page (ux.md §3.6)", () => {
     }, supervisor);
     const rows = await screen.findAllByTestId("history-row");
     expect(rows[0]).toHaveAttribute("data-status", "OVERDUE");
-    expect(rows[0]!.className).toContain("bg-[#FFFBFA]");
+    expect(rows[0]!.className).toContain("bg-overdue");
     expect(within(rows[0]!).getByTestId("loan-status")).toHaveTextContent("Overdue · 2 days");
     expect(rows[0]).toHaveTextContent("Clean Code");
     expect(rows[0]).toHaveTextContent("Sara Haddad");

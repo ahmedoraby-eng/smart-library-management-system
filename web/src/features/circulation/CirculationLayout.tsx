@@ -10,7 +10,7 @@ export function CirculationLayout() {
   return (
     <RequirePermission permission="LOAN_PROCESS">
       <header className="mb-5">
-        <h1 className="text-xl font-semibold tracking-tight">Circulation</h1>
+        <h1 className="font-book text-title plain:tracking-tight">Circulation</h1>
         <p className="mt-1 text-neutral-600">Record a borrowing or a return.</p>
       </header>
       <nav aria-label="Circulation" className="mb-6 flex gap-6 border-b border-border">

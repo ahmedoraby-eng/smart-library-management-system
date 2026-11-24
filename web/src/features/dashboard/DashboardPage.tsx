@@ -29,9 +29,9 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="page-head mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="font-book text-title plain:tracking-tight">Dashboard</h1>
           <p className="mt-1 text-neutral-600" data-testid="today">{today()}</p>
         </div>
         {can("LOAN_PROCESS") && (
@@ -83,18 +83,28 @@ export function DashboardPage() {
   );
 }
 
+/**
+ * Reading Room: one ledger strip, figures split by hairlines, label as an eyebrow (no icon).
+ * Plain: four separate cards with an icon, as before.
+ */
 function KpiCard({ icon, label, testId, children }: { icon: ReactNode; label: string; testId: string; children: ReactNode }) {
   return (
-    <Card className="p-5" data-testid={testId}>
-      <div className="flex items-center gap-2 text-neutral-600">{icon}<h2 className="text-base font-medium">{label}</h2></div>
+    <div
+      className="border-border px-5.5 pt-4 pb-4.5 rr:max-xl:even:border-l rr:max-xl:[&:nth-child(n+3)]:border-t rr:xl:[&:not(:first-child)]:border-l plain:rounded-xl plain:border plain:bg-surface plain:p-5 plain:shadow-card"
+      data-testid={testId}
+    >
+      <div className="flex items-center gap-2 text-neutral-600">
+        <span className="hidden plain:inline-flex">{icon}</span>
+        <h2 className="eyebrow plain:text-base">{label}</h2>
+      </div>
       {children}
-    </Card>
+    </div>
   );
 }
 
 const KpiValue = ({ value, unit, testId }: { value: number; unit?: string; testId: string }) => (
   <p className="mt-3 flex items-baseline gap-2">
-    <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums" data-testid={testId}>{value.toLocaleString("en-GB")}</span>
+    <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid={testId}>{value.toLocaleString("en-GB")}</span>
     {unit && <span className="text-md text-neutral-600">{unit}</span>}
   </p>
 );
@@ -102,7 +112,10 @@ const KpiValue = ({ value, unit, testId }: { value: number; unit?: string; testI
 function KpiCards({ k }: { k: Kpis }) {
   const seg = availabilitySegments(k);
   return (
-    <section aria-label="Key figures" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+    <section
+      aria-label="Key figures"
+      className="grid grid-cols-2 xl:grid-cols-4 rr:rounded-xl rr:border rr:border-border rr:bg-surface rr:shadow-card plain:gap-4"
+    >
       <KpiCard icon={<BookIcon size={16} />} label="Catalog" testId="kpi-catalog">
         <KpiValue value={k.totalTitles} unit={k.totalTitles === 1 ? "title" : "titles"} testId="kpi-titles" />
         <p className="mt-3 text-base text-neutral-600"><b className="font-semibold text-neutral-900 tabular-nums" data-testid="kpi-total-copies">{k.totalCopies.toLocaleString("en-GB")}</b> physical {k.totalCopies === 1 ? "copy" : "copies"}</p>
@@ -110,7 +123,7 @@ function KpiCards({ k }: { k: Kpis }) {
 
       <KpiCard icon={<BookIcon size={16} />} label="Available copies" testId="kpi-available">
         <p className="mt-3 flex items-baseline gap-2">
-          <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums" data-testid="kpi-available-copies">{k.availableCopies.toLocaleString("en-GB")}</span>
+          <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid="kpi-available-copies">{k.availableCopies.toLocaleString("en-GB")}</span>
           <span className="text-md text-neutral-600">of {k.totalCopies.toLocaleString("en-GB")}</span>
         </p>
         <AvailabilityBar seg={seg} />
@@ -195,9 +208,9 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
           </Thead>
           <tbody>
             {rows.map((l) => (
-              <Tr key={l.id} className={l.status === "OVERDUE" ? "bg-[#FFFBFA]" : undefined} data-testid="recent-row" data-status={l.status}>
+              <Tr key={l.id} className={l.status === "OVERDUE" ? "bg-overdue" : undefined} data-testid="recent-row" data-status={l.status}>
                 <Td>
-                  <Link to="/books/$bookId" params={{ bookId: l.book.id }} className="font-semibold text-neutral-900 no-underline hover:underline">{l.book.title}</Link>
+                  <Link to="/books/$bookId" params={{ bookId: l.book.id }} className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">{l.book.title}</Link>
                   <div className="text-sm text-neutral-600">{l.book.author}</div>
                 </Td>
                 <Td>
@@ -226,9 +239,9 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
         <ol>
           {books.map((b, i) => (
             <li key={b.id} className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0" data-testid="popular-row">
-              <span className="w-3 text-sm text-neutral-600 tabular-nums">{i + 1}</span>
+              <span className="w-5 text-right font-book text-[20px] leading-6 text-brass-500 tabular-nums book-italic plain:w-3 plain:text-left plain:text-sm plain:font-normal plain:text-neutral-600">{i + 1}</span>
               <div className="min-w-0 flex-1">
-                <Link to="/books/$bookId" params={{ bookId: b.id }} className="block truncate font-semibold text-neutral-900 no-underline hover:underline">{b.title}</Link>
+                <Link to="/books/$bookId" params={{ bookId: b.id }} className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">{b.title}</Link>
                 <span className="text-sm text-neutral-600">{b.loansLast30Days} {b.loansLast30Days === 1 ? "loan" : "loans"}</span>
               </div>
               <AvailabilityBadge book={b} compact />
@@ -252,7 +265,7 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
             <li key={b.id} className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0" data-testid="added-row">
               <BookCover title={b.title} url={b.coverImageUrl} />
               <div className="min-w-0">
-                <Link to="/books/$bookId" params={{ bookId: b.id }} className="block truncate font-semibold text-neutral-900 no-underline hover:underline">{b.title}</Link>
+                <Link to="/books/$bookId" params={{ bookId: b.id }} className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">{b.title}</Link>
                 <span className="text-sm text-neutral-600">Added {formatDay(b.createdAt)} · {b.totalCopies} {b.totalCopies === 1 ? "copy" : "copies"}</span>
               </div>
             </li>

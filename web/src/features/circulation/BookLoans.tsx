@@ -66,7 +66,7 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
           </Thead>
           <tbody>
             {data.items.map((l) => (
-              <Tr key={l.id} data-testid="book-loan-row" className={cn(l.status === "OVERDUE" && "bg-[#FFFBFA]")}>
+              <Tr key={l.id} data-testid="book-loan-row" className={cn(l.status === "OVERDUE" && "bg-overdue")}>
                 <Td>
                   <div className="font-medium">{l.member.fullName}</div>
                   <div className="text-sm text-neutral-600"><MemberNumber value={l.member.memberNumber} /></div>

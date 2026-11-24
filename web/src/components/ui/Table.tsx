@@ -27,7 +27,7 @@ export function Table({ className, children, ...rest }: HTMLAttributes<HTMLTable
 }
 
 export function Thead({ children }: { children: ReactNode }) {
-  return <thead className="bg-neutral-25 text-xs font-medium text-neutral-600">{children}</thead>;
+  return <thead className="eyebrow bg-transparent plain:bg-neutral-25">{children}</thead>;
 }
 
 export function Th({ className, align, kind = "text", ...rest }: ThHTMLAttributes<HTMLTableCellElement> & { align?: "right"; kind?: CellKind }) {
@@ -35,7 +35,7 @@ export function Th({ className, align, kind = "text", ...rest }: ThHTMLAttribute
     <th
       scope="col"
       className={cn(
-        "whitespace-nowrap border-b border-border px-4 py-3 text-xs font-medium",
+        "whitespace-nowrap border-b border-rule px-4 py-3",
         align === "right" ? "text-right" : "text-left",
         kind === "actions" && "w-px",
         className,
@@ -63,7 +63,7 @@ export function SortableTh({ label, sortKey, sort, defaultSort, onSort, classNam
       <button
         type="button"
         onClick={() => onSort(dir === "ascending" ? `-${sortKey}` : sortKey)}
-        className={cn("-mx-1 inline-flex items-center gap-1 rounded-sm px-1 font-medium hover:text-neutral-900", dir !== "none" && "text-neutral-900")}
+        className={cn("-mx-1 inline-flex items-center gap-1 rounded-sm px-1 [font-weight:inherit] [text-transform:inherit] hover:text-neutral-900", dir !== "none" && "text-neutral-900")}
         data-testid={`sort-${sortKey}`}
       >
         {label}

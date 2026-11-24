@@ -2,7 +2,9 @@ import type { Me } from "@slm/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input, BookIcon } from "../../components/ui";
+import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input } from "../../components/ui";
+import { LogoMark } from "../../components/LogoMark";
+import { ThemeToggle } from "../../components/ThemeToggle";
 import { ApiError, api } from "../../lib/apiClient";
 import { useAuthProviders } from "./providers";
 import { meQueryKey, safeNext, useMe } from "./session";
@@ -18,7 +20,43 @@ const GOOGLE_NOTICES: Record<string, string> = {
 
 const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-/** ux.md §1.1. Google is the primary path; the demo form is secondary under a divider. */
+/** Decorative shelf on the sign-in plate: [width, height, colour] of each spine (Reading Room). */
+const SHELF: Array<[number, number, string]> = [
+  [26, 150, "#2f5a4c"], [34, 182, "#8b6a2c"], [22, 140, "#6a3b4f"], [30, 196, "#3a4668"], [24, 160, "#7c3f2f"],
+  [38, 174, "#4c5a63"], [20, 130, "#2f5a4c"], [28, 188, "#a07a3a"], [34, 150, "#5a3542"], [24, 170, "#2c3a58"],
+  [30, 200, "#6d4a22"], [22, 144, "#3f5d50"], [36, 178, "#7c3f2f"], [26, 160, "#4c5a63"],
+];
+
+/** Left half at ≥ 1024 px in Reading Room: the library plate with a quote and a shelf. Hidden in plain. */
+function SignInPlate() {
+  return (
+    <section className="relative hidden min-h-screen flex-col overflow-hidden bg-spine px-16 pt-14 text-spine-ink lg:flex plain:hidden" data-testid="signin-plate">
+      <div className="flex items-center gap-3" aria-hidden="true">
+        <LogoMark large />
+        <span className="font-book text-[22px] text-[#f6efe0]">
+          Smart <i className="text-brass-200">Library</i>
+        </span>
+      </div>
+      <blockquote className="mt-12 max-w-115 font-book text-[30px] leading-10 font-normal text-[#f6efe0] book-italic">
+        “Every book its reader. Every reader their book.”
+        <cite className="mt-3.5 block font-sans eyebrow not-italic text-brass-200">After S. R. Ranganathan · Five laws of library science</cite>
+      </blockquote>
+      <div className="mt-auto flex h-52.5 items-end gap-0.75" aria-hidden="true">
+        {SHELF.map(([w, h, c], i) => (
+          <span key={i} className="relative block rounded-t-[1px] shadow-[inset_2px_0_0_rgb(0_0_0/.2)]" style={{ width: w, height: h, background: c }}>
+            <span className="absolute top-3.5 right-0.75 left-0.75 h-px bg-[rgb(240_220_170/.5)] shadow-[0_3px_0_rgb(240_220_170/.3)]" />
+          </span>
+        ))}
+      </div>
+      <div className="-mx-16 h-1.5 bg-[#0f241c]" aria-hidden="true" />
+    </section>
+  );
+}
+
+/**
+ * ux.md §1.1. Google is the primary path; the demo form is secondary under a divider.
+ * Reading Room: plate on the left (≥ 1024 px) and the form on an index card; plain: the centred card.
+ */
 export function SignInPage() {
   const search = route.useSearch();
   const router = useRouter();
@@ -98,13 +136,16 @@ export function SignInPage() {
   const googleNotice = search.error ? (GOOGLE_NOTICES[search.error] ?? GOOGLE_NOTICES.google) : undefined;
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-4 py-10">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 grid h-10 w-10 place-items-center rounded-lg bg-brand-600 text-white">
-          <BookIcon size={22} />
+    <main className="min-h-screen lg:grid lg:grid-cols-2 plain:block">
+      <SignInPlate />
+      <div className="flex min-h-screen flex-col items-center px-4 py-10 lg:justify-center plain:justify-start">
+      {/* "Smart Library" stays the page h1; at ≥ 1024 px in Reading Room the plate shows it, so this block is visually hidden. */}
+      <div className="mb-8 flex flex-col items-center text-center lg:sr-only plain:not-sr-only plain:mb-8">
+        <div className="mb-4 flex">
+          <LogoMark large />
         </div>
-        <h1 className="text-xl font-semibold">Smart Library</h1>
-        <p className="mt-1 text-base text-neutral-600">Staff sign-in</p>
+        <h1 className="font-book text-[28px] leading-8 plain:text-xl">Smart Library</h1>
+        <p className="mt-1 hidden text-base text-neutral-600 plain:block">Staff sign-in</p>
       </div>
 
       <div className="w-full max-w-100">
@@ -119,7 +160,17 @@ export function SignInPage() {
           </InlineAlert>
         )}
 
-        <div className="rounded-xl border border-border bg-surface p-7 shadow-card">
+        <div className="relative rounded-sm border border-border bg-surface shadow-pop plain:rounded-xl plain:shadow-card" data-testid="signin-card">
+          {/* Index card head: call number, title, caption, the red top line of a catalogue card. */}
+          <div className="border-b-2 border-[#c98a8a] px-7 pt-5.5 pb-3.5 plain:hidden">
+            <div className="flex justify-between font-mono text-xs tracking-[.04em] text-neutral-500" aria-hidden="true">
+              <span>STAFF</span>
+              <span>025.1 · SL</span>
+            </div>
+            <h2 className="mt-2.5 mb-0.5 font-book text-[28px] leading-8">Staff sign-in</h2>
+            <p className="text-neutral-600">Library staff only. Members don't sign in.</p>
+          </div>
+          <div className="px-7 pt-5.5 pb-10 plain:p-7">
           {googleOn && (
             <Button
               size="lg"
@@ -137,7 +188,7 @@ export function SignInPage() {
               Sign in with Google
             </Button>
           )}
-          <p className={googleOn ? "mt-3 text-center text-sm text-neutral-600" : "text-center text-sm text-neutral-600"}>
+          <p className={googleOn ? "mt-3 hidden text-center text-sm text-neutral-600 plain:block" : "hidden text-center text-sm text-neutral-600 plain:block"}>
             Library staff only. Members don't sign in.
           </p>
 
@@ -154,7 +205,7 @@ export function SignInPage() {
                   <span className="h-px flex-1 bg-border" />
                 </div>
               ) : (
-                <div className="h-6" aria-hidden />
+                <div className="hidden h-6 plain:block" aria-hidden />
               )}
 
               {notice && (
@@ -215,8 +266,13 @@ export function SignInPage() {
               <p className="mt-4 text-center text-sm text-neutral-600">Demo credentials are in the submission email.</p>
             </>
           )}
+          </div>
+          {/* The punched hole of a catalogue card. */}
+          <span className="absolute bottom-3 left-1/2 -ml-1.75 h-3.5 w-3.5 rounded-full bg-canvas shadow-[inset_0_1px_2px_rgb(0_0_0/.18)] plain:hidden" aria-hidden="true" />
         </div>
       </div>
+      </div>
+      <ThemeToggle className="fixed top-3 right-3" />
     </main>
   );
 }

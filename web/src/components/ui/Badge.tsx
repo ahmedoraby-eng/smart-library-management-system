@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { formatDay } from "../../lib/format";
 
-export type BadgeVariant = "success" | "warning" | "danger" | "info" | "neutral" | "brand";
+export type BadgeVariant = "success" | "warning" | "danger" | "info" | "neutral" | "brand" | "brass";
 
 const styles: Record<BadgeVariant, { pill: string; dot: string }> = {
   success: { pill: "bg-success-50 border-success-200 text-success-700", dot: "bg-success-500" },
@@ -12,9 +12,10 @@ const styles: Record<BadgeVariant, { pill: string; dot: string }> = {
   info: { pill: "bg-info-50 border-info-200 text-info-700", dot: "bg-info-700" },
   neutral: { pill: "bg-neutral-100 border-neutral-200 text-neutral-700", dot: "bg-neutral-500" },
   brand: { pill: "bg-brand-50 border-brand-200 text-brand-700", dot: "bg-brand-600" },
+  brass: { pill: "bg-brass-50 border-brass-200 text-brass-700", dot: "bg-brass-500" },
 };
 
-/** 22 px pill: dot + text, so status is never colour alone (ux.md U8). */
+/** 22 px stamp (a pill in the plain theme): dot + text, so status is never colour alone (ux.md U8). */
 export function Badge({ variant = "neutral", dot = true, children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & {
   variant?: BadgeVariant;
   dot?: boolean;
@@ -23,10 +24,10 @@ export function Badge({ variant = "neutral", dot = true, children, className, ..
   const s = styles[variant];
   return (
     <span
-      className={cn("inline-flex h-5.5 items-center gap-1.5 rounded-full border px-2 text-xs font-medium whitespace-nowrap tabular-nums", s.pill, className)}
+      className={cn("inline-flex h-5.5 items-center gap-1.5 rounded-xs border px-2 text-xs font-medium whitespace-nowrap tabular-nums", s.pill, className)}
       {...rest}
     >
-      {dot && <span className={cn("h-1.5 w-1.5 rounded-full", s.dot)} aria-hidden="true" />}
+      {dot && <span className={cn("h-1.5 w-1.5 rounded-xs", s.dot)} aria-hidden="true" />}
       {children}
     </span>
   );
