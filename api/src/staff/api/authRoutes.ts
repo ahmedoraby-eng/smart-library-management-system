@@ -6,7 +6,7 @@ import type { AppEnv } from "../../platform/appEnv";
 import type { Config } from "../../platform/config";
 import { ForbiddenError, NotFoundError } from "../../platform/errors";
 import { parseOr400 } from "../../platform/http";
-import type { Limiter } from "../../platform/security/rateLimit";
+import { RateLimitedError, type Limiter } from "../../platform/security/rateLimit";
 import type { Principal } from "../../platform/security/principal";
 import { clearSession, issueSession } from "../../platform/security/session";
 import { GoogleSignInError, type PendingGoogleSignIn } from "../application/GoogleSignIn";
@@ -16,7 +16,7 @@ export const toMe = (p: Principal): Me => ({
 });
 
 /** Public sign-in routes. They set or clear the session cookie; no other auth state exists. */
-export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter) {
+export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter, googleStartLimiter: (c: Context<AppEnv>) => Limiter) {
   const r = new Hono<AppEnv>();
 
   r.post("/demo-login", async (c) => {
@@ -44,6 +44,13 @@ export function authRoutes(demoLoginLimiter: (c: Context<AppEnv>) => Limiter) {
   r.get("/google/start", async (c) => {
     const { config, googleSignIn } = c.var.container;
     if (!config.google || !googleSignIn) throw new NotFoundError("Google sign-in");
+    // A browser navigation, so a limit hit goes back to the sign-in page with a notice, not JSON.
+    try {
+      await googleStartLimiter(c).check(`google-start:${c.req.header("cf-connecting-ip") ?? "local"}`);
+    } catch (e) {
+      if (e instanceof RateLimitedError) return c.redirect("/signin?error=google_busy", 302);
+      throw e;
+    }
     const { url, pending } = await googleSignIn.begin(redirectUriFor(c), c.req.query("next"));
     await setGoogleStateCookie(c, config, pending);
     return c.redirect(url, 302);

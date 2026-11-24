@@ -13,6 +13,7 @@ const GOOGLE_NOTICES: Record<string, string> = {
   google: "Google sign-in didn't complete. Try again.",
   google_unverified: "Your Google email isn't verified. Verify it with Google, then try again.",
   disabled: "Your staff account is disabled.",
+  google_busy: "Too many sign-in attempts. Wait a minute, then try again.",
 };
 
 const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

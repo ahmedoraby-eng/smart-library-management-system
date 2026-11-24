@@ -108,6 +108,20 @@ describe("SLM-8 GET /api/auth/google/start", () => {
   });
 });
 
+describe("SLM-8 google/start rate limit", () => {
+  it("the 11th start in a minute from one IP goes back to sign-in with google_busy", async () => {
+    const { app } = googleApp();
+    const start = () => app.request("/api/auth/google/start", { headers: { "cf-connecting-ip": "203.0.113.9" } });
+    for (let i = 0; i < 10; i++) expect((await start()).headers.get("location")).toMatch(/^https:\/\/accounts\.google\.com\//);
+    const res = await start();
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/signin?error=google_busy");
+    // Another IP is not affected.
+    const other = await app.request("/api/auth/google/start", { headers: { "cf-connecting-ip": "203.0.113.10" } });
+    expect(other.headers.get("location")).toMatch(/^https:\/\/accounts\.google\.com\//);
+  });
+});
+
 describe("SLM-8 GET /api/auth/google/callback", () => {
   it("happy path: PKCE verifier matches the challenge, session cookie set, state cookie cleared, 302 to next", async () => {
     const { app, fake } = googleApp();

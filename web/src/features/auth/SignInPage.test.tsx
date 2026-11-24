@@ -80,4 +80,10 @@ describe("SLM-8 sign-in page providers (ux.md §1.1)", () => {
     await renderSignIn("/signin?error=disabled");
     expect(await screen.findByTestId("signin-google-error")).toHaveTextContent("Your staff account is disabled.");
   });
+
+  it("shows the wait notice for error=google_busy (rate limit on google/start)", async () => {
+    stubApi({ google: true, demo: true });
+    await renderSignIn("/signin?error=google_busy");
+    expect(await screen.findByTestId("signin-google-error")).toHaveTextContent("Too many sign-in attempts");
+  });
 });
