@@ -39,6 +39,28 @@ npm run demo:video:live -- --audio ~/voice --out ~/video
 
 Output: `test-results/demo-video/smart-library-demo-live.mp4`, plus `scenes.json` (where each scene starts and ends).
 
+### The Google sign-in shot (scene 2)
+
+The script cannot sign in with Google (no Google account, and it never types a password), so the shot is recorded by
+hand: a 10–15 s macOS screen recording (Cmd+Shift+5, "Record Selected Portion" around the browser) of "Sign in with
+Google" → the account chooser → the dashboard as Admin. Then:
+
+```bash
+npm run demo:video:live -- --audio ~/Desktop --google-clip ~/Desktop --out ~/video
+```
+
+- `--google-clip` takes the file, or a folder (the newest `Screen Recording*.mov` in it).
+- `google-clip.swift` finds every email address in the clip with on-device text recognition (Vision) and blurs it,
+  in the account chooser and the avatar menu alike. It then reads the result again: if any address is still readable,
+  the run stops before the live site is touched. `--google-args "--cover x,y,w,h"` blurs a box by hand (fractions of the
+  frame from the top left), `--trim from,to` and `--crop x,y,w,h` cut it down.
+- The clip goes at the end of scene 2, from where the narration's last sentence starts ("Staff can also sign in with
+  their Google account."), found from the pause before it. Only `scene-2.m4a` is heard; the clip's own sound is dropped.
+- `--reuse` skips the recording and lays the narration and the clip over the last recorded run again, so a new clip or
+  voice take needs no new live run.
+- Nothing the run produces is committed: the clip, the voice files and the video stay in `test-results/` and the folders
+  you pass.
+
 ## Requirements
 
 Needs the Playwright Chromium (`npx playwright install chromium`). The `.webm` is made by Playwright; turning it into

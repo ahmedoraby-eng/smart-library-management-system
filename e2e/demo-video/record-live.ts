@@ -9,12 +9,27 @@
  *   --out <dir>     also copy the final MP4 there
  *   SLM_LIVE_URL    another deployment (default https://smart-library.ahmedoraby.workers.dev)
  *   DEMO_GOOGLE=1   scene 2 also points at the "Sign in with Google" button (once SLM-8 is live)
+ *   --google-clip <file.mov | dir>   a screen recording of the Google sign-in (Ahmed records it by hand: agents have no
+ *                   Google account and never type passwords), spliced into scene 2 under its last sentence. A folder
+ *                   means the newest "Screen Recording*.mov" in it. google-clip.swift blurs every email address first
+ *                   and stops the run if one is still readable, before anything is recorded.
+ *   --google-args "<flags>"   extra google-clip flags, e.g. "--trim 1,14 --crop 0,0.05,1,0.95 --cover 0.7,0,0.3,0.1"
+ *   --reuse         skip the recording: lay the narration (and the Google clip) over the last recorded run again
  *
  * Before recording, the admin account resets the demo data and rebuilds the search index; afterwards it resets again,
  * so the site is left as a reviewer expects it. Output: test-results/demo-video/smart-library-demo-live.mp4.
  */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:http";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,8 +55,10 @@ const env = (k: string) => {
   if (!v) throw new Error(`Set ${k} (the demo staff accounts are read from the environment only).`);
   return v;
 };
-const admin = { email: env("SLM_ADMIN_EMAIL"), password: env("SLM_ADMIN_PASSWORD") };
-const librarian = { email: env("SLM_LIBRARIAN_EMAIL"), password: env("SLM_LIBRARIAN_PASSWORD") };
+const reuse = process.argv.includes("--reuse");
+const none = { email: "", password: "\u0000" };
+const admin = reuse ? none : { email: env("SLM_ADMIN_EMAIL"), password: env("SLM_ADMIN_PASSWORD") };
+const librarian = reuse ? none : { email: env("SLM_LIBRARIAN_EMAIL"), password: env("SLM_LIBRARIAN_PASSWORD") };
 /** Every message this script prints goes through here, so a password can never reach the terminal or a log. */
 const redact = (s: string) => [admin.password, librarian.password].reduce((acc, p) => acc.split(p).join("***"), s);
 const log = (s: string) => console.log(redact(s));
@@ -55,6 +72,49 @@ function clipSeconds(n: number): number {
   return m ? Number(m[1]) : DEFAULT_S[n - 1]!;
 }
 const clips = DEFAULT_S.map((_, i) => clipSeconds(i + 1));
+
+// ---- the hand-recorded Google sign-in clip for scene 2 ----
+function googleClipSource(): string | undefined {
+  const g = arg("--google-clip");
+  if (!g) return undefined;
+  if (!existsSync(g)) throw new Error(`--google-clip: ${g} does not exist`);
+  if (!statSync(g).isDirectory()) return g;
+  const movs = readdirSync(g)
+    .filter((f) => f.startsWith("Screen Recording") && f.endsWith(".mov"))
+    .map((f) => join(g, f))
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+  if (!movs[0]) throw new Error(`--google-clip: no "Screen Recording*.mov" in ${g}`);
+  return movs[0];
+}
+/** Blurs the clip's email addresses and sizes it like the scenes; throws if an address is still readable. */
+function prepareGoogleClip(work: string): string | undefined {
+  const src = googleClipSource();
+  if (!src) return undefined;
+  const tool = swiftTool("google-clip", work);
+  if (!tool) throw new Error("--google-clip needs swiftc (Xcode command line tools)");
+  const out = join(outDir, "google-clip.mp4");
+  const extra = (arg("--google-args") ?? "").split(/\s+/).filter(Boolean);
+  log(`google clip: ${src}`);
+  execFileSync(tool, [src, out, ...extra], { stdio: "inherit" });
+  return out;
+}
+
+/** Narration over the silent recording, scene by scene, with the Google clip in scene 2. */
+function finish(work: string, googleClip: string | undefined): void {
+  const silent = join(outDir, "silent.mp4");
+  const marksFile = join(outDir, "scenes.json");
+  if (!existsSync(silent) || !existsSync(marksFile)) throw new Error("nothing recorded yet: run once without --reuse");
+  const assemble = swiftTool("assemble", work);
+  if (!assemble) return log("swiftc not available: kept the .webm only");
+  const final = join(outDir, "smart-library-demo-live.mp4");
+  const insert = googleClip ? ["--insert", `2:${googleClip}`] : [];
+  execFileSync(assemble, [silent, marksFile, audioDir, final, ...insert], { stdio: "inherit" });
+  if (extraOut) {
+    mkdirSync(extraOut, { recursive: true });
+    copyFileSync(final, join(extraOut, "smart-library-demo-live.mp4"));
+  }
+  log(`recorded: ${final}`);
+}
 
 const tmp = mkdtempSync(join(tmpdir(), "slm-live-video-"));
 const marks: { scene: number; start: number; end: number }[] = [];
@@ -128,6 +188,10 @@ let cleaned = false;
 
 async function main(): Promise<void> {
   log(`narration from ${audioDir}: ${clips.map((s) => s.toFixed(1)).join(", ")} s`);
+  mkdirSync(outDir, { recursive: true });
+  // First, so a clip with a readable email address stops the run before the live site is touched.
+  const googleClip = prepareGoogleClip(tmp);
+  if (reuse) return finish(tmp, googleClip);
   const stagePort = 9290;
   const S = `http://localhost:${stagePort}`;
   stage = createServer((req, res) => {
@@ -370,19 +434,9 @@ async function main(): Promise<void> {
 
   const webmOut = join(outDir, "smart-library-demo-live.webm");
   copyFileSync(join(rawDir, webm), webmOut);
-  const silent = join(tmp, "silent.mp4");
-  if (!encodeMp4(webmOut, silent, tmp, FPS)) return;
-  const marksFile = join(outDir, "scenes.json");
-  writeFileSync(marksFile, JSON.stringify(marks, null, 2));
-  const assemble = swiftTool("assemble", tmp);
-  if (!assemble) return log("swiftc not available: kept the .webm only");
-  const final = join(outDir, "smart-library-demo-live.mp4");
-  execFileSync(assemble, [silent, marksFile, audioDir, final], { stdio: "inherit" });
-  if (extraOut) {
-    mkdirSync(extraOut, { recursive: true });
-    copyFileSync(final, join(extraOut, "smart-library-demo-live.mp4"));
-  }
-  log(`recorded: ${final}`);
+  if (!encodeMp4(webmOut, join(outDir, "silent.mp4"), tmp, FPS)) return;
+  writeFileSync(join(outDir, "scenes.json"), JSON.stringify(marks, null, 2));
+  finish(tmp, googleClip);
 }
 
 let code = 0;
