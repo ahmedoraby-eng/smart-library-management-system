@@ -120,6 +120,7 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
 | `GET /ai/quota` | A, L, S | AI-assisted searches left today |
+| `GET /books/:id/similar` | A, L, S | More like this: up to 4 books closest in meaning (stored vectors, no model call) |
 | `GET /admin/discovery/usage`, `POST /admin/discovery/reindex` | A | AI usage today; rebuild the search index batch by batch |
 | `GET /staff-users`, `PUT /staff-users/:id` | A | Staff management |
 | `POST /admin/reset-demo` | A | Restore demo data |

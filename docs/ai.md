@@ -161,6 +161,10 @@ If the model answers with a valid but empty list, the response is `mode: "AI"` w
 - A result found by vector search alone shows a small "Found by meaning" note.
 - Each result shows availability (and the next due date when none is on the shelf). Users who can process loans get a shortcut to borrow when a copy is available.
 
+## More like this (SLM-19)
+
+Every book page shows up to 4 other catalogue books closest in meaning, each with its availability, a link to its page and, for users who can process loans, a Borrow shortcut when a copy is on the shelf. `GET /api/books/:id/similar` (`BOOK_READ`, all staff roles; `404` for an unknown book) averages the book's own chunk vectors and ranks every other live, non-archived book by its best chunk against that average (cosine: `avg(embedding_v)` and `<=>` on the HNSW index with pgvector, the same exact scan in the app without it), best first, positive similarities only. The books are then re-read from the catalogue, as in discovery. **No model is called:** the vectors were paid for once when the books were indexed, so a page view costs 0 Neurons, touches no quota and needs no rate limit. Nothing leaves the server, and the only input is public catalogue text. A book that isn't indexed yet (or an archived one) gets an empty list and the page hides the section; so does a failed request. Code: `SimilarBooks` (`api/src/discovery/application/`) and `PgChunkStore.similarTo`; UI: `web/src/features/books/SimilarBooks.tsx`. On the seed, with the local fake embedder, *H Is for Hawk* suggests *A Grief Observed* and *Crying in H Mart* first (`api/test/similar-books.test.ts`); on the deployed Worker, bge decides.
+
 ## Privacy
 
 - With a `memberId`, the server looks up the **titles only** of that member's last 5 loans and sends them to the model as `alreadyRead`. No names, emails or member numbers are sent. A test checks this.

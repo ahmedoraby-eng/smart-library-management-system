@@ -49,3 +49,28 @@ test("librarian adds a book, borrows it for a member, returns it", async ({ page
   await expect(row).toHaveAttribute("data-status", "RETURNED");
   await expect(row).toContainText("Returned");
 });
+
+test("librarian sees «More like this» on a book page and opens a suggestion (SLM-19)", async ({ page }) => {
+  await signIn(page, "LIBRARIAN");
+  // The seed is indexed with the fake embedder by run.ts; the strip reads those stored vectors.
+  const found = await page.request.get(`/api/books?q=${encodeURIComponent("H Is for Hawk")}`);
+  const hawk = ((await found.json()) as { items: Array<{ id: string; title: string }> }).items.find(
+    (b) => b.title === "H Is for Hawk",
+  )!;
+  await page.goto(`/books/${hawk.id}`);
+  await expect(page.getByTestId("book-detail-title")).toContainText("H Is for Hawk");
+
+  const strip = page.getByTestId("similar-books");
+  await expect(strip.getByRole("heading", { name: "More like this" })).toBeVisible();
+  const links = strip.getByTestId("similar-book-link");
+  await expect(links).toHaveCount(4);
+  await expect(links.nth(0)).toBeVisible();
+  const firstTwo = [await links.nth(0).innerText(), await links.nth(1).innerText()].sort();
+  expect(firstTwo).toEqual(["A Grief Observed", "Crying in H Mart"]);
+  await expect(strip.getByTestId("similar-borrow").first()).toBeVisible(); // seed copies are on the shelf
+
+  await strip.getByRole("link", { name: "Crying in H Mart" }).click();
+  await expect(page.getByTestId("book-detail-title")).toContainText("Crying in H Mart");
+  await expect(page.getByTestId("similar-book-link").first()).toBeVisible();
+  await expect(page.getByTestId("similar-book-link").filter({ hasText: /^Crying in H Mart$/ })).toHaveCount(0);
+});
