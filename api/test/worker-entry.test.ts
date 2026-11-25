@@ -59,12 +59,12 @@ describe("SLM-16 scheduled handlers through the Worker entry", () => {
     expect(Object.keys(await import("../src/worker"))).toEqual(["default"]);
   });
 
-  it("the 15-minute trigger only tops up the discovery index; it never resets the demo data", async () => {
+  it("the hourly index trigger only tops up the discovery index; it never resets the demo data", async () => {
     await pool.query("TRUNCATE loans, members, books, book_chunks CASCADE");
     const r = await pool.query("INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ('Index Me', 'A. Writer', 'Science', 'A short text about stars.', 1, 1) RETURNING id");
     const pending: Promise<unknown>[] = [];
     const c = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException: vi.fn(), props: {} } as unknown as ExecutionContext;
-    await (worker.scheduled as (ctl: unknown, e: unknown, ctx: ExecutionContext) => Promise<void>)({ cron: "*/15 * * * *", scheduledTime: Date.now() }, env({ AI_FAKE: "true" }), c);
+    await (worker.scheduled as (ctl: unknown, e: unknown, ctx: ExecutionContext) => Promise<void>)({ cron: "5 * * * *", scheduledTime: Date.now() }, env({ AI_FAKE: "true" }), c);
     await Promise.all(pending);
     const books = await pool.query("SELECT id FROM books");
     expect(books.rows.map((b) => b.id)).toEqual([r.rows[0].id]); // not replaced by the seed

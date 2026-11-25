@@ -106,7 +106,7 @@ export function loadConfig(env: RawEnv): Config {
     embeddingModel: str(env, "EMBEDDING_MODEL")?.toLowerCase() === "off" ? null : (str(env, "EMBEDDING_MODEL") ?? "@cf/baai/bge-base-en-v1.5"),
     aiFake,
     embeddingMinSimilarity: num(env, "EMBEDDING_MIN_SIMILARITY", 0.72, 0, 1),
-    indexBatchBooks: int(env, "INDEX_BATCH_BOOKS", 16, 1, 500),
+    indexBatchBooks: int(env, "INDEX_BATCH_BOOKS", 8, 1, 500),
     aiDailyNeuronCap: int(env, "AI_DAILY_NEURON_CAP", 8000, 0, 1_000_000),
     aiUserDailySearches: int(env, "AI_USER_DAILY_SEARCHES", 50, 0, 10_000),
   };

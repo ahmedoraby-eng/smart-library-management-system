@@ -110,7 +110,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Admin: rebuild the search-by-meaning index now (after a deploy, or a model change). Runs the reindex
- * batches (16 books each, to stay inside the Worker's CPU limit) until nothing is left, and waits out the
+ * batches (8 books each, to stay inside the Worker's CPU limit) until nothing is left, and waits out the
  * endpoint's 2-a-minute limit instead of failing. Only missing or changed books cost AI; the rest is copied.
  */
 function RebuildIndex() {

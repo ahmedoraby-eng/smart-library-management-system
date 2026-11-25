@@ -83,7 +83,7 @@ Each candidate carries its id, title, author, category, year, a description cut 
 | A book is created, edited or archived | Inline in the same request, 2 s budget. A failure never fails the save; the next sync catches up |
 | Demo reset (Admin button and nightly cron) | `syncAll` after the seed, since the seed gives books new ids |
 | Backfill (after the migration, or a model change) | **Admin dashboard → «Rebuild search index»**: it calls `POST /api/admin/discovery/reindex` batch after batch until nothing is left, shows progress, and waits out the 2-a-minute limit |
-| Automatically, every 15 minutes | A light cron trigger runs one batch when something is missing or stale (post-deploy backfill, failed inline syncs). When everything is up to date it's two cheap queries and no AI call |
+| Automatically, hourly (minute 5) | A light cron trigger runs one batch when something is missing or stale (post-deploy backfill, failed inline syncs). When everything is up to date it's two cheap queries and no AI call. Hourly, not more often, so Neon can sleep (free compute hours), and at minute 5 so it never runs with the 00:00 reset |
 | Local runs and e2e (`AI_FAKE`) | `demo:local` and `npm run e2e` index the seed with the deterministic fake embedder |
 
 Embedding happens inside the Worker through its binding, so no Cloudflare token is needed in scripts or the repository.
@@ -195,7 +195,7 @@ If embeddings fail (an error, or more than 1.5 s) while the user still has AI-as
 | Global cap | **8,000 Neurons per UTC day** (`AI_DAILY_NEURON_CAP`, 80 % of the free 10,000). Past it: `BUDGET_EXHAUSTED` for everyone, and query embeddings stop too (full-text only). A burst can overshoot by a few calls, which the 20 % headroom absorbs. |
 | `max_tokens` 600 | Caps the output of a ranking call. |
 | Reindex | Admin only, 2 a minute, embeds only missing or stale chunks. |
-| CPU (Workers Free: 10 ms per call) | Reindex, the demo reset and the cron embed at most `INDEX_BATCH_BOOKS` books per call (default 16). They're idempotent and resumable: `POST /api/admin/discovery/reindex?limit=N` answers `partial` with `remaining`, and you call it again. Copies of unchanged text are plain SQL. With pgvector, only the `vector` column is written (no second `real[]` copy). |
+| CPU (Workers Free: 10 ms per call) | Reindex, the demo reset and the cron embed at most `INDEX_BATCH_BOOKS` books per call (default 8; each book is 2–3 chunks). They're idempotent and resumable: `POST /api/admin/discovery/reindex?limit=N` answers `partial` with `remaining`, and you call it again. Copies of unchanged text are plain SQL. With pgvector, only the `vector` column is written (no second `real[]` copy). |
 | Dimensions | The index is `vector(768)`; `loadConfig` refuses an `EMBEDDING_MODEL` of another known size. |
 
 **Where it lives:** Postgres, in `ai_usage(day, scope)` and `ai_cache(key, value, expires_at)` (migration `0005_ai_cost.sql`). Days are UTC. The nightly cron purges expired cache rows. The Workers Cache API isn't used because it's a no-op on `*.workers.dev` hosts. The AI Gateway isn't used either: the caches and caps above already cover it, inside our own code and tests.

@@ -20,7 +20,7 @@ export interface SyncResult {
 }
 
 /** Books embedded per call when the caller gives no batch size. */
-export const DEFAULT_BATCH_BOOKS = 16;
+export const DEFAULT_BATCH_BOOKS = 8; // 2–3 chunks per book → ≤ 24 vectors per call (Workers Free: 10 ms CPU)
 
 /**
  * SLM-16 indexing: keeps `book_chunks` in step with the catalogue at the lowest cost.
@@ -79,7 +79,7 @@ export class BookIndexSync {
   async syncAllSafely(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult | null> {
     try {
       const r = await this.syncAll(maxEmbedBooks);
-      // The 15-minute top-up usually finds nothing to do: log only real work.
+      // The hourly top-up usually finds nothing to do: log only real work.
       if (r.embeddedBooks || r.reusedBooks || r.removed || r.remaining) this.log({ level: "info", event: "book_index_sync", ...r });
       return r;
     } catch (e) {

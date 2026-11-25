@@ -312,7 +312,7 @@ describe("SLM-16 config", () => {
   it("the cost numbers come from config", () => {
     const c = loadConfig({ ...testEnv, AI_DAILY_NEURON_CAP: "1234", AI_USER_DAILY_SEARCHES: "7", INDEX_BATCH_BOOKS: "9" });
     expect(c).toMatchObject({ aiDailyNeuronCap: 1234, aiUserDailySearches: 7, indexBatchBooks: 9 });
-    expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 16 });
+    expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 8 });
   });
 });
 
