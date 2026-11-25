@@ -1,6 +1,6 @@
 import type { Me } from "@slm/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { getRouteApi, Link, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input } from "../../components/ui";
 import { LogoMark } from "../../components/LogoMark";
@@ -315,6 +315,11 @@ export function SignInPage() {
               aria-hidden="true"
             />
           </div>
+          <footer className="mt-6 text-center text-sm text-neutral-600">
+            <Link to="/privacy" className="underline underline-offset-2" data-testid="signin-privacy">
+              Privacy policy
+            </Link>
+          </footer>
         </div>
       </div>
       <ThemeToggle className="fixed top-3 right-3" />
