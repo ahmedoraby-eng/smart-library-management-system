@@ -1,0 +1,39 @@
+# Merging to main deploys the Worker to production (Cloudflare Workers Builds), but database migrations are run by
+# hand (`npm run db:migrate` with the Neon connection string, which never goes into GitHub or Cloudflare).
+# So a PR that adds or changes a file under migrations/ fails this check until the migration has been applied to
+# production and the PR carries the label `migrations-applied`. Adding the label re-runs the check.
+name: migrations gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Migrations applied before merge
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          APPLIED: ${{ contains(github.event.pull_request.labels.*.name, 'migrations-applied') }}
+        run: |
+          files="$(git diff --name-only --diff-filter=AMR "$BASE...$HEAD" -- migrations/ | grep -v '^migrations/meta/' || true)"
+          if [[ -z "$files" ]]; then echo "No migration in this PR."; exit 0; fi
+          {
+            echo "## This PR changes database migrations"
+            echo
+            echo '```'; echo "$files"; echo '```'
+            echo
+            echo "Merging deploys the Worker to production at once. Run the migration on production first"
+            echo '(`DATABASE_URL=<Neon string> npm run db:migrate`), then add the label `migrations-applied`.'
+          } >>"$GITHUB_STEP_SUMMARY"
+          if [[ "$APPLIED" == true ]]; then echo "Label migrations-applied is set: OK."; exit 0; fi
+          while IFS= read -r f; do echo "::error file=$f::Migration not yet applied to production. Apply it, then add the label migrations-applied."; done <<<"$files"
+          exit 1
