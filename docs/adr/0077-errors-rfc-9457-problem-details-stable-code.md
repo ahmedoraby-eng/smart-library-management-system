@@ -29,4 +29,6 @@ The UI needs one error shape to map, and errors must never leak internals.
 
 ## Sources
 
-decisions/architecture.md:259-266; decisions/architecture.md:266; decisions/architecture.md:265
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:259-266; decisions/architecture.md:266; decisions/architecture.md:265

@@ -30,4 +30,6 @@ The brief asks for delete, but loan history must survive.
 
 ## Sources
 
-Confluence page 19398657; Jira SLM-1; owner conversation, 2026-11-24; docs/architecture.md; commit cefd097; decisions/architecture.md:195,232; decisions/scope.md:42; backlog/slm-tickets-draft.md:71-82; decisions/ux.md:192-196
+Public: docs/architecture.md; commit cefd097
+
+Also from the owner's working notes and conversations (not published): Confluence page 19398657; Jira SLM-1; owner conversation, 2026-11-24; decisions/architecture.md:195,232; decisions/scope.md:42; backlog/slm-tickets-draft.md:71-82; decisions/ux.md:192-196

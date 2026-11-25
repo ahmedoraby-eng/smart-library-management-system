@@ -17,7 +17,7 @@ A small model's ranking quality can't be proven by unit tests.
 
 ## Decision
 
-Ten fixed queries (incl. vague, off-topic and injection) run on the real model; results in `evidence/ai-quality.md`. Pass = every returned book is real and at least 7 of 10 results are sensible; product owner and QA score.
+Ten fixed queries (incl. vague, off-topic and injection) run on the real model; results to be recorded on the deployed Worker before submission (not recorded yet). Pass = every returned book is real and at least 7 of 10 results are sensible; product owner and QA score.
 
 ## Consequences
 
@@ -25,4 +25,6 @@ Ten fixed queries (incl. vague, off-topic and injection) run on the real model; 
 
 ## Sources
 
-decisions/test-strategy.md:153; decisions/engineering-plan.md:150
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:153; decisions/engineering-plan.md:150

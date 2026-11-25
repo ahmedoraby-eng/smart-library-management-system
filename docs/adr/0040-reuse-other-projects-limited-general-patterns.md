@@ -26,4 +26,6 @@ The team has working patterns from other projects, but the SLM repo is public.
 
 ## Sources
 
-master prompt
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): master prompt

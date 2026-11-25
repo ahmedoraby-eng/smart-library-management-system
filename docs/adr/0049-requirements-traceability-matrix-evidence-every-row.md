@@ -28,4 +28,6 @@ Reviewers must see that every requirement is met or deliberately left out.
 
 ## Sources
 
-Jira SLM-11; Jira SLM-10; Jira SLM-14; decisions/traceability.md:3-6,27,85-90; decisions/traceability.md:90
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): Jira SLM-11; Jira SLM-10; Jira SLM-14; decisions/traceability.md:3-6,27,85-90; decisions/traceability.md:90

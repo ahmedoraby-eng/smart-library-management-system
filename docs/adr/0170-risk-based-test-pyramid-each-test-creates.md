@@ -29,4 +29,6 @@ Tests should be heavy where the risk is and light on plain CRUD.
 
 ## Sources
 
-decisions/test-strategy.md:12,18-29,148; master prompt; decisions/test-strategy.md:11; decisions/test-strategy.md:15; decisions/engineering-plan.md:169; decisions/test-strategy.md:69
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:12,18-29,148; master prompt; decisions/test-strategy.md:11; decisions/test-strategy.md:15; decisions/engineering-plan.md:169; decisions/test-strategy.md:69

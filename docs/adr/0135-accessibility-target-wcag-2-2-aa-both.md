@@ -26,4 +26,6 @@ A staff tool must work by keyboard and for low vision.
 
 ## Sources
 
-Confluence page 19169290; Jira SLM-7; decisions/ux.md:115-117
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): Confluence page 19169290; Jira SLM-7; decisions/ux.md:115-117

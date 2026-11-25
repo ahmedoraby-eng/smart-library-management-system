@@ -26,4 +26,6 @@ No keep-alive job. The nightly cron wakes it anyway; open the app once before re
 
 ## Sources
 
-decisions/infra.md:45; decisions/architecture.md:344
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:45; decisions/architecture.md:344

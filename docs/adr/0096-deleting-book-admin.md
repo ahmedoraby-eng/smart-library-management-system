@@ -26,4 +26,6 @@ BOOK_DELETE is Admin-only; Librarians create and edit books but can't delete or 
 
 ## Sources
 
-decisions/rbac-matrix.md:29; decisions/architecture.md:307,386; docs/architecture.md Roles table; README features; Confluence page 19365918; Jira SLM-1
+Public: docs/architecture.md Roles table; README features
+
+Also from the owner's working notes and conversations (not published): decisions/rbac-matrix.md:29; decisions/architecture.md:307,386; Confluence page 19365918; Jira SLM-1

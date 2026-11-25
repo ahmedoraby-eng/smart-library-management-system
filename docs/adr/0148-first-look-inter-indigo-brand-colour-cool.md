@@ -26,4 +26,6 @@ The first build needed tokens fast so all screens looked the same.
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/ux.md:21,80; decisions/ux.md:22,80; decisions/ux.md:82-113; UI review notes, ui-pass-1
+Public: web/src/index.css
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/ux.md:21,80; decisions/ux.md:22,80; decisions/ux.md:82-113; UI review notes, ui-pass-1

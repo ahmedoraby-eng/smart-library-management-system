@@ -28,4 +28,6 @@ Reviewers read the repo first; docs must be short and match the code.
 
 ## Sources
 
-PR #16; design notes; owner conversation, 2026-11-24; master prompt
+Public: PR #16
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-24; master prompt

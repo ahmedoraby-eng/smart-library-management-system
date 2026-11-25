@@ -28,4 +28,6 @@ A long master prompt was written to drive the work, but it adds roles and ideas 
 
 ## Sources
 
-original-assessment.md:1; master prompt; owner conversation, 2026-11-24
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): original-assessment.md:1; master prompt; owner conversation, 2026-11-24

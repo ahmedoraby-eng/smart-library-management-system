@@ -26,4 +26,4 @@ The dashboard's overdue count must match the loan list exactly.
 
 ## Sources
 
-PR #11; commit b91befa
+Public: PR #11; commit b91befa

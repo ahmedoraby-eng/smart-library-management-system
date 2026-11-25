@@ -29,4 +29,6 @@ Reviewers must try borrowing and admin without an account we create for them, an
 
 ## Sources
 
-backlog/slm-tickets-draft.md:135,164; design notes; README Demo accounts; wrangler.toml [env.production.vars]; owner conversation, 2026-11-24; decisions/architecture.md:292-296,390
+Public: README Demo accounts; wrangler.toml [env.production.vars]
+
+Also from the owner's working notes and conversations (not published): backlog/slm-tickets-draft.md:135,164; design notes; owner conversation, 2026-11-24; decisions/architecture.md:292-296,390

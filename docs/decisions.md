@@ -2,7 +2,9 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-183 decisions: 161 accepted, 21 superseded, 1 rejected, 0 proposed.
+183 decisions: 161 accepted (1 of them not yet in force), 21 superseded, 1 rejected, 0 proposed.
+
+Each ADR's **Sources** line starts with what a reader of this repository can open (a PR, a commit, a file); the owner's private working notes and conversations are listed after it.
 
 | ID | Title | Date | Status | Area | Link |
 |---|---|---|---|---|---|
@@ -69,7 +71,7 @@ Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). S
 | ADR-0061 | A ticket stays In Testing until verified live; no close on a workaround | 2026-11-25 | Accepted | process | [adr/0061-ticket-stays-testing-until-verified-live-close.md](adr/0061-ticket-stays-testing-until-verified-live-close.md) |
 | ADR-0062 | Public repository on the owner's personal GitHub account | 2026-11-24 | Accepted | repo | [adr/0062-public-repository-owner-s-personal-github-account.md](adr/0062-public-repository-owner-s-personal-github-account.md) |
 | ADR-0063 | Seed commit pushed once by the owner from a clean folder | 2026-11-24 | Accepted | repo | [adr/0063-seed-commit-pushed-once-owner-clean-folder.md](adr/0063-seed-commit-pushed-once-owner-clean-folder.md) |
-| ADR-0064 | One repo with npm workspaces: api, contracts, web, e2e, migrations, seed | 2026-11-24 | Accepted | repo | [adr/0064-one-repo-npm-workspaces-api-contracts-web.md](adr/0064-one-repo-npm-workspaces-api-contracts-web.md) |
+| ADR-0064 | One repo with npm workspaces: api, contracts, web | 2026-11-24 | Accepted | repo | [adr/0064-one-repo-npm-workspaces-api-contracts-web.md](adr/0064-one-repo-npm-workspaces-api-contracts-web.md) |
 | ADR-0065 | Squash-merge only; PRs based on main; update branches by merging main | 2026-11-24 | Accepted | repo | [adr/0065-squash-merge-prs-based-main-update-branches.md](adr/0065-squash-merge-prs-based-main-update-branches.md) |
 | ADR-0066 | Branch, commit and PR names carry the SLM key; 'Refs' vs 'Closes' | 2026-11-24 | Accepted | repo | [adr/0066-branch-commit-pr-names-carry-slm-key.md](adr/0066-branch-commit-pr-names-carry-slm-key.md) |
 | ADR-0067 | Workflow-file changes are pushed by the owner | 2026-11-24 | Accepted | repo | [adr/0067-workflow-file-changes-pushed-owner.md](adr/0067-workflow-file-changes-pushed-owner.md) |
@@ -91,7 +93,7 @@ Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). S
 | ADR-0083 | One pooled Postgres connection per request through Hyperdrive | 2026-11-24 | Accepted | architecture | [adr/0083-one-pooled-postgres-connection-per-request-through.md](adr/0083-one-pooled-postgres-connection-per-request-through.md) |
 | ADR-0084 | ISBN lookup through a backend adapter to Open Library, 3 s timeout | 2026-11-24 | Accepted | architecture | [adr/0084-isbn-lookup-through-backend-adapter-open-library.md](adr/0084-isbn-lookup-through-backend-adapter-open-library.md) |
 | ADR-0085 | Stack v1: Kotlin/Ktor + Postgres on Cloud Run, Firebase Auth, Claude Haiku | 2026-11-24 | Superseded by [0003](adr/0003-cloudflare-d1-database.md) | architecture | [adr/0085-stack-v1-kotlin-ktor-postgres-cloud-run.md](adr/0085-stack-v1-kotlin-ktor-postgres-cloud-run.md) |
-| ADR-0086 | Front end: no global state library; react-hook-form + zod; in-house components | 2026-11-24 | Accepted | stack | [adr/0086-front-end-global-state-library-react-hook.md](adr/0086-front-end-global-state-library-react-hook.md) |
+| ADR-0086 | Front end: no global state library; zod-validated forms; in-house components | 2026-11-24 | Accepted | stack | [adr/0086-front-end-global-state-library-react-hook.md](adr/0086-front-end-global-state-library-react-hook.md) |
 | ADR-0087 | Deleting a book: blocked with open loans, archived with history, deleted if never borrowed | 2026-11-24 | Accepted | data | [adr/0087-deleting-book-blocked-open-loans-archived-history.md](adr/0087-deleting-book-blocked-open-loans-archived-history.md) |
 | ADR-0088 | ISBN is unique among active books only | 2026-11-24 | Accepted | data | [adr/0088-isbn-unique-among-active-books.md](adr/0088-isbn-unique-among-active-books.md) |
 | ADR-0089 | Loan history is permanent: loans are never deleted, and the acting staff is recorded | 2026-11-24 | Accepted | data | [adr/0089-loan-history-permanent-loans-deleted-acting-staff.md](adr/0089-loan-history-permanent-loans-deleted-acting-staff.md) |
@@ -167,7 +169,7 @@ Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). S
 | ADR-0159 | CI: a hygiene job and a test job on every PR and push to main | 2026-11-24 | Accepted | cicd | [adr/0159-ci-hygiene-job-test-job-every-pr.md](adr/0159-ci-hygiene-job-test-job-every-pr.md) |
 | ADR-0160 | Manual deploy with `npm run deploy` from a deploy branch | 2026-11-24 | Superseded by [0022](adr/0022-workers-builds-auto-deploy.md) | cicd | [adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md](adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md) |
 | ADR-0161 | Deploy checklist: AI binding on, Hyperdrive cache off, all limiters bound, no test flags | 2026-11-24 | Accepted | cicd | [adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md](adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md) |
-| ADR-0162 | Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard | 2026-11-25 | Accepted | cicd | [adr/0162-same-ci-gates-shared-playbook-90-coverage.md](adr/0162-same-ci-gates-shared-playbook-90-coverage.md) |
+| ADR-0162 | Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard | 2026-11-25 | Accepted, not yet in force | cicd | [adr/0162-same-ci-gates-shared-playbook-90-coverage.md](adr/0162-same-ci-gates-shared-playbook-90-coverage.md) |
 | ADR-0163 | CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested | 2026-11-25 | Accepted | cicd | [adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md) |
 | ADR-0164 | API tests run on real PostgreSQL 16, never a mocked database | 2026-11-24 | Accepted | testing | [adr/0164-api-tests-run-real-postgresql-16-mocked.md](adr/0164-api-tests-run-real-postgresql-16-mocked.md) |
 | ADR-0165 | Concurrency race tests are release gates | 2026-11-24 | Accepted | testing | [adr/0165-concurrency-race-tests-release-gates.md](adr/0165-concurrency-race-tests-release-gates.md) |

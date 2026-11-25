@@ -27,4 +27,6 @@ Workers can't hold long-lived connections; a transaction needs one connection fo
 
 ## Sources
 
-decisions/architecture.md:217; Confluence page 19365918; Jira SLM-6
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:217; Confluence page 19365918; Jira SLM-6

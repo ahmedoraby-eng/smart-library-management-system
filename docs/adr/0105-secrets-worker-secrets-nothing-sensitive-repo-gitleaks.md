@@ -27,4 +27,6 @@ The repo is public.
 
 ## Sources
 
-design notes; ci.yml hygiene job; docs/architecture.md Deployment; Confluence page 19365918; Confluence page 19333121; Jira SLM-6; Jira SLM-10; decisions/infra.md:30-38,81
+Public: docs/architecture.md Deployment
+
+Also from the owner's working notes and conversations (not published): design notes; ci.yml hygiene job; Confluence page 19365918; Confluence page 19333121; Jira SLM-6; Jira SLM-10; decisions/infra.md:30-38,81

@@ -29,4 +29,6 @@ Search must be fast, tolerant and free, without another service.
 
 ## Sources
 
-decisions/architecture.md:117,177,228; decisions/engineering-plan.md:139; PR #2; PR #14; migrations 0002_search; Confluence page 19169328; Jira SLM-1; owner conversation, 2026-11-24
+Public: PR #2; PR #14
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:117,177,228; decisions/engineering-plan.md:139; migrations 0002_search; Confluence page 19169328; Jira SLM-1; owner conversation, 2026-11-24

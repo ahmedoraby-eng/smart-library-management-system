@@ -28,4 +28,6 @@ Many agents build screens in parallel; they need the same parts.
 
 ## Sources
 
-decisions/ux.md:133-146; PR #11; commit 577649e; design notes; decisions/architecture.md:164; decisions/traceability.md:42; Jira SLM-7; Confluence page 19169290; decisions/ux.md:152
+Public: PR #11; commit 577649e
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:133-146; design notes; decisions/architecture.md:164; decisions/traceability.md:42; Jira SLM-7; Confluence page 19169290; decisions/ux.md:152

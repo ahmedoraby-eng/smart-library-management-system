@@ -27,4 +27,6 @@ The consent screen is what reviewers see when they sign in.
 
 ## Sources
 
-decisions/architecture.md:275; decisions/infra.md:10,47,83; owner conversation, 2026-11-24
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:275; decisions/infra.md:10,47,83; owner conversation, 2026-11-24

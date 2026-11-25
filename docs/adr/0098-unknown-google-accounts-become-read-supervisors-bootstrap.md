@@ -27,4 +27,6 @@ Reviewers should be able to look around with their own account without changing 
 
 ## Sources
 
-decisions/architecture.md:288; decisions/scope.md:49; decisions/rbac-matrix.md:35; Jira SLM-8; Confluence page 19365918
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:288; decisions/scope.md:49; decisions/rbac-matrix.md:35; Jira SLM-8; Confluence page 19365918

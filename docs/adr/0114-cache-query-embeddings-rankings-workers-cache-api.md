@@ -25,4 +25,6 @@ Cache the query embedding and ranked ids for about 15 minutes in the Workers Cac
 
 ## Sources
 
-Jira SLM-16; Confluence page 19464205
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): Jira SLM-16; Confluence page 19464205

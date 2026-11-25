@@ -27,4 +27,6 @@ The first UI pass found overflow and inconsistent badges and dates.
 
 ## Sources
 
-owner conversation, 2026-11-24; UI review notes, ui-pass-1; UI review notes, ui-pass-2
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; UI review notes, ui-pass-1; UI review notes, ui-pass-2

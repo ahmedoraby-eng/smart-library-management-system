@@ -28,4 +28,6 @@ Staff often start from a member at the desk.
 
 ## Sources
 
-decisions/ux.md:198-203; PR #7; PR #11
+Public: PR #7; PR #11
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:198-203

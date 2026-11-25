@@ -28,4 +28,6 @@ Users must see what came from the catalogue and what came from the model.
 
 ## Sources
 
-decisions/ux.md:24,274; owner conversation, 2026-11-24; Confluence page 19169290; decisions/ux.md:276-279; decisions/ux.md:281-287; decisions/ux.md:272-274
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:24,274; owner conversation, 2026-11-24; Confluence page 19169290; decisions/ux.md:276-279; decisions/ux.md:281-287; decisions/ux.md:272-274

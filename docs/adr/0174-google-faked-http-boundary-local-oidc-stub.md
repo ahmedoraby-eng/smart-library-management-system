@@ -26,4 +26,6 @@ A local OIDC stub signs ID tokens with a test key pair and serves JWKS; the CI G
 
 ## Sources
 
-decisions/test-strategy.md:89,136; decisions/engineering-plan.md:91
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:89,136; decisions/engineering-plan.md:91

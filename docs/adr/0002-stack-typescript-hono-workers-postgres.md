@@ -1,6 +1,6 @@
 # 0002. Stack: TypeScript, Hono on Cloudflare Workers, PostgreSQL 16, React + TanStack Router
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0003](0003-cloudflare-d1-database.md), [0085](0085-stack-v1-kotlin-ktor-postgres-cloud-run.md))
 - **Date:** 2026-11-24
 - **Area:** stack
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -60,4 +60,6 @@ Criteria named by the owner: support, how common, lightweight, fit, speed of dev
 
 ## Sources
 
-decisions/architecture.md:3,48-64,75; decisions/architecture.md:10,15,22-47,122; backlog/slm-tickets-draft.md:5; handover notes; PR #27; README 'Stack' on origin/main; Confluence page 19267692; Confluence page 19365918; owner conversation, 2026-11-24; Jira SLM-2
+Public: PR #27; README 'Stack' on origin/main
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:3,48-64,75; decisions/architecture.md:10,15,22-47,122; backlog/slm-tickets-draft.md:5; handover notes; Confluence page 19267692; Confluence page 19365918; owner conversation, 2026-11-24; Jira SLM-2

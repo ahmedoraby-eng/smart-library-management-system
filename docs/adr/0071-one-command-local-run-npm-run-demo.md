@@ -27,4 +27,6 @@ Reviewers and the team need to run the app without setup pain; Docker wasn't ava
 
 ## Sources
 
-PR #10; commit f0d1ccc; design notes; owner conversation, 2026-11-24; decisions/architecture.md:345; decisions/engineering-plan.md:164; Jira SLM-6
+Public: PR #10; commit f0d1ccc
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-24; decisions/architecture.md:345; decisions/engineering-plan.md:164; Jira SLM-6

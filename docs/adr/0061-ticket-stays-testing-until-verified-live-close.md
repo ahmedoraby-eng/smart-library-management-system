@@ -25,4 +25,6 @@ SLM-8 stays In Testing until the OAuth client exists and Google sign-in is check
 
 ## Sources
 
-Jira SLM-8
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): Jira SLM-8

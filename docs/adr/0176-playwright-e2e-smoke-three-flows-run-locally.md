@@ -28,4 +28,6 @@ The time box and the public repo made browser tests in CI costly; the app has no
 
 ## Sources
 
-owner conversation, 2026-11-24; PR #17; README Tests; commit 4156f01; Jira SLM-11; Confluence page 19333121; handover notes; design notes
+Public: PR #17; README Tests; commit 4156f01
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Jira SLM-11; Confluence page 19333121; handover notes; design notes

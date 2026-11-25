@@ -25,4 +25,6 @@ Both are desk tasks done many times a day.
 
 ## Sources
 
-decisions/ux.md:12; Confluence page 19169290; PR #8; commit cb7d6a2
+Public: PR #8; commit cb7d6a2
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:12; Confluence page 19169290

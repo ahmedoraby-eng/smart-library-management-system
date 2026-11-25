@@ -27,4 +27,6 @@ Users must understand why an action isn't available.
 
 ## Sources
 
-decisions/ux.md:20,74; Confluence page 19169290
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:20,74; Confluence page 19169290

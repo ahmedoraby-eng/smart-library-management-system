@@ -27,4 +27,6 @@ Local runs need fake AI and local Postgres; production needs bindings.
 
 ## Sources
 
-design notes; Confluence page 19365918; Confluence page 19333121; Jira SLM-10
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): design notes; Confluence page 19365918; Confluence page 19333121; Jira SLM-10

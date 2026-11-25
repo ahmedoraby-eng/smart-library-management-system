@@ -25,4 +25,6 @@ Replaced in the walking-skeleton review. The passwords stay in Worker secrets an
 
 ## Sources
 
-decisions/test-strategy.md:106; decisions/architecture.md:278
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:106; decisions/architecture.md:278

@@ -17,7 +17,7 @@ A percentage alone invites low-value tests; the risky behaviours must be named.
 
 ## Decision
 
-Gate: inventory-invariant, concurrency-20-on-3, duplicate-return, inactive-member, loan-limit, member-suspend-race, rbac-matrix, no-auth-bypass, session-cookie-flags, unknown-google-is-supervisor-readonly, demo-accounts-protected, reset-keeps-inventory-valid. Skipping any fails the run.
+Gate: inventory-invariant, concurrency-20-on-3, duplicate-return, inactive-member, loan-limit, member-suspend-race, rbac-matrix, no-auth-bypass, session-cookie-flags, unknown-google-is-supervisor-readonly, demo-accounts-protected, reset-keeps-inventory-valid. These tests run in every CI run; the gate is a review convention (a reviewer checks they ran), not enforced by a CI check.
 
 ## Consequences
 
@@ -25,4 +25,6 @@ Gate: inventory-invariant, concurrency-20-on-3, duplicate-return, inactive-membe
 
 ## Sources
 
-decisions/test-strategy.md:16,179
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:16,179

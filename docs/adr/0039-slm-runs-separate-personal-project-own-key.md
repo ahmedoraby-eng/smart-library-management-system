@@ -7,7 +7,7 @@
 
 ## Context
 
-The same AI team also works on the owner's employer projects. Mixing keys, files or tickets would break separation of concerns.
+The owner runs other work with the same tooling. Mixing keys, files or tickets would break separation of concerns.
 
 > Ahmed Oraby: «وعشان بس سيبريشن اوف كونسيرن، وعشان ما نلخبطش الشغل ده مع الشغل التاني، ممكن تعملي سيشن تانية منفصلة»
 
@@ -30,4 +30,6 @@ The same AI team also works on the owner's employer projects. Mixing keys, files
 
 ## Sources
 
-owner conversation, 2026-11-24; engagement notes
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; engagement notes

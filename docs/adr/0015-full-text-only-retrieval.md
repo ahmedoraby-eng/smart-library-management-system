@@ -25,4 +25,6 @@ Replaced by hybrid retrieval. Full-text stays as one of the two retrievers, and 
 
 ## Sources
 
-Jira SLM-9; Confluence page 19398657; design notes
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): Jira SLM-9; Confluence page 19398657; design notes

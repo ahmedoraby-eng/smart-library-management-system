@@ -28,4 +28,6 @@ The owner can't watch every PR, and agent identities can't merge as him through 
 
 ## Sources
 
-owner conversation, 2026-11-24; handover notes
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; handover notes

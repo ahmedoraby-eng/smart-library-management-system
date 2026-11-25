@@ -26,4 +26,6 @@ Some steps need the owner's own logins: GitHub, Cloudflare, Neon, Google OAuth, 
 
 ## Sources
 
-decisions/infra.md:77-85
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:77-85

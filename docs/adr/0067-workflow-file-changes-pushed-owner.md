@@ -28,4 +28,6 @@ The agents' GitHub Apps have no Workflows permission.
 
 ## Sources
 
-decisions/infra.md:72; decisions/engineering-plan.md:175; design notes; owner conversation, 2026-11-24; owner conversation, 2026-11-25
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:72; decisions/engineering-plan.md:175; design notes; owner conversation, 2026-11-24; owner conversation, 2026-11-25

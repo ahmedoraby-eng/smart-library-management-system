@@ -25,4 +25,6 @@ Title and author required (≤ 200); optional ISBN-10/13 with checksum, unique; 
 
 ## Sources
 
-decisions/ux.md:172-190
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:172-190

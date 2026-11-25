@@ -31,4 +31,6 @@ Bindings: HYPERDRIVE, AI and the rate limiters, plus one Cron Trigger. Hosts con
 
 ## Sources
 
-Confluence page 19365918; docs/architecture.md; wrangler.toml [assets]; decisions/architecture.md:20,334; decisions/infra.md:19; owner conversation, 2026-11-24
+Public: docs/architecture.md; wrangler.toml [assets]
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365918; decisions/architecture.md:20,334; decisions/infra.md:19; owner conversation, 2026-11-24

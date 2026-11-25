@@ -25,4 +25,6 @@ Badges Available / Low / Unavailable with counts; Low = 25 % or less of copies; 
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

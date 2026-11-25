@@ -29,4 +29,6 @@ Planned GitHub secrets were CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the 
 
 ## Sources
 
-design notes
+Public: .github/workflows/
+
+Also from the owner's working notes and conversations (not published): design notes

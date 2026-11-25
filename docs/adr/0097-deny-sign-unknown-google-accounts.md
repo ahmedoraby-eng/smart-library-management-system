@@ -25,4 +25,6 @@ Unknown Google emails were refused.
 
 ## Sources
 
-decisions/rbac-matrix.md:35
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/rbac-matrix.md:35

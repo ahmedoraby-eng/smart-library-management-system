@@ -30,4 +30,6 @@ Book text changes must reach the vector index without a Cloudflare token in scri
 
 ## Sources
 
-design notes; docs/ai.md; Confluence page 19169328; Jira SLM-16; Confluence page 19464205; owner conversation, 2026-11-25; owner conversation, 2026-11-24; PR #20; commit c8099f7; decisions/rbac-matrix.md:24,36
+Public: docs/ai.md; PR #20; commit c8099f7
+
+Also from the owner's working notes and conversations (not published): design notes; Confluence page 19169328; Jira SLM-16; Confluence page 19464205; owner conversation, 2026-11-25; owner conversation, 2026-11-24; decisions/rbac-matrix.md:24,36

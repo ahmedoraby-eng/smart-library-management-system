@@ -25,4 +25,6 @@ On a 401, redirect to `/signin?next=<path>` with 'Your session ended…'; after 
 
 ## Sources
 
-decisions/ux.md:49
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:49

@@ -31,4 +31,6 @@ The demo first ran only locally; reviewers need a live link.
 
 ## Sources
 
-owner conversation, 2026-11-24; master prompt; decisions/infra.md:28
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; master prompt; decisions/infra.md:28

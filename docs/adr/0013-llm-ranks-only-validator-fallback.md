@@ -1,4 +1,4 @@
-# 0013. AI discovery: the model only ranks real candidates, a validator guards it, and a deterministic fallback always answers
+# 0013. AI discovery: the model only ranks real candidates, behind a validator and a deterministic fallback
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
@@ -38,4 +38,6 @@ Fallback reasons: NO_PROVIDER, TIMEOUT, PROVIDER_ERROR, INVALID_OUTPUT, NO_VALID
 
 ## Sources
 
-decisions/architecture.md:19,311-330; decisions/scope.md:50,59; owner conversation, 2026-11-24; docs/ai.md; PR #4; decisions/architecture.md:327; Confluence page 19398657; Jira SLM-9; Confluence page 19169328; master prompt
+Public: docs/ai.md; PR #4
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:19,311-330; decisions/scope.md:50,59; owner conversation, 2026-11-24; decisions/architecture.md:327; Confluence page 19398657; Jira SLM-9; Confluence page 19169328; master prompt

@@ -28,4 +28,6 @@ Lists must page and sort safely.
 
 ## Sources
 
-decisions/architecture.md:228,258; decisions/architecture.md:228
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:228,258; decisions/architecture.md:228

@@ -28,4 +28,6 @@ The API contract must be explicit and testable with curl.
 
 ## Sources
 
-decisions/architecture.md:224-243
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:224-243

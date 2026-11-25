@@ -26,6 +26,12 @@ Change the CI service image to `pgvector/pgvector:pg16`. Approved by architectur
 
 - Closes the gap noted in ADR 0018.
 
+## Notes
+
+Implemented in PR #26: `scripts/ci-test.sh` starts `pgvector/pgvector:pg16` by default. It runs in CI once the gates PR makes CI call `npm run test:coverage`; until then CI's `test` job keeps its own `postgres:16` service.
+
 ## Sources
 
-design notes; .github/workflows/ci.yml on origin/main
+Public: .github/workflows/ci.yml on origin/main
+
+Also from the owner's working notes and conversations (not published): design notes

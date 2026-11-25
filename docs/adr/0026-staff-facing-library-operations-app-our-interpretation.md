@@ -29,4 +29,6 @@ The assessment doesn't say if the app is for staff or for the public. Every mini
 
 ## Sources
 
-decisions/scope.md:5,8-9; owner conversation, 2026-11-24; master prompt; README.md on origin/main; docs/architecture.md key decisions; Confluence page 19267692; Jira SLM-3; Jira SLM-5; Jira SLM-6; repo-seed/README.md:3
+Public: README.md on origin/main; docs/architecture.md key decisions
+
+Also from the owner's working notes and conversations (not published): decisions/scope.md:5,8-9; owner conversation, 2026-11-24; master prompt; Confluence page 19267692; Jira SLM-3; Jira SLM-5; Jira SLM-6; repo-seed/README.md:3

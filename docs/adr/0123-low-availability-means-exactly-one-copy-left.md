@@ -26,4 +26,6 @@ The meaningful moment for a librarian is the last copy.
 
 ## Sources
 
-decisions/ux.md:19,122-124; Confluence page 19169290
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:19,122-124; Confluence page 19169290

@@ -25,4 +25,6 @@ Two librarians can edit the same book.
 
 ## Sources
 
-decisions/ux.md:188
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:188

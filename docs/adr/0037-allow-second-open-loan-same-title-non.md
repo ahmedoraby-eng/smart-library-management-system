@@ -25,4 +25,6 @@ A member could borrow a second copy of a title they already have, with a note.
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

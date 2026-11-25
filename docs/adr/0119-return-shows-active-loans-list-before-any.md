@@ -25,4 +25,6 @@ The Return tab lists all active loans at once (overdue first, then soonest due).
 
 ## Sources
 
-decisions/ux.md:15,256-258
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:15,256-258

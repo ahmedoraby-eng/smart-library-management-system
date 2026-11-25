@@ -27,4 +27,6 @@ A deactivated member or archived book may still have open loans.
 
 ## Sources
 
-owner conversation, 2026-11-24; commit cb7d6a2; PR #8; decisions/architecture.md:193; decisions/scope.md:43; backlog/slm-tickets-draft.md:95-103
+Public: commit cb7d6a2; PR #8
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/architecture.md:193; decisions/scope.md:43; backlog/slm-tickets-draft.md:95-103

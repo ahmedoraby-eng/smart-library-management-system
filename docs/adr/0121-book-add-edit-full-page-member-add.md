@@ -27,4 +27,6 @@ Books have about 10 fields; members have 4.
 
 ## Sources
 
-Confluence page 19169290; decisions/ux.md:17,70-71
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): Confluence page 19169290; decisions/ux.md:17,70-71

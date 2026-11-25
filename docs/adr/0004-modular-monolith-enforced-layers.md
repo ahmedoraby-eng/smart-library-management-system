@@ -42,4 +42,6 @@ Eight module folders under api/src: catalog, members, circulation, staff, discov
 
 ## Sources
 
-Confluence page 19365918; Confluence page 19333121; Jira SLM-6; owner conversation, 2026-11-24; smart-library-management-system/.dependency-cruiser.cjs; docs/architecture.md; decisions/architecture.md:16,151-156; master prompt; decisions/architecture.md:106,151; decisions/engineering-plan.md:56-59
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365918; Confluence page 19333121; Jira SLM-6; owner conversation, 2026-11-24; smart-library-management-system/.dependency-cruiser.cjs; decisions/architecture.md:16,151-156; master prompt; decisions/architecture.md:106,151; decisions/engineering-plan.md:56-59

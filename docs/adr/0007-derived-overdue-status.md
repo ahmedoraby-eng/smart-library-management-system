@@ -31,4 +31,6 @@ The filter status=ACTIVE means every open loan, overdue included. OVERDUE uses t
 
 ## Sources
 
-docs/architecture.md; PR #9; Confluence page 19398657; Jira SLM-5; decisions/architecture.md:183; decisions/scope.md:45; backlog/slm-tickets-draft.md:119-126
+Public: docs/architecture.md; PR #9
+
+Also from the owner's working notes and conversations (not published): Confluence page 19398657; Jira SLM-5; decisions/architecture.md:183; decisions/scope.md:45; backlog/slm-tickets-draft.md:119-126

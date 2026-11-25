@@ -28,4 +28,6 @@ The concurrency and constraint guarantees live in the database engine.
 
 ## Sources
 
-Confluence page 19333121; README Tests; commit cb7d6a2; design notes; owner conversation, 2026-11-24
+Public: README Tests; commit cb7d6a2
+
+Also from the owner's working notes and conversations (not published): Confluence page 19333121; design notes; owner conversation, 2026-11-24

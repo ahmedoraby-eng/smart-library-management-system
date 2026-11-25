@@ -41,4 +41,6 @@ Isolation is READ COMMITTED. FOR UPDATE (not FOR SHARE) on the member row also b
 
 ## Sources
 
-Confluence page 19398657; Jira SLM-4; docs/architecture.md; commit cb7d6a2; design notes; owner conversation, 2026-11-24; decisions/architecture.md:17,186-189; decisions/scope.md:40; decisions/architecture.md:177,180,215; decisions/architecture.md:17,198-218
+Public: docs/architecture.md; commit cb7d6a2
+
+Also from the owner's working notes and conversations (not published): Confluence page 19398657; Jira SLM-4; design notes; owner conversation, 2026-11-24; decisions/architecture.md:17,186-189; decisions/scope.md:40; decisions/architecture.md:177,180,215; decisions/architecture.md:17,198-218

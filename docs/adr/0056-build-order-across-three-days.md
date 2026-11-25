@@ -28,4 +28,6 @@ Dependencies between stories decide what can run in parallel.
 
 ## Sources
 
-backlog/slm-tickets-draft.md:37; decisions/engineering-plan.md:138; decisions/infra.md:90-99
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): backlog/slm-tickets-draft.md:37; decisions/engineering-plan.md:138; decisions/infra.md:90-99

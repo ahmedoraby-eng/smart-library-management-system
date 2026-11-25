@@ -25,4 +25,6 @@ Journeys: Borrow, Return, Search (Supervisor), AI fallback, Catalog admin + dele
 
 ## Sources
 
-decisions/test-strategy.md:135-148; decisions/test-strategy.md:177,189; decisions/infra.md:75
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:135-148; decisions/test-strategy.md:177,189; decisions/infra.md:75

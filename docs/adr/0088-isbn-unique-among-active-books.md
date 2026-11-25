@@ -26,4 +26,6 @@ An archived book's ISBN may need to come back as a new record.
 
 ## Sources
 
-decisions/architecture.md:177-178; Confluence page 19398657; Jira SLM-1
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:177-178; Confluence page 19398657; Jira SLM-1

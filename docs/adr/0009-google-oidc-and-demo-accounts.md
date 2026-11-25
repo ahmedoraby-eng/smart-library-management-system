@@ -1,6 +1,6 @@
 # 0009. Sign-in: Google OIDC in the app plus demo accounts, with no password hashing
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0010](0010-pbkdf2-demo-password-hashes.md), [0094](0094-cloudflare-access-google-identity-provider-front-app.md))
 - **Date:** 2026-11-24
 - **Area:** security
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -42,4 +42,6 @@ The demo form shows only when DEMO_ACCOUNTS_ENABLED=true (a kill switch). Demo a
 
 ## Sources
 
-decisions/architecture.md:18,273-281; design notes; docs/architecture.md key decisions; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; backlog/slm-tickets-draft.md:128-143; decisions/architecture.md:278; decisions/engineering-plan.md:93-96; PR #1
+Public: PR #12; PR #15; docs/architecture.md key decisions; PR #1
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:18,273-281; design notes; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; backlog/slm-tickets-draft.md:128-143; decisions/architecture.md:278; decisions/engineering-plan.md:93-96

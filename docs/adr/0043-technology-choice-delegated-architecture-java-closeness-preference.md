@@ -29,4 +29,6 @@ The owner reads Java best, but the build window is 3 days.
 
 ## Sources
 
-owner conversation, 2026-11-24; engagement notes; master prompt
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; engagement notes; master prompt

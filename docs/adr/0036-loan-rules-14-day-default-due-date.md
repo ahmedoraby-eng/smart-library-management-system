@@ -30,4 +30,6 @@ Borrowing needs clear, testable limits.
 
 ## Sources
 
-docs/architecture.md; wrangler.toml; PR #9; owner conversation, 2026-11-24; Jira SLM-4; decisions/architecture.md:192; decisions/scope.md:44; decisions/test-strategy.md:64; backlog/slm-tickets-draft.md:105-117; decisions/ux.md:292
+Public: docs/architecture.md; wrangler.toml; PR #8
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Jira SLM-4; decisions/architecture.md:192; decisions/scope.md:44; decisions/test-strategy.md:64; backlog/slm-tickets-draft.md:105-117; decisions/ux.md:292

@@ -28,4 +28,6 @@ Each layer should check what it owns, and the UI must not be trusted.
 
 ## Sources
 
-decisions/architecture.md:267
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:267

@@ -27,4 +27,6 @@ A 3-day build needs a known order of what to drop, decided before the pressure s
 
 ## Sources
 
-decisions/engineering-plan.md:156-158; decisions/scope.md:35; decisions/scope.md:28
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): decisions/engineering-plan.md:156-158; decisions/scope.md:35; decisions/scope.md:28

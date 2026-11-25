@@ -27,4 +27,6 @@ If a real address were set as a demo email, Google sign-in would give Admin with
 
 ## Sources
 
-PR #12; commit b40266f; design notes; owner conversation, 2026-11-24
+Public: PR #12; commit b40266f
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-24

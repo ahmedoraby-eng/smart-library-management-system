@@ -1,6 +1,6 @@
 # 0085. Stack v1: Kotlin/Ktor + Postgres on Cloud Run, Firebase Auth, Claude Haiku
 
-- **Status:** Superseded by [0003](0003-cloudflare-d1-database.md)
+- **Status:** Superseded by [0003](0003-cloudflare-d1-database.md), itself superseded by [0002](0002-stack-typescript-hono-workers-postgres.md)
 - **Date:** 2026-11-24
 - **Area:** architecture
 - **Deciders:** Architecture
@@ -26,4 +26,6 @@ One container serving API + SPA on Cloud Run, Neon Postgres, Firebase Auth (Goog
 
 ## Sources
 
-owner conversation, 2026-11-24; design notes; decisions/architecture.md:8,395-403
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; design notes; decisions/architecture.md:8,395-403

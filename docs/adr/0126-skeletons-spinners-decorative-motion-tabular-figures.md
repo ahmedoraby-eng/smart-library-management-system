@@ -25,4 +25,6 @@ Loading shows skeletons (1.2 s pulse, off under prefers-reduced-motion); the onl
 
 ## Sources
 
-decisions/ux.md:23,144,152,264; Confluence page 19169290
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:23,144,152,264; Confluence page 19169290

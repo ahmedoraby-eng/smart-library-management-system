@@ -27,4 +27,6 @@ Two librarians taking the last copy is the core risk of the app.
 
 ## Sources
 
-decisions/test-strategy.md:43-51; decisions/architecture.md:218; decisions/engineering-plan.md:70; Confluence page 19333121; Jira SLM-4
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:43-51; decisions/architecture.md:218; decisions/engineering-plan.md:70; Confluence page 19333121; Jira SLM-4

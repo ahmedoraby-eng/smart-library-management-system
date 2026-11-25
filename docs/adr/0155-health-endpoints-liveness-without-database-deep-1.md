@@ -21,8 +21,10 @@ Smoke checks need a cheap public liveness probe and a deeper check that can't be
 
 ## Consequences
 
-- The deep check should hit the limiter before the database.
+- Known nit: today the database connection opens before the limit check (see [0103](0103-rate-limiting.md)).
 
 ## Sources
 
-decisions/infra.md:27,74; decisions/engineering-plan.md:107-109
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:27,74; decisions/engineering-plan.md:107-109

@@ -27,4 +27,6 @@ Reviewers need one neutral link at no cost.
 
 ## Sources
 
-design notes; decisions/architecture.md:335; decisions/infra.md:22; Confluence page 19267692; Jira SLM-10; Jira SLM-6
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): design notes; decisions/architecture.md:335; decisions/infra.md:22; Confluence page 19267692; Jira SLM-10; Jira SLM-6

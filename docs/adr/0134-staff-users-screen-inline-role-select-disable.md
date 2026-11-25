@@ -27,4 +27,6 @@ Admins manage staff, and the demo must survive reviewers.
 
 ## Sources
 
-decisions/ux.md:208-210; commit 577649e; commit b40266f; PR #11; decisions/test-strategy.md:125
+Public: commit 577649e; commit b40266f; PR #11
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:208-210; decisions/test-strategy.md:125

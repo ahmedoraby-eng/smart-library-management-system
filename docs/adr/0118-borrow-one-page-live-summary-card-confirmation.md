@@ -30,4 +30,6 @@ Borrowing must be fast but still confirmed.
 
 ## Sources
 
-decisions/ux.md:14,229; owner conversation, 2026-11-24; decisions/ux.md:233-243,262; decisions/ux.md:244; decisions/ux.md:246-253
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:14,229; owner conversation, 2026-11-24; decisions/ux.md:233-243,262; decisions/ux.md:244; decisions/ux.md:246-253

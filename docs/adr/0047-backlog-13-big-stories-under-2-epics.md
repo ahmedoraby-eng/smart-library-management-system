@@ -30,4 +30,6 @@ The backlog should prove the idea, not mirror a full product.
 
 ## Sources
 
-backlog/slm-tickets-draft.md:3,12-15; owner conversation, 2026-11-24; decisions/scope.md:16-34,69; backlog/slm-tickets-draft.md:10-12,41-47; master prompt; backlog/slm-tickets-draft.md:11; decisions/scope.md:6
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): backlog/slm-tickets-draft.md:3,12-15; owner conversation, 2026-11-24; decisions/scope.md:16-34,69; backlog/slm-tickets-draft.md:10-12,41-47; master prompt; backlog/slm-tickets-draft.md:11; decisions/scope.md:6

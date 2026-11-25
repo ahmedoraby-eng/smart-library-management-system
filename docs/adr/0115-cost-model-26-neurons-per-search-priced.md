@@ -27,4 +27,6 @@ Reviewers will ask what AI search costs, now and at real scale.
 
 ## Sources
 
-Confluence page 19464205
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19464205

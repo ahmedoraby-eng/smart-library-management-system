@@ -26,4 +26,6 @@ The invariant `0 ≤ available ≤ total` must hold under any sequence.
 
 ## Sources
 
-decisions/test-strategy.md:37-38; decisions/test-strategy.md:41
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:37-38; decisions/test-strategy.md:41

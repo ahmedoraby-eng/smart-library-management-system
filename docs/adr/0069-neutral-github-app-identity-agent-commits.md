@@ -31,4 +31,6 @@ Reason: the owner's decision of 2026-11-25 to keep the repository public as it i
 
 ## Sources
 
-handover notes; decisions/infra.md:87-88
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): handover notes; decisions/infra.md:87-88

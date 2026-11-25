@@ -26,4 +26,6 @@ Borrow touches both loans (circulation) and copies (catalog).
 
 ## Sources
 
-PR #8; decisions/architecture.md:151,216
+Public: PR #8
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:151,216

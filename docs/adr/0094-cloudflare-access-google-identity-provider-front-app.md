@@ -25,4 +25,6 @@ Access protects the app; the backend verifies `Cf-Access-Jwt-Assertion` (JWKS, a
 
 ## Sources
 
-owner conversation, 2026-11-24; design notes; decisions/architecture.md:280; decisions/infra.md:23,99; decisions/ux.md:298,296
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; design notes; decisions/architecture.md:280; decisions/infra.md:23,99; decisions/ux.md:298,296

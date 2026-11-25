@@ -25,4 +25,6 @@ Return opens 'Return X from Y?' with the return date and overdue days; focus on 
 
 ## Sources
 
-decisions/ux.md:16,260
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:16,260

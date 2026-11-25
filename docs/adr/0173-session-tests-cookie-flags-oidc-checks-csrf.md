@@ -25,4 +25,6 @@ Tests assert each cookie flag, OIDC state/PKCE/claims checks, CSRF Origin/Conten
 
 ## Sources
 
-decisions/test-strategy.md:88-107
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:88-107

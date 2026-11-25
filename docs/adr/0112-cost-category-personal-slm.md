@@ -26,4 +26,6 @@ AI-agent and service spend for SLM must not be charged to the owner's employer w
 
 ## Sources
 
-owner conversation, 2026-11-24; design notes; master prompt; engagement notes
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; design notes; master prompt; engagement notes

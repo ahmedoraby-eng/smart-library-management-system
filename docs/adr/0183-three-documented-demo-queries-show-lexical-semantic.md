@@ -28,4 +28,4 @@ Assessors should see each retrieval path work on the seed.
 
 ## Sources
 
-docs/ai.md; commit c8099f7
+Public: docs/ai.md; commit c8099f7

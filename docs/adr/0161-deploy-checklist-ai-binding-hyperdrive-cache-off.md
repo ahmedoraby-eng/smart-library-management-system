@@ -27,4 +27,6 @@ A missing binding fails silently: without `[ai]`, discovery always falls back.
 
 ## Sources
 
-owner conversation, 2026-11-24; design notes; decisions/infra.md:74; decisions/test-strategy.md:176
+Public: .github/workflows/
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; design notes; decisions/infra.md:74; decisions/test-strategy.md:176

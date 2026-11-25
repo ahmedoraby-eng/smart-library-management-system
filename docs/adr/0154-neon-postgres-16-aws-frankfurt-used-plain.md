@@ -32,4 +32,6 @@ The database needs real transactions, a free tier that doesn't pause for days, a
 
 ## Sources
 
-Confluence page 19365918; Confluence page 19464205; decisions/architecture.md:337; decisions/infra.md:20,80; decisions/architecture.md:67; decisions/infra.md:20; owner conversation, 2026-11-24; design notes
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365918; Confluence page 19464205; decisions/architecture.md:337; decisions/infra.md:20,80; decisions/architecture.md:67; decisions/infra.md:20; owner conversation, 2026-11-24; design notes

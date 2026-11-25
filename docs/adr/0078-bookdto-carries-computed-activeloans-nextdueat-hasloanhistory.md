@@ -27,4 +27,6 @@ Badges, 'next copy due back' and the delete dialog need loan facts on every book
 
 ## Sources
 
-decisions/architecture.md:245-257; owner conversation, 2026-11-24; decisions/ux.md:294
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:245-257; owner conversation, 2026-11-24; decisions/ux.md:294

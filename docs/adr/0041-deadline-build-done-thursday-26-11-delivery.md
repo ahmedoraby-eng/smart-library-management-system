@@ -29,4 +29,6 @@ The assessment has a fixed submission time; the last day is needed for docs, rev
 
 ## Sources
 
-owner conversation, 2026-11-24; owner conversation, 2026-11-25; master prompt; design notes
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; owner conversation, 2026-11-25; master prompt; design notes

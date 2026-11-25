@@ -1,4 +1,4 @@
-# 0064. One repo with npm workspaces: api, contracts, web, e2e, migrations, seed
+# 0064. One repo with npm workspaces: api, contracts, web
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
@@ -17,7 +17,7 @@ API and UI share types and contracts.
 
 ## Decision
 
-One public repo with workspaces `api`, `contracts`, `web`, `e2e`, `migrations` and `seed`.
+One public repo with npm workspaces `contracts`, `api` and `web`; `e2e/`, `migrations/` and `seed/` are plain folders.
 
 ## Consequences
 
@@ -25,4 +25,6 @@ One public repo with workspaces `api`, `contracts`, `web`, `e2e`, `migrations` a
 
 ## Sources
 
-decisions/engineering-plan.md:12,36-54
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): decisions/engineering-plan.md:12,36-54

@@ -25,4 +25,6 @@ The card shows name, email, role chip (Supervisor with a 'Read-only' tooltip) an
 
 ## Sources
 
-decisions/ux.md:46; Confluence page 19169290; Jira SLM-7
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:46; Confluence page 19169290; Jira SLM-7

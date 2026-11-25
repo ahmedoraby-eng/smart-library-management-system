@@ -33,4 +33,6 @@ The reset is one transaction (truncate loans, members and books, then load seed/
 
 ## Sources
 
-decisions/architecture.md:242,294; decisions/infra.md:25; decisions/engineering-plan.md:98-105; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; docs/architecture.md; commit da20579
+Public: docs/architecture.md; commit da20579
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:242,294; decisions/infra.md:25; decisions/engineering-plan.md:98-105; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8

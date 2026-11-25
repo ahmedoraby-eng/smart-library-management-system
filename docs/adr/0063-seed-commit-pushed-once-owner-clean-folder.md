@@ -26,4 +26,6 @@ Agent identities can't push to main or push workflow files; the first commit nee
 
 ## Sources
 
-owner conversation, 2026-11-24; repo-seed/BOOTSTRAP.md:1-10
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; repo-seed/BOOTSTRAP.md:1-10

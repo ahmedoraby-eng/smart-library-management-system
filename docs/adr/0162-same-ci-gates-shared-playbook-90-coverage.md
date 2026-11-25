@@ -1,6 +1,6 @@
 # 0162. Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard
 
-- **Status:** Accepted (supersedes [0168](0168-coverage-gate-coverage-report-informational.md), [0169](0169-security-scanning-limited-secret-scan.md))
+- **Status:** Accepted, not yet in force (supersedes [0168](0168-coverage-gate-coverage-report-informational.md), [0169](0169-security-scanning-limited-secret-scan.md))
 - **Date:** 2026-11-25
 - **Area:** cicd
 - **Deciders:** Ahmed Oraby (owner)
@@ -29,6 +29,12 @@ The owner wanted SLM's CI to work like his other platform's: AI-assisted flag, t
 
 - Earlier 'no coverage gate' and 'secret scan only' choices are replaced.
 
+## Notes
+
+**In force when:** (1) PR #26 merges (tests, coverage thresholds, ESLint and Prettier configs, `scripts/ci-test.sh`); approved, waiting for the owner's merge. (2) The owner's gates PR (opened by `enable-ci-gates.sh`) merges: it makes CI run `npm run check`, `npm run test:coverage` and the audit, and adds `ai-guard`, `.ai-guard.toml` and the AI checkbox in the PR template. Until both land, CI on `main` runs plain `npm test`, with no coverage gate, lint, audit or ai-guard.
+
 ## Sources
 
-owner conversation, 2026-11-25; PR #26; design notes
+Public: PR #26
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-25; design notes

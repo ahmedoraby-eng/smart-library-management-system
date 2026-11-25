@@ -25,4 +25,6 @@ Due-soon badge for loans due within 3 days.
 
 ## Sources
 
-Jira SLM-13
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): Jira SLM-13

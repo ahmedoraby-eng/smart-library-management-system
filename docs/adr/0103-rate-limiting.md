@@ -37,4 +37,6 @@ A public demo with shared demo accounts and a quota-bound AI needs limits on sig
 
 ## Sources
 
-api/src/platform/security/rateLimit.ts; wrangler.toml (ratelimits); PR #1 review and re-review; docs/architecture.md; Confluence page 1; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; Jira SLM-9; PR #1; commit bf13a4a; wrangler.toml [[ratelimits]]; decisions/infra.md:50-69; decisions/architecture.md:239,328; decisions/rbac-matrix.md:23
+Public: api/src/platform/security/rateLimit.ts; wrangler.toml (ratelimits); PR #1 review and re-review; docs/architecture.md; PR #1; commit bf13a4a; wrangler.toml [[ratelimits]]
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; Jira SLM-9; decisions/infra.md:50-69; decisions/architecture.md:239,328; decisions/rbac-matrix.md:23

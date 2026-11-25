@@ -25,4 +25,6 @@ Badges show the count ('3 of 5 available'), a colour and a dot; tight lists drop
 
 ## Sources
 
-decisions/ux.md:18,131
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:18,131

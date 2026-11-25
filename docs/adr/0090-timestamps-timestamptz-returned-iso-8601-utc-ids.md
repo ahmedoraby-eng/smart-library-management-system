@@ -25,4 +25,6 @@ All timestamps are `timestamptz` and returned as ISO-8601 UTC; ids are UUIDs.
 
 ## Sources
 
-decisions/architecture.md:184,224
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:184,224

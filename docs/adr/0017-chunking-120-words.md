@@ -36,4 +36,6 @@ Before calling the model, sync copies a vector from any chunk with the same sour
 
 ## Sources
 
-design notes; Confluence page 19169328; Jira SLM-16; owner conversation, 2026-11-24; Confluence page 19464205
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): design notes; Confluence page 19169328; Jira SLM-16; owner conversation, 2026-11-24; Confluence page 19464205

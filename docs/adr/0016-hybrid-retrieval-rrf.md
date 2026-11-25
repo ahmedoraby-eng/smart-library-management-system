@@ -1,6 +1,6 @@
 # 0016. Hybrid retrieval: full-text + vector, fused with RRF (k = 60), similarity threshold 0.72
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0015](0015-full-text-only-retrieval.md), [0109](0109-semantic-similarity-threshold-hard-coded-0-5.md))
 - **Date:** 2026-11-25
 - **Area:** ai
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -41,4 +41,6 @@ The semantic side embeds the query and takes the top 40 chunks, best chunk per b
 
 ## Sources
 
-owner conversation, 2026-11-24; Jira SLM-16; Confluence page 19169328; design notes; docs/ai.md; PR #19; commit c8099f7; Confluence page 19398657
+Public: docs/ai.md; PR #19; commit c8099f7
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Jira SLM-16; Confluence page 19169328; design notes; Confluence page 19398657

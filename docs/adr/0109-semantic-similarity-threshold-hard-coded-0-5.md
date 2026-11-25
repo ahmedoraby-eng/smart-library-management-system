@@ -25,4 +25,6 @@ Semantic hits below 0.5 cosine were dropped; the value was in code.
 
 ## Sources
 
-design notes; PR #19; commit c8099f7; owner conversation, 2026-11-24
+Public: PR #19; commit c8099f7
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-24

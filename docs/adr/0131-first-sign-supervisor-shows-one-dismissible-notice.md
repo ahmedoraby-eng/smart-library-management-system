@@ -25,4 +25,6 @@ Auto-provisioned Supervisors see a dismissible notice pointing to the demo Libra
 
 ## Sources
 
-decisions/ux.md:48; decisions/architecture.md:288
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:48; decisions/architecture.md:288

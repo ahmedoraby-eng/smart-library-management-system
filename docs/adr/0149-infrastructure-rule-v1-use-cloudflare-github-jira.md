@@ -27,4 +27,6 @@ Use only what we already have: Cloudflare for hosting, GitHub (Actions), Jira/Co
 
 ## Sources
 
-owner conversation, 2026-11-24; engagement notes
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; engagement notes

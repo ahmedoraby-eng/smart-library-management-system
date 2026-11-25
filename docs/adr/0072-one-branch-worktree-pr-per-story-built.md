@@ -29,4 +29,6 @@ The owner wanted a first clickable version of all main screens the same evening.
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

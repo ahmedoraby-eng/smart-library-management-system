@@ -1,6 +1,6 @@
 # 0019. AI cost tiers, a per-user quota and a daily Neuron cap; «AI-assisted search» wording
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0114](0114-cache-query-embeddings-rankings-workers-cache-api.md))
 - **Date:** 2026-11-25
 - **Area:** cost
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -50,4 +50,6 @@ The tier order was an open point on the ticket and was then confirmed by the own
 
 ## Sources
 
-owner conversation, 2026-11-24; owner conversation, 2026-11-25; commit c8099f7; docs/ai.md; PR #19; Jira SLM-16; Confluence page 19464205; design notes; docs/ai.md Cost controls; PR #20
+Public: commit c8099f7; docs/ai.md; PR #19; docs/ai.md Cost controls; PR #20
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; owner conversation, 2026-11-25; Jira SLM-16; Confluence page 19464205; design notes

@@ -27,4 +27,6 @@ Nothing in the app needs runtime settings.
 
 ## Sources
 
-decisions/scope.md:48; decisions/ux.md:69,206
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): decisions/scope.md:48; decisions/ux.md:69,206

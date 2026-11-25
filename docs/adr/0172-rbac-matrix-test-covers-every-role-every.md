@@ -18,8 +18,8 @@ A new endpoint must not ship unprotected.
 
 ## Decision
 
-- The test imports the router's endpoints and fails if a route has no row or a row has no route; 104 checks, plus a 401 case per endpoint.
-- The matrix literal is compared to the RBAC doc in CI.
+- The test imports the router's endpoints and fails if a route has no row or a row has no route; 104 checks in all, including a 401 case per endpoint.
+- The matrix in the test is a copy of the RBAC decision; no test reads a document.
 
 ## Consequences
 
@@ -27,4 +27,6 @@ A new endpoint must not ship unprotected.
 
 ## Sources
 
-Confluence page 19333121; Jira SLM-8; decisions/test-strategy.md:76-77; design notes
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): Confluence page 19333121; Jira SLM-8; decisions/test-strategy.md:76-77; design notes

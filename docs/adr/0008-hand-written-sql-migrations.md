@@ -31,4 +31,6 @@ Migrations so far: 0001_init, 0002_search, 0003_google_sub, 0004_book_chunks, 00
 
 ## Sources
 
-decisions/architecture.md:116,338; design notes; PR #1; Confluence page 19398657; owner conversation, 2026-11-24; decisions/infra.md:3,74
+Public: PR #1
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:116,338; design notes; Confluence page 19398657; owner conversation, 2026-11-24; decisions/infra.md:3,74

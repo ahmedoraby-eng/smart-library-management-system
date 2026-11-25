@@ -27,4 +27,6 @@ SSO is the real path; demo accounts are for reviewers. Errors must not reveal wh
 
 ## Sources
 
-decisions/ux.md:28,52-64; Confluence page 19169290; decisions/ux.md:57-64; Jira SLM-8
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:28,52-64; Confluence page 19169290; decisions/ux.md:57-64; Jira SLM-8

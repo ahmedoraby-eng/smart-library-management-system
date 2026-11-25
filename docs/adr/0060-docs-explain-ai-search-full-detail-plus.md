@@ -28,4 +28,6 @@ AI use and its cost are part of how the assessment is judged.
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

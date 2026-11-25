@@ -29,4 +29,6 @@ The work needs a light board as proof of how tickets flow.
 
 ## Sources
 
-owner conversation, 2026-11-24; engagement notes; design notes; commit da20579
+Public: commit da20579
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; engagement notes; design notes

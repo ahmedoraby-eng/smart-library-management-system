@@ -23,6 +23,12 @@ No whole-repo coverage gate; the report was informational.
 
 - Replaced on 25/11 by the 90 % coverage gate.
 
+## Notes
+
+The replacement, [0162](0162-same-ci-gates-shared-playbook-90-coverage.md), is accepted but not yet in force: until the gates PR merges, this ADR still describes what CI on `main` does.
+
 ## Sources
 
-decisions/test-strategy.md:16,175
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:16,175

@@ -27,4 +27,6 @@ Reviewers need a living library on first open.
 
 ## Sources
 
-decisions/architecture.md:338; decisions/engineering-plan.md:50; Jira SLM-6; Confluence page 19398657; commit da20579; design notes; backlog/slm-tickets-draft.md:51-59
+Public: commit da20579
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:338; decisions/engineering-plan.md:50; Jira SLM-6; Confluence page 19398657; design notes; backlog/slm-tickets-draft.md:51-59

@@ -27,4 +27,6 @@ Who lent and who took back a book must be answerable later.
 
 ## Sources
 
-Confluence page 19398657; Jira SLM-4; decisions/scope.md:46; decisions/architecture.md:180
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19398657; Jira SLM-4; decisions/scope.md:46; decisions/architecture.md:180

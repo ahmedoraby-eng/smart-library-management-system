@@ -25,4 +25,6 @@ The embedding top-up ran every 15 minutes, 16 books per batch.
 
 ## Sources
 
-Jira SLM-16; PR #20
+Public: PR #20
+
+Also from the owner's working notes and conversations (not published): Jira SLM-16

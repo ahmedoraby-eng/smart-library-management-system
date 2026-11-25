@@ -25,4 +25,6 @@ A five-column board with In Review (architecture) was created.
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

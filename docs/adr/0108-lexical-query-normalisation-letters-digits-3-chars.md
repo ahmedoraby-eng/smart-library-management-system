@@ -25,4 +25,6 @@ Raw input can break tsquery and adds noise to ranking.
 
 ## Sources
 
-Confluence page 19169328; owner conversation, 2026-11-24; owner conversation, 2026-11-25
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19169328; owner conversation, 2026-11-24; owner conversation, 2026-11-25

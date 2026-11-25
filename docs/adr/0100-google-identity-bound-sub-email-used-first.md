@@ -27,4 +27,6 @@ Email can change at Google, and two Google accounts can claim the same email.
 
 ## Sources
 
-PR #12; PR #15; commit b40266f; Confluence page 19365918; Confluence page 19333121
+Public: PR #12; PR #15; commit b40266f
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365918; Confluence page 19333121

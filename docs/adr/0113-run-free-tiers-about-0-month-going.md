@@ -28,4 +28,6 @@ The demo must cost nothing to run and must not surprise anyone with a bill.
 
 ## Sources
 
-decisions/architecture.md:343; decisions/infra.md:4,43; Confluence page 19464205; Jira SLM-10
+Public: docs/ai.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:343; decisions/infra.md:4,43; Confluence page 19464205; Jira SLM-10

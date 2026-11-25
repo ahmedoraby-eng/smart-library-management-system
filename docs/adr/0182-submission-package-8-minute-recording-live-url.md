@@ -28,4 +28,6 @@ The assessment is judged on what is handed in on Friday.
 
 ## Sources
 
-backlog/slm-tickets-draft.md:166-171; Jira SLM-11; master prompt
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): backlog/slm-tickets-draft.md:166-171; Jira SLM-11; master prompt

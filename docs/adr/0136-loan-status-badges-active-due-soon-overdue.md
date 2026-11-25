@@ -26,4 +26,6 @@ Loan state must read the same on every screen.
 
 ## Sources
 
-decisions/ux.md:125-129; decisions/extras.md:6-12
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:125-129; decisions/extras.md:6-12

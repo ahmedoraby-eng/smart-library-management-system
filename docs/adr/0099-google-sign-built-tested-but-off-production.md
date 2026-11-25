@@ -28,4 +28,6 @@ The OAuth client and redirect URI weren't registered before the first deploys.
 
 ## Sources
 
-owner conversation, 2026-11-24; PR #12; design notes; Confluence page 19365918; Jira SLM-8; engagement notes
+Public: PR #12
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; design notes; Confluence page 19365918; Jira SLM-8; engagement notes

@@ -28,4 +28,6 @@ Keep the repo public as is while assessors review; send the work by email; make 
 
 ## Sources
 
-owner conversation, 2026-11-25
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-25

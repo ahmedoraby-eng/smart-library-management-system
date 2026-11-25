@@ -26,4 +26,6 @@ Engineering starts each ticket by hand; 'Closes SLM-n' documents intent but move
 
 ## Sources
 
-Confluence page 19365889
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365889

@@ -25,4 +25,6 @@ Toolbar: search (title/author/ISBN/publisher), category, availability, sort, Add
 
 ## Sources
 
-decisions/ux.md:161-164
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:161-164

@@ -27,4 +27,6 @@ Two Admins editing at once could demote each other or lock everyone out.
 
 ## Sources
 
-PR #12/#15; commit b40266f; decisions/ux 3.7 D10; Confluence page 19365918; Jira SLM-8; owner conversation, 2026-11-24; decisions/architecture.md:266; decisions/test-strategy.md:84
+Public: PR #12/#15; commit b40266f
+
+Also from the owner's working notes and conversations (not published): decisions/ux 3.7 D10; Confluence page 19365918; Jira SLM-8; owner conversation, 2026-11-24; decisions/architecture.md:266; decisions/test-strategy.md:84

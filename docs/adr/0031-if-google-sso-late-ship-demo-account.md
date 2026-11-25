@@ -27,4 +27,6 @@ SSO is a stretch item. The app must never fall back to having no authentication.
 
 ## Sources
 
-decisions/scope.md:35; decisions/engineering-plan.md:185; Jira SLM-8; master prompt; backlog/slm-tickets-draft.md:143
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): decisions/scope.md:35; decisions/engineering-plan.md:185; Jira SLM-8; master prompt; backlog/slm-tickets-draft.md:143

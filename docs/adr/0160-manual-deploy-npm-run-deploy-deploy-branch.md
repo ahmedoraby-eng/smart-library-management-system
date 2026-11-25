@@ -25,4 +25,6 @@ PR CI checks only; deploy is a manual `npm run deploy` via wrangler from a local
 
 ## Sources
 
-owner conversation, 2026-11-24
+Public: .github/workflows/
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24

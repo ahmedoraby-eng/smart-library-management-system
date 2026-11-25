@@ -26,4 +26,6 @@ Some things can't be automated cheaply.
 
 ## Sources
 
-decisions/test-strategy.md:150-157; decisions/test-strategy.md:148
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:150-157; decisions/test-strategy.md:148

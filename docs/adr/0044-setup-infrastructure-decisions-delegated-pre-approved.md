@@ -29,4 +29,6 @@ Waiting on the owner for each setup step would block a 3-day build.
 
 ## Sources
 
-owner conversation, 2026-11-24; handover notes; engagement notes
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; handover notes; engagement notes

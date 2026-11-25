@@ -30,4 +30,6 @@ A full rebuild of 64 books takes about 4 minutes and must not look frozen.
 
 ## Sources
 
-owner conversation, 2026-11-25; PR #21; design notes
+Public: PR #21
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-25; design notes

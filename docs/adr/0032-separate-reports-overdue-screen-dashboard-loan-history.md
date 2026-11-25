@@ -28,4 +28,6 @@ The brief's navigation lists reports. A separate screen would repeat the dashboa
 
 ## Sources
 
-decisions/scope.md:47; decisions/ux.md:13
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): decisions/scope.md:47; decisions/ux.md:13

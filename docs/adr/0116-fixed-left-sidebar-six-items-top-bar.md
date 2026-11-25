@@ -28,4 +28,6 @@ Staff use the app all day; every screen should be one click away.
 
 ## Sources
 
-decisions/ux.md:11; Confluence page 19169290; Jira SLM-7; owner conversation, 2026-11-24; decisions/architecture.md:163,167,240; backlog/slm-tickets-draft.md:61-69
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:11; Confluence page 19169290; Jira SLM-7; owner conversation, 2026-11-24; decisions/architecture.md:163,167,240; backlog/slm-tickets-draft.md:61-69

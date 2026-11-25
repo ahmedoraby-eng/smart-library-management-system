@@ -31,4 +31,6 @@ The owner wants interview-ready documentation, not many pages.
 
 ## Sources
 
-owner conversation, 2026-11-24; Confluence page 19267692
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Confluence page 19267692

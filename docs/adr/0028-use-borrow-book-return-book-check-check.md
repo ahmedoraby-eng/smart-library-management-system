@@ -29,4 +29,6 @@ The assessment says check-in = marked as borrowed and check-out = marked as retu
 
 ## Sources
 
-master prompt; backlog/slm-tickets-draft.md:16; owner conversation, 2026-11-24; Jira SLM-7; Jira SLM-5; decisions/scope.md:12-13; decisions/traceability.md:7,44; README.md top note
+Public: README.md top note
+
+Also from the owner's working notes and conversations (not published): master prompt; backlog/slm-tickets-draft.md:16; owner conversation, 2026-11-24; Jira SLM-7; Jira SLM-5; decisions/scope.md:12-13; decisions/traceability.md:7,44

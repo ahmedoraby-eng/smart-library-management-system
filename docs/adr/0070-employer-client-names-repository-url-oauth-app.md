@@ -18,16 +18,21 @@ SLM is a personal assessment in a public repo; it must not expose the owner's em
 
 ## Decision
 
-- No employer or client names in the repo, product, docs, URL, OAuth app, database project, wiki pages or commit metadata.
-- A CI hygiene job greps for the forbidden names and fails the build.
-- New Cloudflare account on a personal email; if a subdomain showed a name, a new domain would be bound.
+- No employer or client names in the **working tree**: code, UI, docs, URL, OAuth app, database project and the wiki pages written for the assessment. A CI hygiene job greps the working tree for the forbidden names and fails the build; it does not read git history, author names or branch names.
+- **Commit metadata is not covered**, by the owner's decision of 2026-11-25. Commits made by the agents' GitHub Apps show those Apps' names; some commits show the owner's work address or his personal address; agent branch names stay. The history is kept as it is, and the repository becomes private after the assessment:
+
+  > Ahmed Oraby, 2026-11-25: «هنسيبه زي ما هو، هنسيب الوضع زي ما هو، مش هنغير حاجة، بابليك وكل حاجة … بعد ما يخلصوا نعمله برايفت»
+- A new Cloudflare account on a personal email; if a subdomain showed a name, a new domain would be bound.
 - Agent avatars on GitHub must not show the employer's logo.
 - Member data is fictional.
 
 ## Consequences
 
 - Every new service or identity is checked for names before use.
+- The rule is true for the working tree and the published app; it is not true for the git history, which a reader of the public repository can see until it turns private. [0069](0069-neutral-github-app-identity-agent-commits.md) (a neutral App) was rejected for the same reason.
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/infra.md:6-13,73; decisions/visual-identity/spec.md:209; design notes; ci.yml hygiene; decisions/engineering-plan.md:177-180; decisions/infra.md:73; owner conversation, 2026-11-25
+Public: .github/workflows/ci.yml (hygiene job)
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/infra.md:6-13,73; decisions/visual-identity/spec.md:209; design notes; ci.yml hygiene; decisions/engineering-plan.md:177-180; decisions/infra.md:73; owner conversation, 2026-11-25

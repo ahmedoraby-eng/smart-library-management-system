@@ -21,7 +21,7 @@ Main should read as one commit per story.
 
 ## Decision
 
-- Every PR is squash-merged into main.
+- Every PR from #2 on is squash-merged into main (#1 was a merge commit).
 - New PRs are based on main, not on another branch; stacked work must be landed on main explicitly.
 - Branches are updated by merging origin/main; no force push.
 - Branch protection isn't available on the plan, so this is a team rule, not enforced by GitHub.
@@ -32,4 +32,6 @@ Main should read as one commit per story.
 
 ## Sources
 
-owner conversation, 2026-11-24; Confluence page 19333121; Confluence page 19365889
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; Confluence page 19333121; Confluence page 19365889

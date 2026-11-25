@@ -27,4 +27,6 @@ The go/no-go needs clear rules.
 
 ## Sources
 
-decisions/test-strategy.md:191-194
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:191-194

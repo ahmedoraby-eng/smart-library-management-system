@@ -26,4 +26,6 @@ Agents pick up and finish stories fast; the bar must be explicit.
 
 ## Sources
 
-backlog/slm-tickets-draft.md:189-193
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): backlog/slm-tickets-draft.md:189-193

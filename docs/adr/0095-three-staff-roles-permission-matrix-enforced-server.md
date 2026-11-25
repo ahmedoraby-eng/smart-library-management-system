@@ -29,4 +29,6 @@ The brief asks for role-based access; hiding buttons is not security.
 
 ## Sources
 
-master prompt; owner conversation, 2026-11-24; docs/architecture.md; design notes; decisions/rbac-matrix.md:13-26; decisions/architecture.md:297-306; Confluence page 19365918; Jira SLM-8; decisions/rbac-matrix.md:31; decisions/rbac-matrix.md:32
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): master prompt; owner conversation, 2026-11-24; design notes; decisions/rbac-matrix.md:13-26; decisions/architecture.md:297-306; Confluence page 19365918; Jira SLM-8; decisions/rbac-matrix.md:31; decisions/rbac-matrix.md:32

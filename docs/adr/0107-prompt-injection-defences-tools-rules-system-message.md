@@ -28,4 +28,6 @@ The request text is user input and may try to steer the model.
 
 ## Sources
 
-owner conversation, 2026-11-24; docs/ai.md Privacy; PR #4; PR #11; decisions/architecture.md:326
+Public: docs/ai.md Privacy; PR #4; PR #11
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/architecture.md:326

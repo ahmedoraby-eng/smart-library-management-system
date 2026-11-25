@@ -34,4 +34,6 @@ Writes are re-checked in the service layer as defence in depth.
 
 ## Sources
 
-Confluence page 19365918; Jira SLM-8; decisions/architecture.md:286; decisions/engineering-plan.md:77; decisions/rbac-matrix.md:9; docs/architecture.md; design notes; decisions/architecture.md:289
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365918; Jira SLM-8; decisions/architecture.md:286; decisions/engineering-plan.md:77; decisions/rbac-matrix.md:9; design notes; decisions/architecture.md:289

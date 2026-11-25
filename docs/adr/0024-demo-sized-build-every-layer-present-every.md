@@ -31,4 +31,6 @@ The app serves a 3-day technical assessment for an AI Engineering Manager role. 
 
 ## Sources
 
-engagement notes; master prompt; owner conversation, 2026-11-24
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): engagement notes; master prompt; owner conversation, 2026-11-24

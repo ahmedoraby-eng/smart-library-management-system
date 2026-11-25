@@ -25,4 +25,6 @@ UI and API were built in parallel by different agents.
 
 ## Sources
 
-decisions/engineering-plan.md:117-119; decisions/architecture.md:388
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): decisions/engineering-plan.md:117-119; decisions/architecture.md:388

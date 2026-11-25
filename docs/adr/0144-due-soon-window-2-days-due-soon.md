@@ -17,7 +17,7 @@ The ticket said 3 days, while the UX spec and the code used 2.
 
 ## Decision
 
-`DUE_SOON_DAYS` = 2, in one place (`web/src/lib/loanStatus.ts` and config); badges read 'Due in n days' / 'Due today'.
+`DUE_SOON_DAYS` = 2, in one place (a web constant in `web/src/lib/loanStatus.ts`); badges read 'Due in n days' / 'Due today'.
 
 ## Consequences
 
@@ -25,4 +25,6 @@ The ticket said 3 days, while the UX spec and the code used 2.
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/ux.md:295; decisions/scope.md:51; README Features; PR #11; PR #13; Jira SLM-13
+Public: README Features; PR #11; PR #13
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/ux.md:295; decisions/scope.md:51; Jira SLM-13

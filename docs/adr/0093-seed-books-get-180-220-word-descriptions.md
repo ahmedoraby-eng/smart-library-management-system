@@ -29,4 +29,6 @@ Semantic search needs real text to embed; publisher blurbs can't be copied.
 
 ## Sources
 
-PR #20; commit c8099f7; owner conversation, 2026-11-24; owner conversation, 2026-11-25; Jira SLM-16
+Public: PR #20; commit c8099f7
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; owner conversation, 2026-11-25; Jira SLM-16

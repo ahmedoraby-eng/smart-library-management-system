@@ -25,4 +25,6 @@ Code freeze Thursday 26/11 at 8 PM Cairo. After it, only S1/S2 fixes land; Frida
 
 ## Sources
 
-decisions/engineering-plan.md:11; decisions/test-strategy.md:5,194
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): decisions/engineering-plan.md:11; decisions/test-strategy.md:5,194

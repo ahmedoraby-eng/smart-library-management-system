@@ -26,4 +26,6 @@ Library staff work at desktop screens.
 
 ## Sources
 
-decisions/ux.md:26,212-216; Confluence page 19169290; Confluence page 19333121
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:26,212-216; Confluence page 19169290; Confluence page 19333121

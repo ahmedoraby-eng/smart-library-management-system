@@ -23,6 +23,12 @@ No npm audit, Dependabot, CodeQL/SAST, pen test or container scan; documented as
 
 - The playbook gates added a dependency audit on 25/11; SAST and Dependabot remain gaps.
 
+## Notes
+
+The replacement, [0162](0162-same-ci-gates-shared-playbook-90-coverage.md), is accepted but not yet in force: until the gates PR merges, this ADR still describes what CI on `main` does.
+
 ## Sources
 
-Confluence page 19333121
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): Confluence page 19333121

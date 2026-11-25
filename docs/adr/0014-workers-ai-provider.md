@@ -33,4 +33,6 @@ llama-3.2-3b-instruct was picked as the cheapest capable model (about 27 Neurons
 
 ## Sources
 
-decisions/architecture.md:19,322-324,402; owner conversation, 2026-11-24; handover notes; design notes; Confluence page 19398657; Confluence page 19169328; Confluence page 19464205; docs/ai.md; wrangler.toml; owner conversation, 2026-11-25
+Public: docs/ai.md; wrangler.toml
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:19,322-324,402; owner conversation, 2026-11-24; handover notes; design notes; Confluence page 19398657; Confluence page 19169328; Confluence page 19464205; owner conversation, 2026-11-25

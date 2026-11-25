@@ -28,4 +28,6 @@ The brief asks for responsive search. That needs a number to test.
 
 ## Sources
 
-decisions/scope.md:52; decisions/test-strategy.md:70; Jira SLM-2; backlog/slm-tickets-draft.md:84-93; PR #14
+Public: PR #14
+
+Also from the owner's working notes and conversations (not published): decisions/scope.md:52; decisions/test-strategy.md:70; Jira SLM-2; backlog/slm-tickets-draft.md:84-93

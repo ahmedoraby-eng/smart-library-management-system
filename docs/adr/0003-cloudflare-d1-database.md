@@ -29,4 +29,6 @@ Draft v2 also used SQLite FTS5 for search, Cloudflare Access for sign-in and Wor
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/architecture.md:9,395-403; design notes
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/architecture.md:9,395-403; design notes

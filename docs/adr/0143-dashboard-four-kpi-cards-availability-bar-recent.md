@@ -27,4 +27,6 @@ The brief lists seven KPIs; the dashboard should stay calm.
 
 ## Sources
 
-Jira SLM-12; Confluence page 19169290; PR #3; README Features; owner conversation, 2026-11-24; decisions/ux.md:156-158; decisions/ux.md:297; backlog/slm-tickets-draft.md:173-185
+Public: PR #3; README Features
+
+Also from the owner's working notes and conversations (not published): Jira SLM-12; Confluence page 19169290; owner conversation, 2026-11-24; decisions/ux.md:156-158; decisions/ux.md:297; backlog/slm-tickets-draft.md:173-185

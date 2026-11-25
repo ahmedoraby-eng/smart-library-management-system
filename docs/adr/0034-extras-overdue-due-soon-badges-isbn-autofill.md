@@ -29,4 +29,6 @@ The brief invites creative extras. The best demo value per hour wins.
 
 ## Sources
 
-Jira SLM-13; Confluence page 19365918; decisions/extras.md:38-42; decisions/scope.md:51; owner conversation, 2026-11-24; decisions/ux.md:27
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): Jira SLM-13; Confluence page 19365918; decisions/extras.md:38-42; decisions/scope.md:51; owner conversation, 2026-11-24; decisions/ux.md:27

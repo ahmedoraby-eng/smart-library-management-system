@@ -27,4 +27,6 @@ Small visual tweaks don't need a full review round.
 
 ## Sources
 
-design notes; PR #18
+Public: PR #18
+
+Also from the owner's working notes and conversations (not published): design notes

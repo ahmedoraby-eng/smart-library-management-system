@@ -1,6 +1,6 @@
 # 0020. «Reading Room» visual identity, with a «Plain» theme toggle
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0148](0148-first-look-inter-indigo-brand-colour-cool.md))
 - **Date:** 2026-11-25
 - **Area:** visual
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -39,4 +39,6 @@ Fonts: Newsreader (titles), Public Sans (UI 14/20), IBM Plex Mono (member number
 
 ## Sources
 
-Confluence page 19169290; owner conversation, 2026-11-24; owner conversation, 2026-11-25; commit 67723b1; PR #18; decisions/visual-identity/spec.md:1-28; decisions/visual-identity/spec.md:30-38; decisions/visual-identity/spec.md:40-117; decisions/visual-identity/spec.md:158-165; decisions/visual-identity/spec.md:174
+Public: commit 67723b1; PR #18
+
+Also from the owner's working notes and conversations (not published): Confluence page 19169290; owner conversation, 2026-11-24; owner conversation, 2026-11-25; decisions/visual-identity/spec.md:1-28; decisions/visual-identity/spec.md:30-38; decisions/visual-identity/spec.md:40-117; decisions/visual-identity/spec.md:158-165; decisions/visual-identity/spec.md:174

@@ -30,4 +30,6 @@ The assessment expects a public repo, and the work must not sit in an employer o
 
 ## Sources
 
-owner conversation, 2026-11-24; engagement notes; master prompt; design notes; Jira SLM-6; Confluence page 19333121
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; engagement notes; master prompt; design notes; Jira SLM-6; Confluence page 19333121

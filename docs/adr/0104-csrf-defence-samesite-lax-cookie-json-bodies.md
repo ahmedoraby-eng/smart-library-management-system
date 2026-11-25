@@ -26,4 +26,6 @@ Every non-GET request must have Origin equal to the app's own origin and, with a
 
 ## Sources
 
-decisions/architecture.md:287; decisions/engineering-plan.md:78; Confluence page 19365918; Jira SLM-1
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:287; decisions/engineering-plan.md:78; Confluence page 19365918; Jira SLM-1

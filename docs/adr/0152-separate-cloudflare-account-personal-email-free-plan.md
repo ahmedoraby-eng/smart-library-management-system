@@ -25,4 +25,6 @@ New Cloudflare account on the owner's personal email, free plan, named 'Smart Li
 
 ## Sources
 
-decisions/infra.md:9,79; engagement notes; handover notes
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:9,79; engagement notes; handover notes

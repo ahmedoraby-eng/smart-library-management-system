@@ -1,6 +1,6 @@
 # 0022. Auto-deploy through Workers Builds; migrations by hand behind a migrations gate
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0021](0021-github-actions-wrangler-deploy.md), [0160](0160-manual-deploy-npm-run-deploy-deploy-branch.md))
 - **Date:** 2026-11-25
 - **Area:** cicd
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -42,4 +42,6 @@ Go-live order: merge the production config first, then connect Workers Builds, t
 
 ## Sources
 
-design notes; commit 7a35f93; docs/architecture.md Deployment; owner conversation, 2026-11-25; PR #25; .github/workflows/migrations-gate.yml; commit 7f86409; PR #23/#24; backlog/slm-tickets-draft.md:158-164
+Public: commit 7a35f93; docs/architecture.md Deployment; PR #25; .github/workflows/migrations-gate.yml; commit 7f86409; PR #24
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-25; backlog/slm-tickets-draft.md:158-164

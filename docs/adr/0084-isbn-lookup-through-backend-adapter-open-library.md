@@ -30,4 +30,6 @@ ISBN autofill is an extra; it must never block saving a book.
 
 ## Sources
 
-PR #13; commit 94420a2; design notes; docs/architecture.md diagram; Jira SLM-13; decisions/extras.md:18; decisions/ux.md:186
+Public: PR #13; commit 94420a2; docs/architecture.md diagram
+
+Also from the owner's working notes and conversations (not published): design notes; Jira SLM-13; decisions/extras.md:18; decisions/ux.md:186

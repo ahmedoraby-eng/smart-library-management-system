@@ -25,4 +25,6 @@ UI is English only, LTR, light theme only; no RTL and no dark mode.
 
 ## Sources
 
-decisions/ux.md:25,4; decisions/test-strategy.md:27
+Public: web/src/
+
+Also from the owner's working notes and conversations (not published): decisions/ux.md:25,4; decisions/test-strategy.md:27

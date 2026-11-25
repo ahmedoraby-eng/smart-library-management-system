@@ -26,4 +26,6 @@ Titles start with story + AC and an @R- tag; `scripts/test-evidence.ts` writes `
 
 ## Sources
 
-decisions/test-strategy.md:13,159-168; decisions/engineering-plan.md:170
+Public: api/test/
+
+Also from the owner's working notes and conversations (not published): decisions/test-strategy.md:13,159-168; decisions/engineering-plan.md:170

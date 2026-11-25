@@ -25,4 +25,6 @@ Open the app once before recording; record after a manual reset; on Friday morni
 
 ## Sources
 
-decisions/architecture.md:344; decisions/test-strategy.md:210; decisions/engineering-plan.md:154
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): decisions/architecture.md:344; decisions/test-strategy.md:210; decisions/engineering-plan.md:154

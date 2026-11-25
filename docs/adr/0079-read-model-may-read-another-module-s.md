@@ -26,4 +26,6 @@ Catalog's BookView reads the loans table by name in raw SQL. Loans column names 
 
 ## Sources
 
-PR #2; design notes
+Public: PR #2
+
+Also from the owner's working notes and conversations (not published): design notes

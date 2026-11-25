@@ -26,4 +26,6 @@ Each agent has its own GitHub App identity. A reviewer with push rights would we
 
 ## Sources
 
-engagement notes; owner conversation, 2026-11-24
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): engagement notes; owner conversation, 2026-11-24

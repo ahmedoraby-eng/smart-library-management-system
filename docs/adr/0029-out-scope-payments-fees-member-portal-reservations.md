@@ -25,4 +25,6 @@ Excluded: payments, rental fees, subscriptions, fines and automated late process
 
 ## Sources
 
-master prompt; backlog/slm-tickets-draft.md:126; decisions/scope.md:54-60
+Public: README.md
+
+Also from the owner's working notes and conversations (not published): master prompt; backlog/slm-tickets-draft.md:126; decisions/scope.md:54-60

@@ -31,4 +31,6 @@ The board should stay simple but show that testing and code review happen.
 
 ## Sources
 
-owner conversation, 2026-11-24; handover notes; owner conversation, 2026-11-25; Confluence page 19365889; Confluence page 19267692
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; handover notes; owner conversation, 2026-11-25; Confluence page 19365889; Confluence page 19267692

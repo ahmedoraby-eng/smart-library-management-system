@@ -27,4 +27,6 @@ Every change must be checked for leaks and for correctness on real Postgres.
 
 ## Sources
 
-design notes; ci.yml on origin/main; commit 4723055; Confluence page 19333121; Confluence page 19365889; decisions/architecture.md:339-342; decisions/infra.md:71-75; decisions/test-strategy.md:170-177; decisions/test-strategy.md:175-177
+Public: commit 4723055
+
+Also from the owner's working notes and conversations (not published): design notes; ci.yml on origin/main; Confluence page 19333121; Confluence page 19365889; decisions/architecture.md:339-342; decisions/infra.md:71-75; decisions/test-strategy.md:170-177; decisions/test-strategy.md:175-177

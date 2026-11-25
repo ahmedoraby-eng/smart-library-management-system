@@ -33,4 +33,6 @@ The owner agreed on 2026-11-25 to keep an ADR and a register entry for every dec
 
 ## Sources
 
-owner conversation, 2026-11-25
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-25

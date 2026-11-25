@@ -28,4 +28,6 @@ Agents write the code; independent checks keep quality and design consistent.
 
 ## Sources
 
-Confluence page 19365889; owner conversation, 2026-11-24; decisions/engineering-plan.md:24-34; Jira SLM-4; Jira SLM-8; Jira SLM-9; Confluence page 19333121; backlog/slm-tickets-draft.md:36,203; owner conversation, 2026-11-25; Jira SLM-1
+Public: docs/decisions.md
+
+Also from the owner's working notes and conversations (not published): Confluence page 19365889; owner conversation, 2026-11-24; decisions/engineering-plan.md:24-34; Jira SLM-4; Jira SLM-8; Jira SLM-9; Confluence page 19333121; backlog/slm-tickets-draft.md:36,203; owner conversation, 2026-11-25; Jira SLM-1

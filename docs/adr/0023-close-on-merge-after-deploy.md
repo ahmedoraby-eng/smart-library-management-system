@@ -1,6 +1,6 @@
 # 0023. Close the issue on merge, moving it to Released only after the deploy check
 
-- **Status:** Accepted
+- **Status:** Accepted (supersedes [0055](0055-ticket-moves-hand-pickup-bot-auto-close.md))
 - **Date:** 2026-11-25
 - **Area:** process
 - **Deciders:** Ahmed Oraby (owner), architecture review
@@ -38,4 +38,6 @@ The shared close tool was fixed so --deploy-check waits for every project, not o
 
 ## Sources
 
-.github/workflows/jira-close.yml; design notes; owner conversation, 2026-11-25
+Public: .github/workflows/jira-close.yml
+
+Also from the owner's working notes and conversations (not published): design notes; owner conversation, 2026-11-25

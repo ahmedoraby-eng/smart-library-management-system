@@ -28,4 +28,6 @@ Cloudflare isn't mandatory. Prefer existing tools when easy, otherwise any free 
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/architecture.md:10,30
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/architecture.md:10,30

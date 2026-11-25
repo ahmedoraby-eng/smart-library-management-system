@@ -25,4 +25,6 @@ DevOps measured CPU per request on the deployed skeleton on day 2 morning. Heavy
 
 ## Sources
 
-decisions/infra.md:43; decisions/engineering-plan.md:183
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): decisions/infra.md:43; decisions/engineering-plan.md:183

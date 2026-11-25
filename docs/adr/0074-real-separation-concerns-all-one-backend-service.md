@@ -29,4 +29,6 @@ The design must show clear layers that can be defended in the interview.
 
 ## Sources
 
-owner conversation, 2026-11-24; decisions/architecture.md:4,85-93
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-24; decisions/architecture.md:4,85-93
