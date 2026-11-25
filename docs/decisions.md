@@ -2,7 +2,7 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-183 decisions: 161 accepted, 21 superseded, 1 proposed.
+183 decisions: 161 accepted, 21 superseded, 1 rejected, 0 proposed.
 
 | ID | Title | Date | Status | Area | Link |
 |---|---|---|---|---|---|
@@ -74,7 +74,7 @@ Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). S
 | ADR-0066 | Branch, commit and PR names carry the SLM key; 'Refs' vs 'Closes' | 2026-11-24 | Accepted | repo | [adr/0066-branch-commit-pr-names-carry-slm-key.md](adr/0066-branch-commit-pr-names-carry-slm-key.md) |
 | ADR-0067 | Workflow-file changes are pushed by the owner | 2026-11-24 | Accepted | repo | [adr/0067-workflow-file-changes-pushed-owner.md](adr/0067-workflow-file-changes-pushed-owner.md) |
 | ADR-0068 | Agents reach the repo through their GitHub Apps; the architecture reviewer has no push | 2026-11-24 | Accepted | repo | [adr/0068-agents-reach-repo-through-their-github-apps.md](adr/0068-agents-reach-repo-through-their-github-apps.md) |
-| ADR-0069 | A neutral GitHub App identity for agent commits | 2026-11-24 | Proposed | repo | [adr/0069-neutral-github-app-identity-agent-commits.md](adr/0069-neutral-github-app-identity-agent-commits.md) |
+| ADR-0069 | A neutral GitHub App identity for agent commits | 2026-11-24 | Rejected | repo | [adr/0069-neutral-github-app-identity-agent-commits.md](adr/0069-neutral-github-app-identity-agent-commits.md) |
 | ADR-0070 | No employer or client names in the repository, URL, OAuth app or UI | 2026-11-24 | Accepted | repo | [adr/0070-employer-client-names-repository-url-oauth-app.md](adr/0070-employer-client-names-repository-url-oauth-app.md) |
 | ADR-0071 | One-command local run: `npm run demo:local` with embedded Postgres | 2026-11-24 | Accepted | repo | [adr/0071-one-command-local-run-npm-run-demo.md](adr/0071-one-command-local-run-npm-run-demo.md) |
 | ADR-0072 | One branch, worktree and PR per story, built in parallel | 2026-11-24 | Accepted | repo | [adr/0072-one-branch-worktree-pr-per-story-built.md](adr/0072-one-branch-worktree-pr-per-story-built.md) |
