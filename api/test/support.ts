@@ -37,7 +37,7 @@ export function testApp(opts: { env?: RawEnv; clock?: Clock; oidc?: OidcProvider
 }
 
 export async function resetDb(): Promise<void> {
-  await pool.query("TRUNCATE loans, members, books, staff_users CASCADE");
+  await pool.query("TRUNCATE loans, members, books, staff_users, book_chunks, ai_usage, ai_cache CASCADE");
 }
 
 /** Staff fixtures (one per role + a disabled one). Returns ids by key. */

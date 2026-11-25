@@ -11,7 +11,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import EmbeddedPostgres from "embedded-postgres";
-import { runMigrations, seed } from "./lib/db-tools";
+import { indexCatalogueWithFakeEmbedder, runMigrations, seed } from "./lib/db-tools";
 
 const root = new URL("../", import.meta.url).pathname;
 
@@ -36,6 +36,7 @@ await pg.start();
 if (firstRun) await pg.createDatabase("library");
 await runMigrations(databaseUrl);
 const seeded = await seed(databaseUrl, { reset: false });
+await indexCatalogueWithFakeEmbedder(databaseUrl); // SLM-16: hybrid retrieval index (fake embedder, AI_FAKE)
 
 // .dev.vars: created once with random values, then reused; the database URL always follows this run's port.
 const varsPath = `${root}.dev.vars`;

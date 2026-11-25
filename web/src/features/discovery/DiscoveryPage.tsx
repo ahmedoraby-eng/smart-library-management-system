@@ -11,7 +11,7 @@ import { useCan } from "../auth/session";
 import { BookCover } from "../books/BookCover";
 import { useMemberSearch } from "../circulation/api";
 import { MemberStatusBadge } from "../members/badges";
-import { useDiscover } from "./api";
+import { useAiQuota, useDiscover } from "./api";
 
 // The circulation routes arrive with SLM-4; until then the typed router only knows "/circulation".
 const BORROW_TO = "/circulation/borrow" as "/circulation";
@@ -22,6 +22,7 @@ const EXAMPLES = ["Clean code for a junior developer", "A light classic novel", 
 export function DiscoveryPage() {
   const can = useCan();
   const discover = useDiscover();
+  const quota = useAiQuota();
   const [query, setQuery] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -157,6 +158,7 @@ export function DiscoveryPage() {
               </Button>
             </div>
           </div>
+          <QuotaLine quota={quota.data} keywordsOnly={discover.data?.retrieval === "lexical"} />
         </form>
       </Card>
 
@@ -174,6 +176,25 @@ export function DiscoveryPage() {
         ) : null}
       </section>
     </>
+  );
+}
+
+/** SLM-16 cost tiers, visible: what's left today, and a red note once the user's AI searches are used up. */
+function QuotaLine({ quota, keywordsOnly }: { quota: { left: number; limit: number } | undefined; keywordsOnly: boolean }) {
+  if (!quota) return null;
+  const out = quota.left <= 0;
+  return (
+    <div className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+      {out ? (
+        <p className="text-sm font-medium text-danger-700" role="status" data-testid="ai-quota-note">
+          You've used today's {quota.limit} AI searches.{" "}
+          {keywordsOnly ? "Results are matched by keywords only right now, without AI ranking or reasons." : "Results are still matched by meaning, without AI ranking or reasons."}
+        </p>
+      ) : <span />}
+      <span className="ml-auto text-sm text-neutral-600 tabular-nums" data-testid="ai-searches-left">
+        {quota.left} of {quota.limit} AI searches left today
+      </span>
+    </div>
   );
 }
 
@@ -210,7 +231,14 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
   const n = data.items.length;
   return (
     <>
-      {data.mode === "FALLBACK" && data.note && <InlineAlert variant="warning" className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>}
+      {data.mode === "FALLBACK" && data.note && (
+        // A single match is not a failure (the model is skipped on purpose to save cost): info, not warning.
+        // Quota used up with hybrid results: the red note under the search box says it all. If retrieval fell back
+        // to keywords too, show the server's note (it says keywords). Budget used up or a single match: calm info.
+        (data.fallbackReason !== "QUOTA_EXCEEDED" || data.retrieval === "lexical") && (
+          <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" || data.fallbackReason === "BUDGET_EXHAUSTED" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
+        )
+      )}
       <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
         <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>
         {data.mode === "AI" ? (
@@ -242,7 +270,11 @@ function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryI
       <BookCover title={book.title} url={book.coverImageUrl} size="md" />
       <div className="min-w-0 flex-1">
         <Link to="/books/$bookId" params={{ bookId: book.id }} className="font-book text-[19px] leading-6 text-neutral-900 no-underline hover:underline plain:text-md">{book.title}</Link>
-        <p className="text-sm text-neutral-600">{meta}</p>
+        <p className="text-sm text-neutral-600">
+          {meta}
+          {/* SLM-16: vector search found it although none of the request's words are in its text. */}
+          {item.foundBy === "semantic" && <span className="text-brass-700" data-testid="found-by-meaning"> · Found by meaning</span>}
+        </p>
         {/* Reading Room: a librarian's note in italic serif under a brass hairline; plain: the tinted box with an inline label. */}
         <div
           className="mt-2.5 max-w-[72ch] border-l-2 border-brass-200 pl-3.5 plain:max-w-none plain:rounded-md plain:border-brand-200 plain:bg-neutral-25 plain:px-3 plain:py-2 plain:text-base"

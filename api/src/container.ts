@@ -9,8 +9,12 @@ import { PgLoanReader } from "./circulation/infrastructure/PgLoanReader";
 import { DashboardService } from "./dashboard/application/DashboardService";
 import { PgDashboardReadModel } from "./dashboard/infrastructure/PgDashboardReadModel";
 import { BookDiscoveryService } from "./discovery/application/BookDiscoveryService";
+import { BookIndexSync } from "./discovery/application/BookIndexSync";
+import { HybridCatalogRetrieval } from "./discovery/application/HybridCatalogRetrieval";
+import { PgAiBudget, PgAiCache } from "./discovery/infrastructure/PgAiCost";
+import { PgChunkStore } from "./discovery/infrastructure/PgChunkStore";
 import { PgCatalogRetrieval } from "./discovery/infrastructure/PgCatalogRetrieval";
-import { selectAiProvider } from "./discovery/infrastructure/selectProvider";
+import { selectAiProvider, selectEmbedder } from "./discovery/infrastructure/selectProvider";
 import type { AiBinding } from "./discovery/infrastructure/WorkersAiProvider";
 import { MemberService } from "./members/application/MemberService";
 import { PgMemberRepository } from "./members/infrastructure/PgMemberRepository";
@@ -30,6 +34,13 @@ import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserReposit
 export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding, overrides: { oidc?: OidcProvider; isbnLookup?: IsbnLookup } = {}) {
   const staffRepo = new PgStaffUserRepository(db);
   const staffIdentity = new StaffIdentityService(staffRepo, config);
+  // SLM-16 hybrid retrieval: one embedder and one chunk store for indexing and search.
+  const embedder = selectEmbedder(config, ai);
+  const chunkStore = new PgChunkStore(db, embedder?.dimensions);
+  // SLM-16 cost controls: daily budget (global Neuron cap + per-user quota) and a TTL cache, in Postgres.
+  const aiBudget = new PgAiBudget(db, clock, config.aiDailyNeuronCap, config.aiUserDailySearches);
+  const aiCache = new PgAiCache(db, clock);
+  const logJson = (e: Record<string, unknown>) => console.info(JSON.stringify({ level: "info", ...e }));
   return {
     db,
     config,
@@ -43,7 +54,16 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     isbnLookup: overrides.isbnLookup ?? new OpenLibraryIsbnLookup(),
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
-    discovery: new BookDiscoveryService(new PgCatalogRetrieval(db), selectAiProvider(config, ai), (e) => console.info(JSON.stringify({ level: "info", event: "ai_discovery", ...e }))),
+    discovery: new BookDiscoveryService(
+      new HybridCatalogRetrieval(new PgCatalogRetrieval(db), chunkStore, embedder, (e) => logJson({ event: "ai_retrieval", ...e }), undefined, { cache: aiCache, budget: aiBudget }),
+      selectAiProvider(config, ai),
+      (e) => logJson({ event: "ai_discovery", ...e }),
+      undefined,
+      { cache: aiCache, budget: aiBudget, userQuota: config.aiUserDailySearches },
+    ),
+    bookIndex: new BookIndexSync(chunkStore, embedder, (e) => logJson(e), aiBudget),
+    aiBudget,
+    aiCache,
     dashboard: new DashboardService(new PgDashboardReadModel(db, clock)),
     members: new MemberService(new PgMemberRepository(db)),
   };

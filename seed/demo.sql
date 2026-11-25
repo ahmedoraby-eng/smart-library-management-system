@@ -75,7 +75,12 @@ INSERT INTO books (title, author, isbn, category, publisher, publication_year, t
   ('Deep Work', 'Cal Newport', NULL, 'Self-Development', 'Grand Central', 2016, 3, 3, 'Rules for focused success in a distracted world.'),
   ('Thinking, Fast and Slow', 'Daniel Kahneman', NULL, 'Self-Development', 'Farrar, Straus and Giroux', 2011, 2, 2, 'The two systems of thinking and the biases that shape our judgement.'),
   ('Mindset', 'Carol S. Dweck', NULL, 'Self-Development', 'Ballantine Books', 2006, 2, 2, 'The psychology of fixed and growth mindsets.'),
-  ('The 7 Habits of Highly Effective People', 'Stephen R. Covey', NULL, 'Self-Development', 'Free Press', 1989, 2, 2, 'A principle-centred approach to personal and professional effectiveness.');
+  ('The 7 Habits of Highly Effective People', 'Stephen R. Covey', NULL, 'Self-Development', 'Free Press', 1989, 2, 2, 'A principle-centred approach to personal and professional effectiveness.'),
+
+  -- SLM-16: memoirs that make the semantic search case visible ("losing a parent" finds them by meaning, not by words).
+  ('H Is for Hawk', 'Helen Macdonald', NULL, 'Memoir', 'Jonathan Cape', 2014, 2, 2, 'After her father''s sudden death, a naturalist trains a goshawk and works through her grief in the English countryside.'),
+  ('Crying in H Mart', 'Michelle Zauner', NULL, 'Memoir', 'Knopf', 2021, 2, 2, 'A musician remembers her Korean mother through food, illness and mourning, and finds her own identity along the way.'),
+  ('A Grief Observed', 'C. S. Lewis', NULL, 'Memoir', 'Faber & Faber', 1961, 1, 1, 'Short, raw notes written in the weeks after his wife died: faith, doubt and the slow work of mourning.');
 
 INSERT INTO members (full_name, email, phone, status, registered_at) VALUES
   ('Nour Hassan',       'nour.hassan@example.com',      '+20 100 000 0001', 'ACTIVE',   now() - interval '400 days'),

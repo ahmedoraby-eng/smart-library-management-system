@@ -7,6 +7,7 @@ export function adminRoutes() {
   // Same job as the nightly Cron Trigger (architecture §5.2a).
   r.post("/reset-demo", requirePermission("STAFF_MANAGE"), async (c) => {
     await c.var.container.demoData.reset();
+    await c.var.container.bookIndex.syncAllSafely(c.var.container.config.indexBatchBooks); // SLM-16: new ids, same texts → vectors copied
     return c.json({ result: "reset" });
   });
   return r;

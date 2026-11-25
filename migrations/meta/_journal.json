@@ -4,6 +4,8 @@
   "entries": [
     { "idx": 0, "version": "7", "when": 1764000000000, "tag": "0001_init", "breakpoints": false },
     { "idx": 1, "version": "7", "when": 1764000001000, "tag": "0002_search", "breakpoints": false },
-    { "idx": 2, "version": "7", "when": 1764000002000, "tag": "0003_google_sub", "breakpoints": false }
+    { "idx": 2, "version": "7", "when": 1764000002000, "tag": "0003_google_sub", "breakpoints": false },
+    { "idx": 3, "version": "7", "when": 1764000003000, "tag": "0004_book_chunks", "breakpoints": false },
+    { "idx": 4, "version": "7", "when": 1764000004000, "tag": "0005_ai_cost", "breakpoints": false }
   ]
 }

@@ -12,7 +12,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import EmbeddedPostgres from "embedded-postgres";
-import { runMigrations, seed } from "../scripts/lib/db-tools";
+import { indexCatalogueWithFakeEmbedder, runMigrations, seed } from "../scripts/lib/db-tools";
 
 const root = new URL("../", import.meta.url).pathname;
 
@@ -85,6 +85,7 @@ async function main(): Promise<number> {
   await pg.createDatabase("library");
   await runMigrations(databaseUrl);
   await seed(databaseUrl, { reset: false });
+  await indexCatalogueWithFakeEmbedder(databaseUrl);
 
   const vars = {
     ENVIRONMENT: "local",

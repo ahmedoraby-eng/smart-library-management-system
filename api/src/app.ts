@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
 import { loanRoutes } from "./circulation/api/routes";
 import { dashboardRoutes } from "./dashboard/api/routes";
-import { discoveryRoutes } from "./discovery/api/routes";
+import { discoveryAdminRoutes, discoveryRoutes } from "./discovery/api/routes";
 import type { Container } from "./container";
 import { memberRoutes } from "./members/api/routes";
 import { adminRoutes } from "./demo/api/routes";
@@ -32,6 +32,7 @@ export function createApp(openContainer: ContainerFactory) {
   const demoLoginFallback = new MemoryLimiter(5, 60_000);
   const deepHealthFallback = new MemoryLimiter(10, 60_000);
   const discoveryFallback = new MemoryLimiter(10, 60_000);
+  const reindexFallback = new MemoryLimiter(2, 60_000);
   const googleStartFallback = new MemoryLimiter(10, 60_000);
   const googleCallbackFallback = new MemoryLimiter(10, 60_000);
 
@@ -86,7 +87,9 @@ export function createApp(openContainer: ContainerFactory) {
   app.get("/health", async (c) => {
     await limiterFor(c.env, "HEALTH_LIMITER", deepHealthFallback, 60).check("deep");
     await c.var.container.db.execute(sql`SELECT 1`);
-    return c.json({ status: "ok", db: "ok" });
+    // SLM-16: which vector-search path this deployment uses, so production never sits on brute force unnoticed.
+    const vector = await c.var.container.bookIndex.vectorPath().catch(() => "error" as const);
+    return c.json({ status: "ok", db: "ok", vector: vector ?? "off" });
   });
 
   app.route("/auth", authRoutes(
@@ -113,6 +116,7 @@ export function createApp(openContainer: ContainerFactory) {
   app.route("/dashboard", dashboardRoutes());
   app.route("/members", memberRoutes());
   app.route("/admin", adminRoutes());
+  app.route("/admin/discovery", discoveryAdminRoutes((c) => limiterFor(c.env, "REINDEX_LIMITER", reindexFallback, 60)));
   app.route("/staff-users", staffRoutes());
 
   return app;

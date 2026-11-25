@@ -42,7 +42,7 @@ describe("SL-08 demo-login rate limit through the Worker entry", () => {
     const c = ctx();
     const res = await (worker.fetch as (r: Request, e: unknown, c: ExecutionContext) => Promise<Response>)(
       new Request(`${ORIGIN}/api/health?deep=1`), env(), c);
-    expect(await res.json()).toEqual({ status: "ok", db: "ok" });
+    expect(await res.json()).toEqual({ status: "ok", db: "ok", vector: "off" }); // SLM-16: no embedder in this env
     expect(c.waitUntil).toHaveBeenCalledTimes(1);
   });
 

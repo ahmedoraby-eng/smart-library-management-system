@@ -1,3 +1,4 @@
+import { estimateTokens } from "../domain/Cost";
 import type { AiProvider, RankRequest } from "../domain/Discovery";
 
 /** The part of the Workers AI binding (`[ai] binding = "AI"`) we use. */
@@ -38,7 +39,7 @@ export class WorkersAiProvider implements AiProvider {
   readonly name = "workers-ai";
   constructor(private readonly ai: AiBinding, private readonly model: string) {}
 
-  async rank({ query, candidates, memberRecentTitles, signal }: RankRequest): Promise<unknown> {
+  async rank({ query, candidates, memberRecentTitles, signal, onUsage }: RankRequest): Promise<unknown> {
     // Book text and the query go in as JSON data, in the user turn; the system turn holds the rules only.
     const payload = {
       request: query,
@@ -58,8 +59,17 @@ export class WorkersAiProvider implements AiProvider {
       if (signal.aborted) reject(new Error("aborted"));
       signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
     });
-    const result = (await Promise.race([call, aborted])) as { response?: unknown } | null;
+    const result = (await Promise.race([call, aborted])) as { response?: unknown; usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } } | null;
+    // Cost: the model's own token count when it reports one, else an estimate from the text sizes.
+    const reported = result && typeof result === "object" ? result.usage : undefined;
+    const answer = result && typeof result === "object" && "response" in result ? result.response : result;
+    if (reported && typeof reported.prompt_tokens === "number" && typeof reported.completion_tokens === "number") {
+      onUsage?.({ model: this.model, inputTokens: reported.prompt_tokens, outputTokens: reported.completion_tokens, estimated: false });
+    } else {
+      const out = typeof answer === "string" ? answer : JSON.stringify(answer ?? "");
+      onUsage?.({ model: this.model, inputTokens: estimateTokens(SYSTEM_PROMPT + JSON.stringify(payload)), outputTokens: estimateTokens(out), estimated: true });
+    }
     // JSON mode returns the parsed object (or a string); the validator handles both.
-    return result && typeof result === "object" && "response" in result ? result.response : result;
+    return answer;
   }
 }
