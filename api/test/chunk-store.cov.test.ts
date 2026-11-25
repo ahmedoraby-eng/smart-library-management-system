@@ -262,6 +262,67 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
   });
 });
 
+describe("PgChunkStore.similarTo on plain Postgres (SLM-19, brute-force path)", () => {
+  async function seed() {
+    const self = await book("Self");
+    const twin = await book("Twin", { available: 0 });
+    const mid = await book("Mid");
+    const opposite = await book("Opposite");
+    const gone = await book("Archived");
+    await store().apply(MODEL, {
+      embedded: [
+        // mean of the two chunks = [0.5, 0.5, 0]
+        { bookId: self, hash: "s", rows: [chunk(0, [1, 0, 0]), chunk(1, [0, 1, 0])] },
+        { bookId: twin, hash: "t", rows: [chunk(0, [0, 0, 1]), chunk(1, [1, 1, 0])] }, // best chunk decides: 1
+        { bookId: mid, hash: "m", rows: [chunk(0, [1, 0, 0])] }, // √½
+        { bookId: opposite, hash: "o", rows: [chunk(0, [-1, -1, 0])] }, // −1: never "like this"
+        { bookId: gone, hash: "g", rows: [chunk(0, [1, 1, 0])] },
+      ],
+      copied: [],
+    });
+    // archived after indexing (its chunks remain); another model's and a null vector are never read
+    await pool.query("UPDATE books SET archived_at = now() WHERE id = $1", [gone]);
+    await pool.query(
+      "INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1, 5, 'null', 'x', $2, NULL), ($3, 0, 'x', 'x', 'other', '{1,1,0}')",
+      [mid, MODEL, opposite],
+    );
+    return { self, twin, mid, opposite, gone };
+  }
+
+  it("ranks other live books by their best chunk against the book's mean vector; excludes itself, archived and non-positive", async () => {
+    const { self, twin, mid } = await seed();
+    const hits = await store().similarTo(self, { model: MODEL, limit: 4 });
+    expect(hits.map((h) => h.bookId)).toEqual([twin, mid]); // availability doesn't matter here
+    expect(hits[0]!.similarity).toBeCloseTo(1, 10);
+    expect(hits[1]!.similarity).toBeCloseTo(Math.SQRT1_2, 10);
+    expect(await store().similarTo(self, { model: MODEL, limit: 1 })).toHaveLength(1);
+  });
+
+  it("no chunks for the model, an unknown or malformed id → []", async () => {
+    const { self } = await seed();
+    const lonely = await book("Not indexed");
+    expect(await store().similarTo(lonely, { model: MODEL, limit: 4 })).toEqual([]);
+    expect(await store().similarTo(self, { model: "unknown-model", limit: 4 })).toEqual([]);
+    expect(await store().similarTo("00000000-0000-4000-8000-000000000000", { model: MODEL, limit: 4 })).toEqual([]);
+    expect(await store().similarTo("1; DROP TABLE books", { model: MODEL, limit: 4 })).toEqual([]);
+  });
+
+  it("equal similarities are ordered by book id", async () => {
+    const self = await book("Self");
+    const others = [await book("B1"), await book("B2"), await book("B3")];
+    await store().apply(MODEL, {
+      embedded: [
+        { bookId: self, hash: "s", rows: [chunk(0, [1, 0, 0])] },
+        ...others.map((id, n) => ({ bookId: id, hash: `o${n}`, rows: [chunk(0, [n + 1, 0, 0])] })),
+      ],
+      copied: [],
+    });
+    expect((await store().similarTo(self, { model: MODEL, limit: 4 })).map((h) => h.bookId)).toEqual(
+      [...others].sort(),
+    );
+  });
+});
+
 describe("PgChunkStore with pgvector (SQL shape checked against a recording database; the embedded server has no pgvector)", () => {
   type Call = { sql: string; params: unknown[] };
   const dialect = new PgDialect();
@@ -334,6 +395,37 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
     expect(q.params).toEqual(expect.arrayContaining(["[0.5,0.25]", "m", 8, 0.7, 4])); // limit × 2 chunks read, then limit books
     await f.make().nearest([1], { model: "m", limit: 4, minSimilarity: 0.7, availableOnly: false });
     expect(f.calls.at(-1)!.sql).not.toContain("available_copies");
+  });
+
+  it("similarTo (SLM-19) averages the book's own vectors with avg() and orders the other books' chunks by <=>", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const f = await fresh((call) =>
+      call.sql.includes("information_schema")
+        ? hasColumn(call)
+        : {
+            rows: [
+              { book_id: "b1", similarity: "0.93" },
+              { book_id: "b2", similarity: "NaN" }, // a zero mean vector: cosine is undefined → dropped
+              { book_id: "b3", similarity: 0.5 },
+            ],
+          },
+    );
+    const self = "11111111-1111-4111-8111-111111111111";
+    const hits = await f.make().similarTo(self, { model: "m", limit: 4 });
+    expect(hits).toEqual([
+      { bookId: "b1", similarity: 0.93 },
+      { bookId: "b3", similarity: 0.5 },
+    ]);
+    const q = f.calls.at(-1)!;
+    expect(q.sql).toContain("avg(embedding_v)");
+    expect(q.sql).toContain("ORDER BY c.embedding_v <=> (SELECT v FROM q)");
+    expect(q.sql).toContain("c.book_id <>");
+    expect(q.sql).toContain("b.archived_at IS NULL");
+    expect(q.sql).toContain("HAVING max(n.similarity) > 0");
+    expect(q.params).toEqual(expect.arrayContaining([self, "m", 40, 4])); // 10 chunks per wanted book, then 4 books
+    const before = f.calls.length;
+    expect(await f.make().similarTo("not-a-uuid", { model: "m", limit: 4 })).toEqual([]);
+    expect(f.calls.length).toBe(before); // a malformed id never reaches the database
   });
 
   it("apply writes the vector column only (no array copy) and copies both columns from the donor", async () => {

@@ -1,4 +1,12 @@
-import type { BookDeleteResult, BookDto, BookInput, BookListQuery, IsbnLookupResult, Page } from "@slm/contracts";
+import type {
+  BookDeleteResult,
+  BookDto,
+  BookInput,
+  BookListQuery,
+  IsbnLookupResult,
+  Page,
+  SimilarBooksResponse,
+} from "@slm/contracts";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, toQuery } from "../../lib/apiClient";
 
@@ -25,6 +33,18 @@ export function useBook(id: string) {
   return useQuery({
     queryKey: [...booksKey, "detail", id],
     queryFn: () => api<BookDto>(`/books/${encodeURIComponent(id)}`),
+  });
+}
+
+/**
+ * SLM-19 "More like this": up to 4 books closest in meaning (stored vectors, no model call). Under booksKey, so a
+ * borrow or return refreshes their availability with everything else.
+ */
+export function useSimilarBooks(id: string) {
+  return useQuery({
+    queryKey: [...booksKey, "similar", id],
+    queryFn: () => api<SimilarBooksResponse>(`/books/${encodeURIComponent(id)}/similar`),
+    staleTime: 60_000,
   });
 }
 

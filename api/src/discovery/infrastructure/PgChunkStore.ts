@@ -1,10 +1,15 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "../../platform/db";
-import { cosine } from "../domain/Fusion";
+import { cosine, meanVector } from "../domain/Fusion";
 import type { ChunkRow, ChunkStore, IndexableBook, VectorHit } from "../domain/Indexing";
 
 /** How many nearest chunks the vector query reads before grouping by book. */
 const CHUNK_POOL_FACTOR = 2;
+/**
+ * SLM-19: chunks read per wanted book for "More like this". A book has 2–3 chunks, so 4 books need up to
+ * 12; 10× (40 for 4 books) also matches pgvector's default hnsw.ef_search, the most one HNSW scan returns.
+ */
+const SIMILAR_CHUNK_POOL_FACTOR = 10;
 /** Per isolate: whether `book_chunks.embedding_v` exists. Asked once, then reused by every request. */
 let pgvectorColumn: Promise<boolean> | null = null;
 /** pgvector's column is vector(768); any other size must use the array path (and loadConfig refuses it anyway). */
@@ -151,9 +156,55 @@ export class PgChunkStore implements ChunkStore {
     }
 
     // No pgvector: exact cosine over every chunk of live books.
+    const best = await this.scan(query, { ...opts, excludeBookId: null });
+    return best.filter((h) => h.similarity >= opts.minSimilarity).slice(0, opts.limit);
+  }
+
+  async similarTo(bookId: string, opts: { model: string; limit: number }): Promise<VectorHit[]> {
+    if (!UUID.test(bookId)) return [];
+    if (await this.usesPgvector()) {
+      // pgvector: avg() of the book's own chunk vectors, then HNSW over the other books' chunks; best chunk per
+      // live book. No chunks → avg is NULL → no rows. A zero mean (cosine NaN) is dropped below.
+      const { rows } = await this.db.execute(sql`WITH q AS (
+          SELECT avg(embedding_v) AS v FROM book_chunks WHERE book_id = ${bookId}::uuid AND model = ${opts.model}
+        )
+        SELECT n.book_id, max(n.similarity) AS similarity
+        FROM (
+          SELECT c.book_id, 1 - (c.embedding_v <=> (SELECT v FROM q)) AS similarity
+          FROM book_chunks c
+          WHERE c.model = ${opts.model} AND c.book_id <> ${bookId}::uuid AND (SELECT v FROM q) IS NOT NULL
+          ORDER BY c.embedding_v <=> (SELECT v FROM q)
+          LIMIT ${opts.limit * SIMILAR_CHUNK_POOL_FACTOR}
+        ) n
+        JOIN books b ON b.id = n.book_id AND b.archived_at IS NULL
+        GROUP BY n.book_id
+        HAVING max(n.similarity) > 0
+        ORDER BY similarity DESC, n.book_id
+        LIMIT ${opts.limit}`);
+      return rows
+        .map((r) => ({ bookId: r.book_id as string, similarity: Number(r.similarity) }))
+        .filter((h) => Number.isFinite(h.similarity));
+    }
+
+    // No pgvector: the mean of the book's own array vectors, then the same exact scan as `nearest`.
+    const own = await this.db.execute(sql`SELECT embedding FROM book_chunks
+      WHERE book_id = ${bookId}::uuid AND model = ${opts.model} AND embedding IS NOT NULL`);
+    if (own.rows.length === 0) return [];
+    const mean = meanVector(own.rows.map((r) => (r.embedding as number[]).map(Number)));
+    const best = await this.scan(mean, { model: opts.model, availableOnly: false, excludeBookId: bookId });
+    return best.filter((h) => h.similarity > 0).slice(0, opts.limit);
+  }
+
+  /** Brute-force path: every live book's best chunk for `query`, best first (ties by book id). */
+  private async scan(
+    query: number[],
+    opts: { model: string; availableOnly: boolean; excludeBookId: string | null },
+  ): Promise<VectorHit[]> {
+    const avail = opts.availableOnly ? sql`AND b.available_copies > 0` : sql``;
+    const exclude = opts.excludeBookId ? sql`AND c.book_id <> ${opts.excludeBookId}::uuid` : sql``;
     const { rows } = await this.db.execute(sql`SELECT c.book_id, c.embedding FROM book_chunks c
       JOIN books b ON b.id = c.book_id AND b.archived_at IS NULL ${avail}
-      WHERE c.model = ${opts.model} AND c.embedding IS NOT NULL`);
+      WHERE c.model = ${opts.model} AND c.embedding IS NOT NULL ${exclude}`);
     const best = new Map<string, number>();
     for (const r of rows) {
       const s = cosine(query, (r.embedding as number[]).map(Number));
@@ -161,9 +212,7 @@ export class PgChunkStore implements ChunkStore {
       if (s > (best.get(id) ?? -Infinity)) best.set(id, s);
     }
     return [...best.entries()]
-      .filter(([, s]) => s >= opts.minSimilarity)
       .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
-      .slice(0, opts.limit)
       .map(([bookId, similarity]) => ({ bookId, similarity }));
   }
 }
