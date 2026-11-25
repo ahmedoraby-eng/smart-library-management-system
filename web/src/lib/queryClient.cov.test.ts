@@ -24,7 +24,7 @@ describe("shared error handler", () => {
     const err = apiError(401, "UNAUTHENTICATED");
     await failQuery("q-401", err);
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith(err);
+    expect(handler).toHaveBeenCalledWith(err, ["q-401"]); // with the failing query's key
   });
 
   it("passes an ApiError from a failing mutation to the handler too", async () => {
@@ -33,7 +33,7 @@ describe("shared error handler", () => {
     const err = apiError(403, "FORBIDDEN");
     const m = new MutationObserver(queryClient, { mutationFn: () => Promise.reject(err) });
     await expect(m.mutate()).rejects.toBe(err);
-    expect(handler).toHaveBeenCalledWith(err);
+    expect(handler).toHaveBeenCalledWith(err, undefined); // a mutation has no query key
   });
 
   it("ignores errors that are not ApiError (network failures, bugs)", async () => {
