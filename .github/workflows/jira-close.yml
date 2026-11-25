@@ -1,0 +1,28 @@
+# When a merged PR's description says `Closes SLM-<n>`, move that Jira issue to Released and comment
+# with the PR links. `Refs SLM-<n>` (an intermediate PR) moves nothing. Needs the ATL_TOKEN repo secret.
+# The logic is the engineering playbook's reusable-jira-close.yml (python -m atl_agent.close).
+#
+# Deploy check (25/11/2026): a merge to main deploys through Cloudflare Workers Builds, so the issue moves to Released
+# only after the check "Workers Builds: smart-library" succeeded on the merge commit (or a later one); the playbook
+# waits up to 12 minutes, and a failed or missing build leaves the issue where it is, with a comment.
+# pull_request_target runs this file from main and never checks out or runs the PR's code.
+name: Jira close on merge
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  jira-close:
+    if: github.event.pull_request.merged == true
+    uses: ahmedoraby-eng/engineering-playbook/.github/workflows/reusable-jira-close.yml@main
+    with:
+      repos: ahmedoraby-eng/smart-library-management-system
+      deploy-check: "Workers Builds: smart-library"
+    secrets:
+      ATL_TOKEN: ${{ secrets.ATL_TOKEN }}
