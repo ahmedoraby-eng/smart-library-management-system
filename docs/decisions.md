@@ -2,7 +2,7 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-183 decisions: 160 accepted, 21 superseded, 2 proposed.
+183 decisions: 161 accepted, 21 superseded, 1 proposed.
 
 | ID | Title | Date | Status | Area | Link |
 |---|---|---|---|---|---|
@@ -168,7 +168,7 @@ Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). S
 | ADR-0160 | Manual deploy with `npm run deploy` from a deploy branch | 2026-11-24 | Superseded by [0022](adr/0022-workers-builds-auto-deploy.md) | cicd | [adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md](adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md) |
 | ADR-0161 | Deploy checklist: AI binding on, Hyperdrive cache off, all limiters bound, no test flags | 2026-11-24 | Accepted | cicd | [adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md](adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md) |
 | ADR-0162 | Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard | 2026-11-25 | Accepted | cicd | [adr/0162-same-ci-gates-shared-playbook-90-coverage.md](adr/0162-same-ci-gates-shared-playbook-90-coverage.md) |
-| ADR-0163 | CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested | 2026-11-25 | Proposed | cicd | [adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md) |
+| ADR-0163 | CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested | 2026-11-25 | Accepted | cicd | [adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md) |
 | ADR-0164 | API tests run on real PostgreSQL 16, never a mocked database | 2026-11-24 | Accepted | testing | [adr/0164-api-tests-run-real-postgresql-16-mocked.md](adr/0164-api-tests-run-real-postgresql-16-mocked.md) |
 | ADR-0165 | Concurrency race tests are release gates | 2026-11-24 | Accepted | testing | [adr/0165-concurrency-race-tests-release-gates.md](adr/0165-concurrency-race-tests-release-gates.md) |
 | ADR-0166 | Inventory invariant checked by a property test and by raw SQL against the CHECK | 2026-11-24 | Accepted | testing | [adr/0166-inventory-invariant-checked-property-test-raw-sql.md](adr/0166-inventory-invariant-checked-property-test-raw-sql.md) |

@@ -1,11 +1,13 @@
 # 0163. CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-11-25, by Ahmed Oraby)
 - **Date:** 2026-11-25
 - **Area:** cicd
 - **Deciders:** Architecture, approved by Ahmed Oraby
 
 ## Context
+
+> Ahmed Oraby, 2026-11-25: «موافق طبعا على القرار بتاع البي جي فيكتور ده»
 
 CI uses plain `postgres:16`, so migration 0004's pgvector branch runs only on Neon.
 
