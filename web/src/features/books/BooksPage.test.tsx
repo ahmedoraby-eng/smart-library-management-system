@@ -98,7 +98,7 @@ describe("SLM-2 Books page", () => {
   it("AC4 shows how many books match the query", async () => {
     stubApi(() => [book("Clean Code"), book("Clean Architecture")]);
     await visit("/books?q=clean");
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("2 books match “clean”");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("2 books match “clean”"));
     expect(screen.getAllByTestId("book-title")).toHaveLength(2);
   });
 
@@ -120,6 +120,6 @@ describe("SLM-2 Books page", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]!);
     await waitFor(() => expect(router.state.location.search).not.toHaveProperty("q"));
     expect(router.state.location.search).not.toHaveProperty("category");
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("1 book");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("1 book"));
   });
 });

@@ -94,10 +94,10 @@ Bonus and extras:
 | Contracts | zod schemas in `contracts/`, shared by the API and the UI |
 | Auth | Sign in with Google (OIDC) in the app, plus two demo staff accounts; HttpOnly session cookie; roles live in our database |
 | AI | Hybrid retrieval (Postgres full-text + Workers AI embeddings in pgvector, fused with RRF); a Workers AI model ranks and explains the candidates; deterministic fallback when AI isn't available |
-| Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), a 90% coverage gate, and a local Playwright smoke (`npm run e2e`) |
+| Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), a 90% coverage gate, and a Playwright E2E smoke (`npm run e2e`) that runs in CI on every PR |
 | Delivery | GitHub Actions quality gates on every PR; every merge to `main` deploys through Cloudflare Workers Builds |
 
-More detail: [docs/architecture.md](docs/architecture.md), [docs/ai.md](docs/ai.md), and the decision register [docs/decisions.md](docs/decisions.md) (one ADR per decision in `docs/adr/`).
+More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md). Why each choice was made: the [decision register](docs/decisions.md) (one ADR per decision in [docs/adr/](docs/adr/)).
 
 ## Tests
 
@@ -110,23 +110,25 @@ npm run typecheck      # tsc for contracts, api, web and e2e
 npm run lint:deps      # architecture rules (dependency-cruiser): domain stays pure, no cross-module table access
 npm run lint           # ESLint
 npm run format         # Prettier (format:check in CI)
-npm run e2e            # local Playwright smoke in a real browser (not part of CI)
+npm run e2e            # Playwright smoke in a real browser (also the e2e job in CI)
 ```
 
 The API tests run against a real PostgreSQL 16, with no database mocks. The coverage gate is 90% for lines, statements and functions (branches: 85% for the API, 80% for the web app); the thresholds are in `vitest.config.ts` and `web/vitest.config.ts`.
 
 ### Quality gates (CI)
 
-These gates arrive with PR #29; until it merges, CI runs the hygiene job, one `test` job (typecheck, dependency rules, API tests, build) and the migrations gate. Once it merges, every pull request runs:
+On `main` today every pull request runs the hygiene job, one `test` job (typecheck, dependency rules, API tests, build), the **e2e** job and the migrations gate. The shared Node CI and the AI guardrails arrive with PR #29. Once it merges, every pull request runs:
 
 - **hygiene**: a secret scan (gitleaks) and a check that no employer or client name is in the repository.
-- **ci / Build and test**: `npm ci`, `npm run check`, `npm run test:coverage` (the API tests run on a PostgreSQL 16 container with pgvector, so the HNSW path is tested too), and an audit of production dependencies.
+- **ci / Build and test**: `npm ci`, `npm run check`, `npm run test:coverage` (the API tests move to the `pgvector/pgvector:pg16` image, so the HNSW path is tested too: [ADR-0163](docs/adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md), accepted; until then CI's Postgres has no pgvector and the tests take the brute-force path), and an audit of production dependencies.
 - **AI guardrails**: an AI-assisted PR ticks the AI-assistance box, changes tests when it changes source, and needs an owner review label when it changes workflows, the guardrail policy or migrations (`.ai-guard.toml`).
+- **e2e** (`.github/workflows/e2e.yml`, on `main` now): `npm run e2e` on a GitHub-hosted runner; a failed test uploads its Playwright trace and screenshot as the `e2e-traces` artifact ([ADR-0184](docs/adr/0184-e2e-smoke-runs-github-ci-traces-kept.md)).
 - **migrations gate**: a PR that adds or changes a migration fails until the migration has been applied to production and the PR has the label `migrations-applied`.
+- **Jira status** ([ADR-0185](docs/adr/0185-qa-tests-pr-before-merge.md), QA before merge): QA tests the PR, not merged `main`. When a PR with `Closes SLM-<n>` opens, the issue moves from In Development to In Testing (`scripts/jira-ready-for-testing.mjs`); the PR merges only when every SLM key it names is in Ready for Release, which QA sets when the PR passed (`scripts/jira-status-check.mjs`, rules in `.github/jira-status.json`). The scripts and their tests are on `main`; the repository owner adds their workflow files.
 
-Contribution rules (branch and PR naming, review replies) are in [AGENTS.md](AGENTS.md).
+Contribution rules (branch and PR naming, review replies) are in [AGENTS.md](AGENTS.md). Agents commit through their own GitHub Apps ([ADR-0068](docs/adr/0068-agents-reach-repo-through-their-github-apps.md)); a separate neutral App identity was considered and rejected ([ADR-0069](docs/adr/0069-neutral-github-app-identity-agent-commits.md)).
 
-`npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. It is local only (not part of CI) and needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
+`npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. CI runs it in the `e2e` job on every PR and every push to `main`, and keeps the trace of a failed test. Locally it needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
 
 Named release tests in `api/test`:
 
@@ -181,7 +183,8 @@ migrations/     versioned SQL: 0001_init (schema, constraints), 0002_search (ful
 seed/           demo data (public book metadata, fictional members)
 web/            React SPA (features/, components/, routes/) with component tests
 scripts/        migrate, seed, local Postgres, demo-local
-docs/           architecture.md, ai.md, decisions.md (decision register) and adr/ (one file per decision)
-e2e/            local Playwright smoke
-.github/        CI workflows and the PR template; AGENTS.md has the contribution rules
+docs/           architecture.md, ai.md, decisions.md (register), adr/ (one file per decision), img/ (diagrams)
+e2e/            Playwright smoke (runs in CI on every PR, and locally)
+scripts/test/   tests of the Jira scripts
+.github/        CI workflows, the PR template and the Jira status rules; AGENTS.md has the contribution rules
 ```

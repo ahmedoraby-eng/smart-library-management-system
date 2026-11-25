@@ -1,0 +1,11 @@
+{
+  "$comment": "ADR-0185: the Jira status check (scripts/jira-status-check.mjs, workflow jira-status.yml). Each SLM key a PR names (title, branch, a Closes/Refs line) must be in one of these statuses before the merge: Ready for Release, which QA sets when the PR passed. A Released issue passes only for a PR that changes test files only. Only the owner's waiver label lets another PR through.",
+  "owner": "ahmedoraby-eng",
+  "context": "Jira status",
+  "projects": {
+    "SLM": ["Ready for Release"]
+  },
+  "waiver_label": "jira-status-waived",
+  "released_ok_paths": ["api/test/", "e2e/", "scripts/test/"],
+  "released_ok_suffixes": [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"]
+}

@@ -8,6 +8,8 @@ Code: `api/src/discovery/`. UI: `web/src/features/discovery/`.
 
 ## Flow
 
+![AI search stages as built: guards, lexical and semantic retrieval in parallel, RRF fusion, model ranking, validator, database re-read, fallback, and the index pipeline](img/ai-retrieval-stages.png)
+
 ```mermaid
 sequenceDiagram
   participant U as Librarian (browser)
@@ -62,7 +64,7 @@ Order of checks: permission, then a rate limit of 10 requests per minute per sta
 
 - **Model:** `@cf/baai/bge-base-en-v1.5` (768 dimensions, `EMBEDDING_MODEL`; `off` turns vector search off). It's called through the `AI` binding: `env.AI.run(model, { text: [...] })`. Vectors are L2-normalised. Search queries get bge's retrieval instruction prefix.
 - **Chunking** (`domain/Chunking.ts`): the source text is title, author, category and description. The description is split into sentences and packed into windows of at most 120 words, with one sentence of overlap. Every chunk starts with a `Title — Author (Category)` header, so it stands on its own. Every seed book has a 180–220-word description in our own words, faithful to what the book is about (not a publisher's blurb), so each book makes 2–3 chunks and the windowing is visible.
-- **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. CI runs the tests on a pgvector image (the HNSW path); local runs use the scan. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
+- **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. CI moves to a pgvector image with PR #29 ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)); until then CI, like local runs, uses the scan. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
 - **Query:** embed the request, take the nearest chunks, keep each live book's best chunk, drop anything below the minimum similarity (`EMBEDDING_MIN_SIMILARITY`, default 0.72: bge-base cosines sit high, and unrelated texts often score 0.6–0.7), top 20. Every request logs the top similarity (a number only), so the value can be checked against live queries and changed in config. `availableOnly` applies here too.
 - `book_chunks` belongs to the discovery module. It's a derived index that can be rebuilt at any time, with no foreign key to `books`: search joins live books, and the sync removes orphans.
 
@@ -233,7 +235,7 @@ Checked on the seed by `api/test/ai-cost.test.ts`, using the deterministic local
 
 - The model is small (3B parameters). Reasons can be generic, and ranking quality varies between requests.
 - Vector search depends on the catalogue descriptions. The seed books have 180–220-word descriptions, but a book added with a short one has little "meaning" to match, and the 0.72 minimum similarity (`EMBEDDING_MIN_SIMILARITY`) for bge is a starting value that needs tuning on real queries.
-- Without pgvector (local runs), vector search is a brute-force scan, and the fake embedder only knows a handful of concepts. With the quality gates (PR #29) the API tests also run the HNSW path on a pgvector image; the real model's quality is proven only on the deployed Worker (Neon).
+- Without pgvector (local runs and e2e), vector search is a brute-force scan, and the fake embedder only knows a handful of concepts. CI's Postgres is plain `postgres:16` today, so CI takes the scan too; with the quality gates (PR #29) the API tests move to the `pgvector/pgvector:pg16` image and run the HNSW path ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md), accepted). The real model's quality is proven only on the deployed Worker (Neon).
 - Search is configured for English text (English stemming and a small English stop-word list). Requests in other languages work poorly.
 - The model only sees the 20 best candidates and 200 characters of each description.
 - The validator checks ids, shape and length. It can't check that a reason is true about the book.

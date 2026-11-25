@@ -1,5 +1,5 @@
 /**
- * `npm run e2e`: a local Playwright smoke against a throwaway stack. Not part of CI.
+ * `npm run e2e`: a Playwright smoke against a throwaway stack, locally and in CI (the e2e job, GitHub-hosted runner).
  *  1. embedded PostgreSQL 16 in a temp dir on a free port (from 5460), migrated and seeded;
  *  2. a temp env file and temp state dir for `wrangler dev` (so rate-limit state never carries over) (a developer's .dev.vars is moved aside and restored);
  *  3. web build, then `wrangler dev` on a free port (from 8860), waits for /api/health;
