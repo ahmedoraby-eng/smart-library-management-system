@@ -167,6 +167,8 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 
 ## Deployment
 
-`npm run deploy` builds the UI and runs `wrangler deploy`. `wrangler.toml` sets the static assets, the cron trigger (`0 0 * * *`), the rate-limit bindings and public vars. The Hyperdrive and Workers AI bindings are set per deployment. Secrets (`SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, the demo passwords) are set with `wrangler secret put`.
+Every merge to `main` deploys to production through Cloudflare Workers Builds (Git integration): it runs `npm ci`, the build command `npm run build`, and the deploy command `npx wrangler deploy --env production`. Its check on the merge commit is `Workers Builds: smart-library`. `npm run deploy` does the same by hand. `wrangler.toml` sets the static assets, the cron triggers (`0 0 * * *` reset, `5 * * * *` index backfill), the rate-limit bindings and public vars; `[env.production]` adds the Hyperdrive and Workers AI bindings. Secrets (`SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, the demo passwords) are set once with `wrangler secret put <NAME> --env production` and persist across deploys; no secret is in the repository or in the build settings.
+
+Database migrations are not part of the deploy: they are run by hand on production (`DATABASE_URL=<connection string> npm run db:migrate`) before the PR that adds them is merged. The `migrations gate` check fails on a PR that adds or changes a file under `migrations/` until the PR has the label `migrations-applied`.
 
 CI (`.github/workflows/ci.yml`) runs a secret scan and a name check, then typecheck, `lint:deps`, tests on a PostgreSQL 16 service container, and the web build.

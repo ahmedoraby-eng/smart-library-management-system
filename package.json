@@ -20,7 +20,8 @@
     "typecheck": "tsc -p contracts && tsc -p api && tsc -p web && tsc -p e2e",
     "test": "vitest run",
     "build": "npm run build -w web",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy --env production",
+    "db:setup": "npm run db:migrate && npm run seed",
     "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs",
     "demo:local": "tsx scripts/demo-local.ts",
     "e2e": "tsx e2e/run.ts"
