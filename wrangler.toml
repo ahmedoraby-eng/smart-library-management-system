@@ -12,8 +12,10 @@ not_found_handling = "single-page-application"
 run_worker_first = ["/api/*"]
 
 # Nightly demo-data reset: 00:00 UTC = 02:00 Cairo (winter).
+# SLM-16: every 15 min, one batch of the discovery index if anything is missing or stale (post-deploy
+# backfill, failed inline syncs). Up to date → two cheap queries, no AI call.
 [triggers]
-crons = ["0 0 * * *"]
+crons = ["0 0 * * *", "*/15 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"

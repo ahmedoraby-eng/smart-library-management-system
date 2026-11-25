@@ -121,7 +121,34 @@ describe("dashboard model", () => {
   it("SLM-16: Admin sees today's AI usage against the cap", async () => {
     stubApi("ADMIN", summary());
     await renderWithProviders(<DashboardPage />);
-    expect(await screen.findByTestId("ai-usage-today")).toHaveTextContent("AI usage today: 312 / 8,000 Neurons · 14 AI searches");
+    expect(await screen.findByTestId("ai-usage-today")).toHaveTextContent("AI usage today: 312 / 8,000 Neurons · 14 AI-assisted searches");
+  });
+
+  it("SLM-16: Admin «Rebuild search index» runs the batches until done, waiting out the 2/min limit", async () => {
+    const replies = [
+      { status: 200, body: { result: "partial", embeddedBooks: 16, reusedBooks: 0, upToDate: 0, remaining: 48 } },
+      { status: 429, body: { type: "about:blank", title: "x", status: 429, code: "RATE_LIMITED" }, headers: { "retry-after": "1" } },
+      { status: 200, body: { result: "done", embeddedBooks: 16, reusedBooks: 32, upToDate: 16, remaining: 0 } },
+    ];
+    const posts: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
+      if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Admin", role: "ADMIN", permissions: ROLE_PERMISSIONS.ADMIN, isDemo: false });
+      if (url === "/api/dashboard/summary") return json(summary());
+      if (url === "/api/admin/discovery/usage") return json({ day: "2026-11-25", searches: 0, neurons: 0, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
+      if (url === "/api/admin/discovery/reindex" && init?.method === "POST") {
+        posts.push(url);
+        const r = replies.shift()!;
+        return json(r.body, r.status, r.headers ?? {});
+      }
+      return json({}, 404);
+    }));
+    await renderWithProviders(<DashboardPage />);
+    await userEvent.click(await screen.findByTestId("rebuild-index"));
+    expect(screen.getByTestId("rebuild-index")).toBeDisabled();
+    expect(await screen.findByText("The search index is up to date.", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(posts).toHaveLength(3);
+    expect(screen.getByTestId("rebuild-index")).toBeEnabled();
   });
 
   it("SLM-16: a Librarian sees no AI usage line and never calls the endpoint", async () => {

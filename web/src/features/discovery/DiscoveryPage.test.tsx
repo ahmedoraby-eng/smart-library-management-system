@@ -181,18 +181,18 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
       expect(sent(f)).toHaveLength(0);
     });
 
-    it("shows the AI searches left today, and updates it from each answer", async () => {
+    it("shows the AI-assisted searches left today, and updates it from each answer", async () => {
       stubApi("LIBRARIAN", { ...ai, tier: 1, aiSearches: { left: 41, limit: 50 } }, { left: 42, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
-      expect(await screen.findByTestId("ai-searches-left")).toHaveTextContent("42 of 50 AI searches left today");
+      expect(await screen.findByTestId("ai-searches-left")).toHaveTextContent("42 of 50 AI-assisted searches left today");
       await ask();
       await screen.findByTestId("results-title");
-      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("41 of 50 AI searches left today");
+      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("41 of 50 AI-assisted searches left today");
       expect(screen.queryByTestId("ai-quota-note")).toBeNull();
     });
 
     it("tier 2: none left → a red note under the search box, results still shown, no extra warning", async () => {
-      const tier2: DiscoveryResponse = { ...fallback, tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches.", aiSearches: { left: 0, limit: 50 } };
+      const tier2: DiscoveryResponse = { ...fallback, tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI-assisted searches.", aiSearches: { left: 0, limit: 50 } };
       stubApi("LIBRARIAN", tier2, { left: 0, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
       expect(await screen.findByTestId("ai-quota-note")).toHaveTextContent("Results are still matched by meaning, without AI ranking or reasons.");
@@ -202,7 +202,7 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
     });
 
     it("quota used up with keyword-only results: the server's keyword note is shown too", async () => {
-      const kw: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches, and search by meaning is unavailable right now, so results are matched by keywords only.", aiSearches: { left: 0, limit: 50 } };
+      const kw: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI-assisted searches, and search by meaning is unavailable right now, so results are matched by keywords only.", aiSearches: { left: 0, limit: 50 } };
       stubApi("LIBRARIAN", kw, { left: 0, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
       await ask();

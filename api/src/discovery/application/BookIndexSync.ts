@@ -79,7 +79,8 @@ export class BookIndexSync {
   async syncAllSafely(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult | null> {
     try {
       const r = await this.syncAll(maxEmbedBooks);
-      this.log({ level: "info", event: "book_index_sync", ...r });
+      // The 15-minute top-up usually finds nothing to do: log only real work.
+      if (r.embeddedBooks || r.reusedBooks || r.removed || r.remaining) this.log({ level: "info", event: "book_index_sync", ...r });
       return r;
     } catch (e) {
       this.log({ level: "warn", event: "book_index_sync_failed", reason: e instanceof Error ? e.message : "error" });
