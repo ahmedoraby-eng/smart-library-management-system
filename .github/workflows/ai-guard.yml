@@ -1,0 +1,20 @@
+name: AI guardrails
+
+# Shared guardrails from the engineering playbook (SLM-11); rules in .ai-guard.toml. An AI-assisted PR must tick
+# the AI-assistance box, change tests when it changes source, and have the reviewed-by-ahmed label when it changes
+# a protected path (workflows, this policy, migrations).
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ai-guard:
+    uses: ahmedoraby-eng/engineering-playbook/.github/workflows/reusable-ai-guard.yml@main

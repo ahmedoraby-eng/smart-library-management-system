@@ -1,0 +1,9 @@
+# AI guardrail policy for this repository (the engineering playbook's ai-guard).
+[policy]
+source_globs = ["api/src/*", "web/src/*", "contracts/src/*"]
+test_globs = ["api/test/*", "e2e/*", "*.test.ts", "*.test.tsx", "web/src/test/*"]
+# AI-assisted changes to CI, to this policy or to the database schema need a line-by-line human review: the
+# reviewed-by-ahmed label. Migrations are run on production by hand (see the migrations gate).
+protected_globs = [".github/workflows/*", ".ai-guard.toml", "migrations/*"]
+human_review_label = "reviewed-by-ahmed"
+max_ai_changed_lines = 400

@@ -1,5 +1,11 @@
 name: ci
 
+# Quality gates (SLM-11, 25/11/2026), from the engineering playbook's shared Node CI:
+# clean install; typecheck, dependency rules, lint, format and build (`npm run check`); tests with the
+# 90% coverage gate (`npm run test:coverage`: API tests on a PostgreSQL 16 + pgvector container, then the web tests);
+# and an audit of production dependencies. GitHub-hosted runners: this repository is public.
+# The hygiene job (secret scan and forbidden names) stays here.
+
 on:
   pull_request:
   push:
@@ -29,29 +35,12 @@ jobs:
             echo "Forbidden name found"; exit 1
           fi
 
-  test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: slm_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U test" --health-interval 2s --health-timeout 5s --health-retries 20
-    env:
-      TEST_DATABASE_URL: postgres://test:test@localhost:5432/slm_test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint:deps
-      - run: npm test
-      - run: npm run build
+  ci:
+    uses: ahmedoraby-eng/engineering-playbook/.github/workflows/reusable-node-ci.yml@main
+    with:
+      runner: '"ubuntu-latest"'
+      node-version: "22"
+      build-command: npm run check
+      test-command: npm run test:coverage
+      audit-in-build-job: true
+      timeout-minutes: 20
