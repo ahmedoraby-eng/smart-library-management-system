@@ -139,7 +139,7 @@ declare module "@tanstack/react-router" {
 }
 
 // Session and permission failures from any query or mutation (ux.md §1).
-setApiErrorHandler((err: ApiError) => {
+setApiErrorHandler((err: ApiError, queryKey?: readonly unknown[]) => {
   const here = router.state.location;
   if (err.status === 401) {
     if (here.pathname.startsWith("/signin")) return;
@@ -148,7 +148,10 @@ setApiErrorHandler((err: ApiError) => {
     queryClient.removeQueries({ queryKey: meQueryKey });
     void router.navigate({ to: "/signin", search: { next: here.href, ...(hadSession ? { expired: "1" } : {}) }, replace: true });
   } else if (err.code === "USER_DISABLED") {
-    void queryClient.invalidateQueries({ queryKey: meQueryKey }); // the shell then shows "Your account is disabled"
+    // The shell then shows "Your account is disabled". Not when /me itself failed: its error is already the news,
+    // and invalidating it again would re-request /me without end.
+    const isMe = JSON.stringify(queryKey) === JSON.stringify(meQueryKey);
+    if (!isMe) void queryClient.invalidateQueries({ queryKey: meQueryKey });
   } else if (err.code === "FORBIDDEN") {
     if (here.pathname !== "/403") void router.navigate({ to: "/403", replace: true });
   }
