@@ -64,6 +64,8 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ## Domain model and invariants
 
+![Data model on main: staff_users, members, loans and books; book_chunks (the AI search index); ai_usage and ai_cache (AI cost controls)](img/data-model.png)
+
 Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`.
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
