@@ -2,6 +2,8 @@
 // usage: google-clip <in.mov> <out.mp4> [--crop x,y,w,h] [--trim from,to] [--cover x,y,w,h[@from-to]]… [--caption "t|s|n"]
 //   --crop    keep only this part of the frame (fractions of width/height, from the top left), e.g. the browser window
 //   --trim    keep only this time range of the clip (seconds)
+//   --keep    from-to:seconds (repeatable, in order): keep these ranges only, each fitted to the given length (played
+//             faster when shorter; at its own speed, then held on its last frame, when longer). Replaces --trim.
 //   --cover   always blur this box (same units as --crop, on the uncropped frame), optionally only between two times
 //   --caption the banner drawn at the bottom, like the recorded scenes ("" for none)
 // Any email address on screen (account chooser, avatar menu) is found with on-device text recognition and blurred,
@@ -13,7 +15,7 @@ import CoreText
 import Foundation
 import Vision
 
-let W = 1600, H = 900  // the recorded scenes' size (record-live.ts)
+var W = 1920, H = 1080  // the recorded scenes' size (record-live.ts films 1600×900 CSS px at 1.2×); --size to change
 let SAMPLE = 0.1  // seconds between text-recognition passes
 let HOLD = 0.5  // a box found at t is blurred from t - HOLD to t + HOLD
 let PAD = 0.2  // grow each box by this share of its height on every side
@@ -32,6 +34,7 @@ var args = Array(CommandLine.arguments.dropFirst())
 var positional: [String] = []
 var crop: [Double]? = nil
 var trim: [Double]? = nil
+var keeps: [(from: Double, to: Double, dur: Double)] = []
 var covers: [(rect: CGRect, from: Double, to: Double)] = []
 var caption = "Or sign in with Google|Staff can also use their Google account. Every email address is blurred.|2 · Sign in"
 while !args.isEmpty {
@@ -44,6 +47,16 @@ while !args.isEmpty {
   case "--crop": crop = nums(next(), 4)
   case "--trim": trim = nums(next(), 2)
   case "--caption": caption = next()
+  case "--size":
+    let v = next().split(separator: "x").compactMap { Int($0) }
+    guard v.count == 2 else { fail("--size WxH") }
+    (W, H) = (v[0], v[1])
+  case "--keep":
+    let v = next()
+    let p = v.split(separator: ":").map(String.init)
+    let r = p.first?.split(separator: "-").compactMap { Double($0) } ?? []
+    guard p.count == 2, r.count == 2, let d = Double(p[1]), r[1] > r[0], d > 0 else { fail("--keep from-to:seconds, got \(v)") }
+    keeps.append((r[0], r[1], d))
   case "--cover":
     let parts = next().split(separator: "@", maxSplits: 1).map(String.init)
     let r = nums(parts[0], 4)
@@ -67,7 +80,22 @@ let outURL = URL(fileURLWithPath: positional[1])
 
 let emailLike = try NSRegularExpression(pattern: "[A-Za-z0-9._%+-]+\\s?@\\s?[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*|@[A-Za-z0-9-]+\\.|gmail|googlemail", options: [.caseInsensitive])
 
+/** Placeholders and demo accounts on reserved domains (name@example.com, …@smartlibrary.example, …@x.test) are not
+ * anyone's address: they stay readable. Any other address is blurred. */
+let publicDomain = try NSRegularExpression(pattern: "@\\s?([A-Za-z0-9-]+\\.)*(example(\\.com|\\.org)?|test|invalid)\\b", options: [.caseInsensitive])
+func isPublic(_ s: String) -> Bool {
+  let r = NSRange(s.startIndex..., in: s)
+  return publicDomain.firstMatch(in: s, range: r) != nil && !s.lowercased().contains("gmail")
+}
+
 /** Boxes (normalised, bottom-left origin) of every text line that looks like an email address. */
+/** What matched, masked (first two letters, then the domain), for the refusal message. */
+var matched = Set<String>()
+func mask(_ s: String) -> String {
+  guard let at = s.firstIndex(of: "@") else { return String(s.prefix(2)) + "…" }
+  let before = s[..<at].split(separator: " ").last.map(String.init) ?? ""
+  return String(before.prefix(2)) + "…" + String(s[at...].prefix(20))
+}
 func emailBoxes(_ image: CGImage) -> [CGRect] {
   let req = VNRecognizeTextRequest()
   req.recognitionLevel = .accurate
@@ -78,8 +106,9 @@ func emailBoxes(_ image: CGImage) -> [CGRect] {
   for obs in req.results ?? [] {
     for cand in obs.topCandidates(3) {
       let s = cand.string
-      if emailLike.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil {
+      if emailLike.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil && !isPublic(s) {
         out.append(obs.boundingBox)
+        matched.insert(mask(s))
         break
       }
     }
@@ -91,14 +120,14 @@ func frameTimes(_ duration: Double, step: Double) -> [Double] {
   stride(from: 0.0, through: max(0, duration - 0.001), by: step).map { $0 }
 }
 
-func scan(_ asset: AVAsset, step: Double) async throws -> [(t: Double, boxes: [CGRect])] {
+func scan(_ asset: AVAsset, step: Double, within: [(from: Double, to: Double, dur: Double)] = []) async throws -> [(t: Double, boxes: [CGRect])] {
   let gen = AVAssetImageGenerator(asset: asset)
   gen.appliesPreferredTrackTransform = true
   gen.requestedTimeToleranceBefore = .zero
   gen.requestedTimeToleranceAfter = CMTime(seconds: step / 2, preferredTimescale: 600)
   let dur = try await asset.load(.duration).seconds
   var found: [(Double, [CGRect])] = []
-  for t in frameTimes(dur, step: step) {
+  for t in frameTimes(dur, step: step) where within.isEmpty || within.contains(where: { t >= $0.from - HOLD && t <= $0.to + HOLD }) {
     guard let img = try? await gen.image(at: CMTime(seconds: t, preferredTimescale: 600)).image else { continue }
     let b = emailBoxes(img)
     if !b.isEmpty { found.append((t, b)) }
@@ -112,12 +141,26 @@ let asset = AVURLAsset(url: inURL)
 guard let track = try await asset.loadTracks(withMediaType: .video).first else { fail("no video in \(inURL.path)") }
 let srcSize = try await track.load(.naturalSize)
 let duration = try await asset.load(.duration).seconds
-let t0 = trim?[0] ?? 0
-let t1 = min(trim?[1] ?? duration, duration)
+let t0 = keeps.first?.from ?? trim?[0] ?? 0
+let t1 = min(keeps.last?.to ?? trim?[1] ?? duration, duration)
+let outLength = keeps.isEmpty ? t1 - t0 : keeps.reduce(0) { $0 + $1.dur }
+/** Where source time t lands in the output, or nil if it is cut. */
+func outTime(_ t: Double) -> Double? {
+  if keeps.isEmpty { return t - t0 }
+  var acc = 0.0
+  for k in keeps {
+    if t >= k.from && t < k.to {
+      let len = k.to - k.from
+      return acc + (t - k.from) * (k.dur < len ? k.dur / len : 1)
+    }
+    acc += k.dur
+  }
+  return nil
+}
 if t1 <= t0 { fail("--trim is outside the clip (\(String(format: "%.1f", duration)) s)") }
 
 print(String(format: "google-clip: %.0f×%.0f, %.1f s; looking for email addresses…", srcSize.width, srcSize.height, duration))
-let hits = try await scan(asset, step: SAMPLE)
+let hits = try await scan(asset, step: SAMPLE, within: keeps)
 print("google-clip: email text in \(hits.count) of \(frameTimes(duration, step: SAMPLE).count) sampled frames")
 
 func boxes(at t: Double) -> [CGRect] {
@@ -132,23 +175,24 @@ func banner(_ spec: String) -> CIImage? {
   let p = spec.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
   guard let title = p.first, !title.isEmpty else { return nil }
   let sub = p.count > 1 ? p[1] : "", chip = p.count > 2 ? p[2].uppercased() : ""
-  let barH = 150
+  let k = CGFloat(W) / 1600  // the banner is designed at 1600 px wide
+  let barH = Int(150 * k), fade = Int(24 * k)
   let cs = CGColorSpaceCreateDeviceRGB()
   guard let ctx = CGContext(data: nil, width: W, height: barH, bitsPerComponent: 8, bytesPerRow: 0, space: cs,
                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
   // Opaque like the scenes' banner (rgba .97 over a page reads as solid), with a short fade at the top.
   ctx.setFillColor(CGColor(red: 15/255, green: 20/255, blue: 48/255, alpha: 1))
-  ctx.fill(CGRect(x: 0, y: 0, width: W, height: barH - 24))
-  for i in 0..<24 {
-    ctx.setFillColor(CGColor(red: 15/255, green: 20/255, blue: 48/255, alpha: CGFloat(24 - i) / 24))
-    ctx.fill(CGRect(x: 0, y: barH - 24 + i, width: W, height: 1))
+  ctx.fill(CGRect(x: 0, y: 0, width: W, height: barH - fade))
+  for i in 0..<fade {
+    ctx.setFillColor(CGColor(red: 15/255, green: 20/255, blue: 48/255, alpha: CGFloat(fade - i) / CGFloat(fade)))
+    ctx.fill(CGRect(x: 0, y: barH - fade + i, width: W, height: 1))
   }
   func line(_ s: String, size: CGFloat, weight: CGFloat, color: CGColor, y: CGFloat) {
-    let font = CTFontCreateWithName(".AppleSystemUIFont" as CFString, size, nil)
+    let font = CTFontCreateWithName(".AppleSystemUIFont" as CFString, size * k, nil)
     let traits = [kCTFontWeightTrait: weight] as CFDictionary
-    let f = CTFontCreateCopyWithAttributes(font, size, nil, CTFontDescriptorCreateWithAttributes([kCTFontTraitsAttribute: traits] as CFDictionary))
+    let f = CTFontCreateCopyWithAttributes(font, size * k, nil, CTFontDescriptorCreateWithAttributes([kCTFontTraitsAttribute: traits] as CFDictionary))
     let attr = NSAttributedString(string: s, attributes: [.init(kCTFontAttributeName as String): f, .init(kCTForegroundColorAttributeName as String): color])
-    ctx.textPosition = CGPoint(x: 48, y: y)
+    ctx.textPosition = CGPoint(x: 48 * k, y: y * k)
     CTLineDraw(CTLineCreateWithAttributedString(attr), ctx)
   }
   line(chip, size: 13, weight: 0.3, color: CGColor(red: 165/255, green: 180/255, blue: 252/255, alpha: 1), y: 104)
@@ -185,6 +229,10 @@ while let sb = rOut.copyNextSampleBuffer() {
   guard let px = CMSampleBufferGetImageBuffer(sb) else { continue }
   let pts = CMSampleBufferGetPresentationTimeStamp(sb)
   let t = pts.seconds
+  // Cut frames, and frames that a speed-up puts on the previous one's time, are skipped before any work.
+  guard let o = outTime(t) else { continue }
+  let ot = CMTime(seconds: o, preferredTimescale: 6000)
+  if frames > 0 && ot <= last { continue }
   var img = CIImage(cvPixelBuffer: px)
   let ext = img.extent
   for b in boxes(at: t) {
@@ -210,22 +258,26 @@ while let sb = rOut.copyNextSampleBuffer() {
   CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &outPx)
   guard let outPx else { fail("no pixel buffer") }
   ci.render(img, to: outPx, bounds: CGRect(x: 0, y: 0, width: W, height: H), colorSpace: CGColorSpaceCreateDeviceRGB())
-  last = pts - CMTime(seconds: t0, preferredTimescale: 600)
-  if last < .zero { continue }
-  adaptor.append(outPx, withPresentationTime: last)
+  last = ot
+  adaptor.append(outPx, withPresentationTime: ot)
   frames += 1
 }
 wIn.markAsFinished()
-writer.endSession(atSourceTime: CMTime(seconds: t1 - t0, preferredTimescale: 600))
+writer.endSession(atSourceTime: CMTime(seconds: outLength, preferredTimescale: 600))
 await writer.finishWriting()
 if writer.status != .completed { fail("writing failed: \(writer.error?.localizedDescription ?? "?")") }
 
 // MARK: check the result
 
+matched.removeAll()
 let check = try await scan(AVURLAsset(url: outURL), step: SAMPLE)
 if !check.isEmpty {
-  try? FileManager.default.removeItem(at: outURL)
+  FileHandle.standardError.write("still readable: \(matched.sorted().joined(separator: ", "))\n".data(using: .utf8)!)
+  // Kept aside (never used by the pipeline) so the frame can be inspected.
+  let rejected = outURL.deletingPathExtension().appendingPathExtension("rejected.mp4")
+  try? FileManager.default.removeItem(at: rejected)
+  try? FileManager.default.moveItem(at: outURL, to: rejected)
   fail(String(format: "google-clip: an email address is still readable at %@ s; nothing kept. Add --cover boxes.",
               check.map { String(format: "%.1f", $0.t) }.joined(separator: ", ")), 2)
 }
-print(String(format: "google-clip: written %@ (%d frames, %.1f s); no email address readable", outURL.path, frames, t1 - t0))
+print(String(format: "google-clip: written %@ (%d frames, %.1f s); no email address readable", outURL.path, frames, outLength))

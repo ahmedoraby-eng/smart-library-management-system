@@ -58,6 +58,16 @@ npm run demo:video:live -- --audio ~/Desktop --google-clip ~/Desktop --out ~/vid
   their Google account."), found from the pause before it. Only `scene-2.m4a` is heard; the clip's own sound is dropped.
 - `--reuse` skips the recording and lays the narration and the clip over the last recorded run again, so a new clip or
   voice take needs no new live run.
+- `--cues <cues.json>`: when each on-screen step happens, in seconds of the scene's narration (from the voice edit), so
+  the screen follows the words; without it, fixed shares of each scene. In scene 2, cues `clipFrom`/`clipTo` place
+  the Google clip under the sentences about it.
+- `google-clip.swift --keep from-to:seconds` (repeatable) cuts a long hand recording down and fits each range to the
+  narration; `--cover x,y,w,h@from-to` blurs a box by hand (e.g. while a dialog animates in). Already prepared clips
+  go in with `--google-prepared <file.mp4>`.
+- `--extras` also films extra scenes 9–11 after scene 5 (delete a book safely, ISBN look-up, the desk rules, as the
+  demo admin). Until their clips exist they stay out of the main cut and go to `extras-preview.mp4`.
+- Output is 1920×1080 (H.264, AAC): the scenes are filmed at 1600×900 and scaled, with a short dip to black between
+  scenes.
 - Nothing the run produces is committed: the clip, the voice files and the video stay in `test-results/` and the folders
   you pass.
 

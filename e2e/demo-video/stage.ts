@@ -67,17 +67,19 @@ export function cardPage(id: string): string {
     return shell(`<div class="brand">Smart Library</div><h1>Built, tested and live</h1>
 <ul>
 <li>Live at <code>smart-library.ahmedoraby.workers.dev</code></li>
+<li>Code on GitHub: <code>github.com/ahmedoraby-eng/smart-library-management-system</code></li>
 <li>Deployed on Cloudflare Workers, with PostgreSQL on Neon. Every merge to <code>main</code> deploys.</li>
 <li>CI gates on every pull request: hygiene, tests with a 90% coverage gate, E2E, migrations gate, AI guardrails, Jira status.</li>
 <li>How it was built, with a team of AI agents: <code>docs/ai-team.md</code></li>
 <li>How it works, end to end: <code>docs/how-it-works.md</code></li>
 <li>Architecture, AI search and every decision: <code>docs/architecture.md</code>, <code>docs/ai.md</code>, <code>docs/decisions.md</code></li>
 </ul>`);
-  return shell(`<div class="brand">Smart Library Management System</div><h1>Run a library from one screen</h1>
+  return shell(`<div class="brand">Smart Library — demo</div><h1>Run a library from one screen</h1>
 <p>A staff-facing app: catalogue, members, Borrow Book and Return Book, loan history, search, a dashboard, and AI-assisted discovery.</p>
 <ul>
 <li>Used by library staff: librarians, admins and read-only supervisors</li>
 <li>Members have no login: the librarian borrows and returns for them</li>
+<li>Live at <code>smart-library.ahmedoraby.workers.dev</code></li>
 </ul>`);
 }
 

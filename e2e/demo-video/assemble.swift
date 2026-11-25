@@ -1,5 +1,5 @@
 // Lays each narration clip over its scene with AVFoundation (macOS), so no ffmpeg install is needed.
-// usage: assemble <silent.mp4> <scenes.json> <audio-dir> <out.mp4> [--insert N:<clip.mp4>] [--line-at <seconds>]
+// usage: assemble <silent.mp4> <scenes.json> <audio-dir> <out.mp4> [--insert N:<clip.mp4>] [--line-at <s>] [--line-end <s>]
 // scenes.json: [{"scene": 1, "start": 0.0, "end": 24.8}, …] in seconds of the silent video (record-live.ts writes it).
 // Scene N's screen time becomes the length of <audio-dir>/scene-N.m4a: a shorter scene holds its last frame for the
 // rest, a longer one plays a little faster. A scene without a clip keeps its own length, silent.
@@ -22,12 +22,22 @@ var rest = Array(CommandLine.arguments.dropFirst())
 var pos: [String] = []
 var insert: (scene: Int, url: URL)? = nil
 var lineAtArg: Double? = nil
+var lineEndArg: Double? = nil
+var cropMain: CGSize? = nil  // --crop-main WxH: the recording only fills this top-left area (Playwright pads to the video size)
 while !rest.isEmpty {
   let a = rest.removeFirst()
   switch a {
   case "--insert":
     guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--insert N:<clip.mp4>") }
     insert = (n, URL(fileURLWithPath: String(v[v.index(after: colon)...])))
+    rest.removeFirst()
+  case "--crop-main":
+    guard let v = rest.first?.split(separator: "x").compactMap({ Double($0) }), v.count == 2 else { fail("--crop-main WxH") }
+    cropMain = CGSize(width: v[0], height: v[1])
+    rest.removeFirst()
+  case "--line-end":
+    guard let v = rest.first.flatMap(Double.init) else { fail("--line-end <seconds>") }
+    lineEndArg = v
     rest.removeFirst()
   case "--line-at":
     guard let v = rest.first.flatMap(Double.init) else { fail("--line-at <seconds>") }
@@ -37,7 +47,7 @@ while !rest.isEmpty {
   }
 }
 guard pos.count == 4 else {
-  fail("usage: assemble <silent.mp4> <scenes.json> <audio-dir> <out.mp4> [--insert N:<clip.mp4>] [--line-at <seconds>]")
+  fail("usage: assemble <silent.mp4> <scenes.json> <audio-dir> <out.mp4> [--insert N:<clip.mp4>] [--line-at <s>] [--line-end <s>]")
 }
 let marks = try JSONDecoder().decode([Mark].self, from: Data(contentsOf: URL(fileURLWithPath: pos[1])))
 let video = AVURLAsset(url: URL(fileURLWithPath: pos[0]))
@@ -51,7 +61,14 @@ let ts: CMTimeScale = 600
 func t(_ s: Double) -> CMTime { CMTime(seconds: s, preferredTimescale: ts) }
 
 /** Puts `range` of `src` at `at` and fits it to `length`: holds its last 0.2 s when shorter, plays faster when longer. */
+/** Where each source starts in the output (for its scale to the render size), and where to dip between shots. */
+var sources: [(at: CMTime, track: AVAssetTrack)] = []
+var cuts: [CMTime] = []
 func place(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
+  if sources.last?.track !== src {
+    sources.append((at, src))
+    if at > .zero { cuts.append(at) }
+  }
   try vOut.insertTimeRange(range, of: src, at: at)
   let seg = range.duration
   if length > seg {
@@ -140,6 +157,20 @@ for m in marks {
     // The recorded part: cut to the sentence (or held, if it was shorter), then the clip under the sentence.
     try place(vSrc, CMTimeRange(start: start, duration: CMTimeMinimum(seg, before)), at: at, length: before)
     // Natural speed; if the clip outlasts the sentence, the scene runs up to 3 s longer (silent), then speeds up.
+    if let endAt = lineEndArg, endAt > lineAt, endAt < total.seconds {
+      // A middle range: the clip covers the narration from --line-at to --line-end, the recording resumes after it
+      // (the recorder holds a still sign-in page meanwhile, so nothing is lost).
+      let end = t(endAt)
+      try place(eSrc, CMTimeRange(start: .zero, duration: eLen), at: at + before, length: end - before)
+      let rest = CMTimeMaximum(.zero, CMTimeMinimum(seg - end, seg))
+      if rest > .zero {
+        try place(vSrc, CMTimeRange(start: start + end, duration: rest), at: at + end, length: total - end)
+      }
+      print(String(format: "scene %d: the inserted clip (%.1f s) covers %.1f–%.1f s of the narration", m.scene, eLen.seconds, lineAt, endAt))
+      at = at + total
+      cuts.append(at)
+      continue
+    }
     let sentence = total - before
     let shown = CMTimeMaximum(sentence, CMTimeMinimum(eLen, sentence + t(3)))
     try place(eSrc, CMTimeRange(start: .zero, duration: eLen), at: at + before, length: shown)
@@ -149,6 +180,7 @@ for m in marks {
       print(String(format: "  note: the clip plays %.1f× faster to fit; trim it with google-clip --trim", eLen.seconds / shown.seconds))
     }
     at = at + before + shown
+    cuts.append(at)
     continue
   }
 
@@ -156,14 +188,45 @@ for m in marks {
   try place(vSrc, CMTimeRange(start: start, duration: seg), at: at, length: length)
   print(String(format: "scene %d: screen %.1f s → %.1f s", m.scene, seg.seconds, length.seconds))
   at = at + length
+  cuts.append(at)
 }
 
 // No clip at all: an empty audio track would make the export fail.
 if aOut.segments.isEmpty { comp.removeTrack(aOut) }
+// 1920×1080, every source scaled to fit; a 0.2 s dip to black on both sides of each scene change and splice.
+let render = CGSize(width: 1920, height: 1080)
+let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: vOut)
+for s in sources {
+  var size = try await s.track.load(.naturalSize)
+  if let c = cropMain, s.track === vSrc {
+    size = c
+    layer.setCropRectangle(CGRect(origin: .zero, size: c), at: s.at)
+  } else {
+    layer.setCropRectangle(CGRect(origin: .zero, size: size), at: s.at)
+  }
+  let k = min(render.width / size.width, render.height / size.height)
+  let tx = CGAffineTransform(scaleX: k, y: k).concatenating(
+    CGAffineTransform(translationX: (render.width - size.width * k) / 2, y: (render.height - size.height * k) / 2))
+  layer.setTransform(tx, at: s.at)
+}
+let dip = t(0.2)
+for c in Set(cuts.map { $0.seconds }).sorted().map(t) where c > dip && c < at - dip {
+  layer.setOpacityRamp(fromStartOpacity: 1, toEndOpacity: 0, timeRange: CMTimeRange(start: c - dip, duration: dip))
+  layer.setOpacityRamp(fromStartOpacity: 0, toEndOpacity: 1, timeRange: CMTimeRange(start: c, duration: dip))
+}
+let instruction = AVMutableVideoCompositionInstruction()
+instruction.timeRange = CMTimeRange(start: .zero, duration: at)
+instruction.layerInstructions = [layer]
+let videoComposition = AVMutableVideoComposition()
+videoComposition.renderSize = render
+videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+videoComposition.instructions = [instruction]
+
 let out = URL(fileURLWithPath: pos[3])
 try? FileManager.default.removeItem(at: out)
 guard let export = AVAssetExportSession(asset: comp, presetName: AVAssetExportPresetHighestQuality) else {
   fail("cannot export")
 }
+export.videoComposition = videoComposition
 try await export.export(to: out, as: .mp4)
 print(String(format: "written: %@ (%.1f s)", pos[3], at.seconds))
