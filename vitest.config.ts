@@ -15,5 +15,14 @@ export default defineConfig({
     testTimeout: 20_000,
     hookTimeout: 120_000,
     fileParallelism: false,
+    // The 90% gate (the same bar as the other repos' CI): `npm run test:coverage` fails below it.
+    coverage: {
+      provider: "v8",
+      include: ["api/src/**/*.ts", "contracts/src/**/*.ts"],
+      exclude: ["**/*.test.ts", "**/*.d.ts"],
+      reporter: ["text-summary", "text", "lcov"],
+      reportsDirectory: "coverage/api",
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 85 },
+    },
   },
 });

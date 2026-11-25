@@ -14,7 +14,7 @@ import { LoanStatusBadge } from "../circulation/LoanStatusBadge";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../../lib/apiClient";
 import { reindexBatch, useAiUsageToday, useDashboard } from "./api";
-import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } from "./model";
+import { availabilitySegments, dismissNotice, isNoticeDismissed } from "./model";
 
 /** Card-header links: brand-700, semibold. */
 const cardLink = "text-base font-semibold text-brand-700";

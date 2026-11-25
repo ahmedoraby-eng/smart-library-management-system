@@ -10,7 +10,7 @@ import { LogoMark } from "../components/LogoMark";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
-import { meQueryKey, useMe } from "../features/auth/session";
+import { useMe } from "../features/auth/session";
 
 type NavTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
 interface NavItem {

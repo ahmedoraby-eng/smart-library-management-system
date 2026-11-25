@@ -3,6 +3,8 @@ import { MAX_ITEMS, MAX_REASON_LENGTH, type Candidate } from "./Discovery";
 export interface ValidRecommendation { candidate: Candidate; reason: string }
 export interface ValidatedOutput { items: ValidRecommendation[]; note: string | null; dropped: number }
 
+// Control characters are stripped on purpose: model output must not reach the UI with them.
+// eslint-disable-next-line no-control-regex
 const clean = (s: string, max: number) => s.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max).trim();
 
 /**

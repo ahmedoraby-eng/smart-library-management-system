@@ -2,7 +2,7 @@ import type { LoanDto, MemberDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent } from "react";
 import {
-  ActionMenu, ArrowLeftIcon, Badge, Button, buttonClasses, Card, CardBody, EditIcon, EmptyState, PlusIcon, InlineAlert, Skeleton, Table, Td, Th,
+  ActionMenu, ArrowLeftIcon, Button, buttonClasses, Card, CardBody, EditIcon, EmptyState, PlusIcon, InlineAlert, Skeleton, Table, Td, Th,
   Thead, Tr, useToast,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
