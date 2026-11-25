@@ -26,6 +26,10 @@ The time box and the public repo made browser tests in CI costly; the app has no
 
 - Recorded as the highest-value known testing gap.
 
+## Notes
+
+Superseded by [0184](0184-e2e-smoke-runs-github-ci-traces-kept.md), which is not yet in force: until PR #35 merges, this ADR still describes `main`.
+
 ## Sources
 
 Public: PR #17; README Tests; commit 4156f01

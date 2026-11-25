@@ -1,6 +1,6 @@
 # 0185. QA tests on the pull request before merge; merge only after QA passes
 
-- **Status:** Accepted
+- **Status:** Accepted, not yet in force (amends [0023](0023-close-on-merge-after-deploy.md), [0051](0051-board-flow-refinement-development-testing-released-review.md), [0052](0052-review-flow-per-pr-architecture-github-ux.md), [0065](0065-squash-merge-prs-based-main-update-branches.md))
 - **Date:** 2026-11-25
 - **Area:** process
 - **Deciders:** Ahmed Oraby (owner)
@@ -34,6 +34,10 @@ The board flow ([0051](0051-board-flow-refinement-development-testing-released-r
 - The workflows act only on PRs from branches of this repository, never from forks (the repository is public and `pull_request_target` runs with secrets).
 - The status check reads Jira with the existing `ATL_TOKEN` (GET only, code from `main` only) until a read-only token exists.
 - The status refreshes every 15 minutes while the repository is public (free); when it turns private, the schedule drops to hourly to stay within the free Actions minutes.
+
+## Notes
+
+**In force when** PR #34 (the scripts, approved) and the owner's workflows PR (`enable-qa-gate.sh`) merge, the board has the Ready for Release status, and the `protect-main` ruleset is on (`enable-qa-gate.sh --ruleset`). Until then the order is followed by hand.
 
 ## Sources
 

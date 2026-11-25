@@ -1,6 +1,6 @@
 # 0184. E2E smoke runs in GitHub CI, with traces kept on failure
 
-- **Status:** Accepted (supersedes [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md))
+- **Status:** Accepted, not yet in force (supersedes [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md))
 - **Date:** 2026-11-25
 - **Area:** testing
 - **Deciders:** Ahmed Oraby (owner), on QA and architecture's recommendation
@@ -21,13 +21,17 @@
 ## Decision
 
 - The same three flows as 0176 (Librarian add → borrow → return → history; Supervisor read-only with a direct `POST` → 403; Admin demo reset), on the same throwaway stack (embedded PostgreSQL 16 + `wrangler dev`), now in CI on every pull request.
-- Playwright keeps traces, screenshots and video on failure, uploaded as a workflow artifact (PR #33).
+- Playwright keeps a trace and a screenshot on failure, uploaded as a workflow artifact (PR #33, merged).
 - The workflow file (`e2e.yml`) is added by the owner's script `enable-e2e-ci.sh`, because the agents' Apps can't push workflow files.
 
 ## Consequences
 
 - No auth bypass is added for CI: the run signs in with its own throwaway secrets, as locally.
 - Revisit if E2E time grows past a few minutes, or if the repository goes private (Actions minutes are then billed).
+
+## Notes
+
+**In force when** PR #35 (`e2e.yml`, opened by the owner's script) merges; its own run is green (E2E passed in about 50 s). Until then [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md) still describes `main`: E2E is a local run.
 
 ## Sources
 

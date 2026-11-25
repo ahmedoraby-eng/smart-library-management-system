@@ -30,6 +30,10 @@ Main should read as one commit per story.
 
 - A stacked set (#2–#4) had to be re-landed on main in PR #6.
 
+## Notes
+
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): rulesets are free on a public repository, so a `protect-main` ruleset enforces squash-only merges, required checks (including `Jira status`) and no bypass. The line above about branch protection was wrong for a public repository.
+
 ## Sources
 
 Public: docs/decisions.md

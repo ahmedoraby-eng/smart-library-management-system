@@ -26,6 +26,10 @@ Agents write the code; independent checks keep quality and design consistent.
 
 - SLM-4, SLM-8 and SLM-9 carry a named architecture review before Done.
 
+## Notes
+
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): QA tests the PR before the merge, not merged `main`; the merge waits for Ready for Release.
+
 ## Sources
 
 Public: docs/decisions.md

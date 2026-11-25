@@ -31,7 +31,7 @@ The owner wanted SLM's CI to work like his other platform's: AI-assisted flag, t
 
 ## Notes
 
-**In force when:** (1) PR #26 merges (tests, coverage thresholds, ESLint and Prettier configs, `scripts/ci-test.sh`); approved, waiting for the owner's merge. (2) The owner's gates PR (opened by `enable-ci-gates.sh`) merges: it makes CI run `npm run check`, `npm run test:coverage` and the audit, and adds `ai-guard`, `.ai-guard.toml` and the AI checkbox in the PR template. Until both land, CI on `main` runs plain `npm test`, with no coverage gate, lint, audit or ai-guard.
+**In force when** PR #29 (the gates PR: `ci.yml` calling `npm run check` and `npm run test:coverage`, the audit, `ai-guard.yml`, `.ai-guard.toml`, the AI checkbox) merges. PR #26 (tests, coverage thresholds, ESLint and Prettier configs, `scripts/ci-test.sh`) is merged (16630f9). Until #29 merges, CI on `main` runs plain `npm test`, with no coverage gate, lint, audit or ai-guard.
 
 ## Sources
 

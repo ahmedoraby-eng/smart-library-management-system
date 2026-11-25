@@ -1,4 +1,4 @@
-# 0070. No employer or client names in the repository, URL, OAuth app or UI
+# 0070. No employer or client names in the working tree, URL, OAuth app or UI
 
 - **Status:** Accepted
 - **Date:** 2026-11-24

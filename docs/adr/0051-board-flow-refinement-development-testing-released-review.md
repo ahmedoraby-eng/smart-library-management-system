@@ -29,6 +29,10 @@ The board should stay simple but show that testing and code review happen.
 
 - The issue-close automation targets Released (ADR 0023).
 
+## Notes
+
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): a fifth status, Ready for Release, between In Testing and Released; QA tests the PR before the merge.
+
 ## Sources
 
 Public: docs/decisions.md
