@@ -29,6 +29,7 @@ const MATRIX: Record<string, Who[]> = {
   "GET /api/loans/:id": ["A", "L", "S"],
   "POST /api/loans/borrow": ["A", "L"],
   "POST /api/loans/:id/return": ["A", "L"],
+  "POST /api/loans/:id/renew": ["A", "L"],
   "GET /api/dashboard/summary": ["A", "L", "S"],
   "POST /api/ai/book-discovery": ["A", "L", "S"],
   "GET /api/ai/quota": ["A", "L", "S"],

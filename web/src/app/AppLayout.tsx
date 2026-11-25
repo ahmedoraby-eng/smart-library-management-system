@@ -22,6 +22,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
 import { useMe } from "../features/auth/session";
+import { OverdueBell } from "../features/circulation/OverdueBell";
 
 type NavTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
 interface NavItem {
@@ -140,6 +141,7 @@ export function AppLayout() {
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
       </aside>
       <main className="relative min-w-0 flex-1 px-8 pt-7 pb-8" data-testid="main">
+        {can("LOAN_READ") && <OverdueBell className="absolute top-1 right-8" />}
         <ThemeToggle className="absolute top-1 right-1.5" />
         <Outlet />
       </main>

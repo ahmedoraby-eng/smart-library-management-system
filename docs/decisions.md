@@ -2,7 +2,7 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-185 decisions: 162 accepted (4 of them not yet in force), 22 superseded, 1 rejected, 0 proposed.
+186 decisions: 162 accepted (4 of them not yet in force), 22 superseded, 1 rejected, 1 proposed.
 
 Each ADR's **Sources** line starts with what a reader of this repository can open (a PR, a commit, a file); the owner's private working notes and conversations are listed after it.
 
@@ -193,6 +193,7 @@ Each ADR's **Sources** line starts with what a reader of this repository can ope
 | ADR-0183 | Three documented demo queries show lexical, semantic and both | 2026-11-25 | Accepted | demo | [adr/0183-three-documented-demo-queries-show-lexical-semantic.md](adr/0183-three-documented-demo-queries-show-lexical-semantic.md) |
 | ADR-0184 | E2E smoke runs in GitHub CI, with traces kept on failure | 2026-11-25 | Accepted, not yet in force | testing | [adr/0184-e2e-smoke-runs-github-ci-traces-kept.md](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md) |
 | ADR-0185 | QA tests on the pull request before merge; merge only after QA passes | 2026-11-25 | Accepted, not yet in force | process | [adr/0185-qa-tests-pr-before-merge.md](adr/0185-qa-tests-pr-before-merge.md) |
+| ADR-0186 | Loan renewal: once, by LOAN_DAYS from the current due date, recorded in `renewed_at`/`renewed_by` | 2026-11-25 | Proposed | data | [adr/0186-loan-renewal-once-loan-days-from-due-date.md](adr/0186-loan-renewal-once-loan-days-from-due-date.md) |
 
 ## Adding a decision
 
