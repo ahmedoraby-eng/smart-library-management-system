@@ -10,11 +10,12 @@ flowchart LR
   subgraph W["One Cloudflare Worker"]
     A["Static assets<br/>web/dist (SPA fallback)"]
     H["Hono API<br/>/api/*"]
-    C["Cron Trigger<br/>00:00 UTC"]
+    C["Cron Triggers<br/>00:00 UTC reset<br/>hourly index sync"]
   end
-  H -->|"Hyperdrive (query cache off)"| N[("Neon PostgreSQL 16")]
-  C -->|"demo reset"| N
-  H -->|"AI binding"| AI["Workers AI"]
+  H -->|"Hyperdrive (query cache off)"| N[("Neon PostgreSQL 16<br/>+ pgvector")]
+  C -->|"demo reset, embeddings backfill"| N
+  H -->|"AI binding: embeddings, ranking"| AI["Workers AI"]
+  C -->|"embeddings"| AI
   H -->|"OIDC code + PKCE"| G["Google sign-in"]
   H -->|"ISBN lookup, 3 s timeout"| OL["Open Library"]
 ```
@@ -33,7 +34,7 @@ The API is a modular monolith. Each module is a folder under `api/src/`:
 | `members` | Members (no login, no delete) |
 | `circulation` | Borrow, return, loan history, derived loan status |
 | `staff` | Staff users, sign-in (Google, demo), role and status changes |
-| `discovery` | AI book discovery (see [ai.md](ai.md)) |
+| `discovery` | AI book discovery: hybrid retrieval, the search index (`book_chunks`), cost limits (see [ai.md](ai.md)) |
 | `dashboard` | One read-only summary query |
 | `demo` | Demo data reset (nightly job and Admin button) |
 | `platform` | Config, errors (Problem Details), clock, security (session, CSRF, rate limits, permissions) |
@@ -47,7 +48,7 @@ api  →  application  →  domain  ←  infrastructure
 - `api`: Hono routes. Parse the request with the zod schemas from `contracts/`, check the permission, call a service, map the result to JSON.
 - `application`: services that run one use case. They own transactions.
 - `domain`: rules and ports (interfaces). No framework, no driver.
-- `infrastructure`: Postgres repositories, the Workers AI provider, the Google OIDC client, the Open Library client.
+- `infrastructure`: Postgres repositories, the Workers AI provider and embedder, the Google OIDC client, the Open Library client.
 
 `npm run lint:deps` (dependency-cruiser, config in `.dependency-cruiser.cjs`) fails on:
 
@@ -66,7 +67,7 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ![Data model on main: staff_users, members, loans and books; book_chunks (the AI search index); ai_usage and ai_cache (AI cost controls)](img/data-model.png)
 
-Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`.
+Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry).
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
 - **Stock invariant.** `0 <= available_copies <= total_copies` is a `CHECK` constraint. Available plus on-loan always equals total, where on-loan is the number of open loans of that book.
@@ -118,6 +119,8 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `POST /loans/borrow`, `POST /loans/:id/return` | A, L | Borrow Book, Return Book |
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
+| `GET /ai/quota` | A, L, S | AI-assisted searches left today |
+| `GET /admin/discovery/usage`, `POST /admin/discovery/reindex` | A | AI usage today; rebuild the search index batch by batch |
 | `GET /staff-users`, `PUT /staff-users/:id` | A | Staff management |
 | `POST /admin/reset-demo` | A | Restore demo data |
 
@@ -142,13 +145,13 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 - **Session.** A signed JWT (HS256) in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production and on https), `Path=/`, 8 hours by default. It holds only the staff id.
 - **Role from the database.** On every request the API loads the staff row and builds the permissions from the stored role. A role change or a disable applies on the next request. A cookie that claims a role has no effect (tested).
 - **CSRF.** Every non-GET request must have an `Origin` equal to the request's origin, and a body, if any, must be JSON.
-- **Rate limits.** Demo login (5 per minute per IP), Google start and Google callback (10 each per IP), AI discovery (10 per user), deep health check (10). In production these use Workers Rate Limiting bindings, shared across locations. Without a binding, a per-isolate in-memory limiter is used.
+- **Rate limits.** Demo login (5 per minute per IP), Google start and Google callback (10 each per IP), AI discovery (10 per user), search index rebuild (2 per minute), deep health check (10). In production these use Workers Rate Limiting bindings, shared across locations. Without a binding, a per-isolate in-memory limiter is used.
 - **Demo credentials** come from Worker secrets, are compared as SHA-256 digests in constant time, and passwords must be 12+ characters. They are never stored in the database or the repository.
 - **No auth bypass.** There is no flag, header or environment that signs a user in without credentials.
 
 ## Key decisions
 
-Every decision taken so far (183 on 2026-11-25), with the options we weighed and what we gave up, is an ADR in [`adr/`](adr/), listed in the [decision register](decisions.md). The main ones:
+Every decision taken so far (185 on 2026-11-25, ADR-0001 to ADR-0185), with the options we weighed and what we gave up, is an ADR in [`adr/`](adr/), listed in the [decision register](decisions.md). The main ones:
 
 - Stack: TypeScript, Hono on Workers, PostgreSQL 16 ([ADR-0002](adr/0002-stack-typescript-hono-workers-postgres.md)).
 - Modular monolith with layers enforced in CI ([ADR-0004](adr/0004-modular-monolith-enforced-layers.md)).
@@ -157,6 +160,9 @@ Every decision taken so far (183 on 2026-11-25), with the options we weighed and
 - AI: the model only ranks, behind a validator and a fallback ([ADR-0013](adr/0013-llm-ranks-only-validator-fallback.md)); hybrid retrieval ([ADR-0016](adr/0016-hybrid-retrieval-rrf.md)); cost tiers ([ADR-0019](adr/0019-ai-cost-tiers-and-quotas.md)).
 - Deploy: Workers Builds, with migrations behind a gate ([ADR-0022](adr/0022-workers-builds-auto-deploy.md)).
 - Rate limiting: Workers bindings with an in-memory fallback ([ADR-0103](adr/0103-rate-limiting.md)).
+- Testing: CI Postgres image `pgvector/pgvector:pg16`, so the HNSW path is tested before production ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md), accepted, arrives with PR #29); the E2E smoke runs in CI with traces kept on failure ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md), supersedes [ADR-0176](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md)).
+- Process: QA tests the PR before merge, and a Jira status check gates the merge ([ADR-0185](adr/0185-qa-tests-pr-before-merge.md)).
+- Not taken: a neutral GitHub App identity for agent commits ([ADR-0069](adr/0069-neutral-github-app-identity-agent-commits.md), rejected).
 
 ## Deployment
 
@@ -164,4 +170,18 @@ Every merge to `main` deploys to production through Cloudflare Workers Builds (G
 
 Database migrations are not part of the deploy: they are run by hand on production (`DATABASE_URL=<connection string> npm run db:migrate`) before the PR that adds them is merged. The `migrations gate` check fails on a PR that adds or changes a file under `migrations/` until the PR has the label `migrations-applied`.
 
-CI (`.github/workflows/ci.yml`) runs a secret scan and a name check, then typecheck, `lint:deps`, tests on a PostgreSQL 16 service container, and the web build.
+## CI and quality gates
+
+On `main` today CI runs the hygiene job, one `test` job (typecheck, `lint:deps`, the API tests on a plain `postgres:16` service container, so the vector tests take the brute-force path, and the web build), the **e2e** job and the migrations gate. The shared Node CI and the AI guardrails arrive with PR #29.
+
+Once PR #29 merges, every pull request and every push to `main` runs:
+
+- **hygiene** (`.github/workflows/ci.yml`): a secret scan (gitleaks) and a check for employer or client names.
+- **ci / Build and test**: the shared Node CI. `npm ci`, then `npm run check` (typecheck, `lint:deps`, ESLint, Prettier check, build), then `npm run test:coverage` (`scripts/ci-test.sh`: the API and contracts tests on the `pgvector/pgvector:pg16` image, so the HNSW path is tested ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)), then the web tests; both fail under the coverage gate of 90% lines, statements and functions, with branches at 85% for the API and 80% for the web app), and an audit of production dependencies.
+- **AI guardrails** (`.ai-guard.toml`): an AI-assisted PR ticks the AI-assistance box, adds or updates tests when it changes `api/src`, `web/src` or `contracts/src`, and needs the owner's review label when it changes workflows, the policy itself or `migrations/`.
+- **e2e** (`.github/workflows/e2e.yml`, on `main` now): `npm run e2e` on a GitHub-hosted runner. `e2e/run.ts` builds its own throwaway stack (embedded PostgreSQL 16, `wrangler dev`, the fake AI, generated secrets; no repository secrets). A failed test uploads its Playwright trace and screenshot as the `e2e-traces` artifact ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md)).
+- **migrations gate**: described above.
+
+**QA before merge and the Jira status check** ([ADR-0185](adr/0185-qa-tests-pr-before-merge.md)). QA tests the PR's build, not merged `main`. When a PR whose description says `Closes SLM-<n>` opens (or leaves draft), `scripts/jira-ready-for-testing.mjs` moves the issue from In Development to In Testing and assigns it to QA. `scripts/jira-status-check.mjs` posts a `Jira status` commit status: it is green only when every SLM key the PR names (title, branch, `Closes`/`Refs` lines) is in Ready for Release, which QA sets when the PR passed. A Released issue passes only for a PR that changes test files only, and only the owner's waiver label overrides the check. The rules are in `.github/jira-status.json`. The scripts and their tests (`scripts/test/`) are on `main`; the repository owner adds their workflow files ([ADR-0067](adr/0067-workflow-file-changes-pushed-owner.md)).
+
+A merged PR whose description says `Closes <issue key>` moves that issue to Released (`.github/workflows/jira-close.yml`). Contribution rules are in [AGENTS.md](../AGENTS.md). Agents commit through their own GitHub Apps ([ADR-0068](adr/0068-agents-reach-repo-through-their-github-apps.md)); a neutral App identity was rejected ([ADR-0069](adr/0069-neutral-github-app-identity-agent-commits.md)).
