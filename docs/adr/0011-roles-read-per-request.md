@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** security
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -26,3 +27,11 @@ A role change or a disable must take effect at once, and a cookie must not be ab
 
 - A disabled user is out on the next request (`403 USER_DISABLED`).
 - The UI's show/hide from `GET /api/me` is a convenience only.
+
+## Notes
+
+Writes are re-checked in the service layer as defence in depth.
+
+## Sources
+
+Confluence page 19365918; Jira SLM-8; decisions/architecture.md:286; decisions/engineering-plan.md:77; decisions/rbac-matrix.md:9; docs/architecture.md; design notes; decisions/architecture.md:289

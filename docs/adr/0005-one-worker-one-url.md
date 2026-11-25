@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** architecture
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -23,3 +24,11 @@ The Worker serves `web/dist` with an SPA fallback, and requests to `/api/*` reac
 
 - No CORS, and no token in the browser.
 - The URL, the OAuth client and the UI carry only the product name.
+
+## Notes
+
+Bindings: HYPERDRIVE, AI and the rate limiters, plus one Cron Trigger. Hosts considered and rejected: Pages + Functions, Render/Fly, Cloud Run. Worker request-time limits suit short OLTP calls, not long jobs.
+
+## Sources
+
+Confluence page 19365918; docs/architecture.md; wrangler.toml [assets]; decisions/architecture.md:20,334; decisions/infra.md:19; owner conversation, 2026-11-24

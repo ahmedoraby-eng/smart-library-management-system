@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** ai
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -31,3 +32,13 @@ Full-text alone ([0015](0015-full-text-only-retrieval.md)) misses synonym-only m
 
 - The threshold can't be calibrated locally, because the local embedder is a fake. It is checked on the deployed Worker.
 - Everything after retrieval (ranker, validator, fallback) is unchanged.
+
+## Notes
+
+The semantic side embeds the query and takes the top 40 chunks, best chunk per book. If embeddings fail but quota and budget remain, the model still ranks the lexical candidates: embedding failure is an availability signal, not a cost signal. Related-category top-up (fixed score 0.001) runs only when fewer than 5 candidates are fused. Calibration set: the three memoir queries plus three unrelated ones (quantum chromodynamics, tax law for shipping companies, knitting patterns); keep the highest value where memoirs stay semantic and each unrelated query gets at most 2 semantic hits. The UI shows a small 'Found by meaning' note.
+
+> Ahmed Oraby: «يبقى عندنا هايبرد سيرش. يبقى ده هيبقى شوكيس كويس، خصوصا ان البوزيشن اللي احنا بنقدم عليه ده AI Engineering Manager»
+
+## Sources
+
+owner conversation, 2026-11-24; Jira SLM-16; Confluence page 19169328; design notes; docs/ai.md; PR #19; commit c8099f7; Confluence page 19398657

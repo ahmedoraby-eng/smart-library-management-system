@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** demo
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -25,3 +26,11 @@ Reviewers edit, borrow and delete on a public demo. Their changes would degrade 
 
 - The search index is rebuilt after each reset ([0016](0016-hybrid-retrieval-rrf.md)).
 - The hourly index job runs at minute 5, so it never collides with the reset.
+
+## Notes
+
+The reset is one transaction (truncate loans, members and books, then load seed/demo.sql), shares its code with the Admin button, and the nightly run also purges expired AI cache rows.
+
+## Sources
+
+decisions/architecture.md:242,294; decisions/infra.md:25; decisions/engineering-plan.md:98-105; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; docs/architecture.md; commit da20579

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** process
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -28,3 +29,13 @@ Issues stayed open after their work shipped. And "merged" isn't "live" while the
 
 - The PR template carries the `Refs` / `Closes` line.
 - The workflow needs one repository secret, for the issue tracker.
+
+## Notes
+
+The shared close tool was fixed so --deploy-check waits for every project, not only guarded ones, and its comment names the target status. Released is SLM's done status. Pickup automation stays off for SLM.
+
+> Ahmed Oraby: «خلينا نعمل اول حاجه الاوتوميشن الخفيفه»
+
+## Sources
+
+.github/workflows/jira-close.yml; design notes; owner conversation, 2026-11-25

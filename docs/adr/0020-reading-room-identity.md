@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** visual
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -29,3 +30,13 @@ The first build used the default look of many generated UIs: Inter, indigo, a gr
 
 - The theme doesn't change flows, routes or tests.
 - Every new component must look right in both themes.
+
+## Notes
+
+Fonts: Newsreader (titles), Public Sans (UI 14/20), IBM Plex Mono (member numbers, ISBN). Tokens: canvas #F3EDE2, library green #1F5640, brass #B08433, spine #17352A; radii 2–4 px; no card shadows. Signature pieces: a dark-green spine sidebar with a brass active-tab marker, one ledger strip for the KPIs, book-spine covers, stamp badges, an index-card sign-in and AI discovery as a 'reference desk' with no sparkles. The toggle is a 24 px half-moon at 50 % opacity in a corner (also on sign-in), stored in localStorage and applied before first paint. Must not change: test ids, ARIA, copy, routes, RBAC hiding, layout widths. It was asked for to avoid the generic AI-template look; the acceptance smoke checks fonts load from our own origin at 1280/1440/1920.
+
+> Ahmed Oraby: «موافق على الاتجاه بتاع الريدنج روم ... بس ممكن نخلي فيه توجل... الديفولت يكون فاتح على الريدنج روم، والتوجل ده محطوط في مكان في زاويه مش باين قوي»
+
+## Sources
+
+Confluence page 19169290; owner conversation, 2026-11-24; owner conversation, 2026-11-25; commit 67723b1; PR #18; decisions/visual-identity/spec.md:1-28; decisions/visual-identity/spec.md:30-38; decisions/visual-identity/spec.md:40-117; decisions/visual-identity/spec.md:158-165; decisions/visual-identity/spec.md:174

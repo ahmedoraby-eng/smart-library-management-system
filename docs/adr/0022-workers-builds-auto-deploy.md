@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** cicd
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -32,3 +33,13 @@ Every merge to `main` should reach production:
 
 - Migrations must work with the running version, because they land before the code.
 - A failed build leaves the previous version live.
+
+## Notes
+
+Go-live order: merge the production config first, then connect Workers Builds, then the issue-close workflow; a wrong order could drop Hyperdrive or AI from the live site. Rollback is the dashboard's previous version or wrangler rollback, with the owner's OK; the local deploy folder is kept for a hand rollback. Optional build variable NODE_VERSION=22. Connecting Cloudflare to GitHub needed one owner approval.
+
+> Ahmed Oraby: «لا بس اللي يظبط الديبلوي الاوتوماتيك طبعا للابلكيشن»
+
+## Sources
+
+design notes; commit 7a35f93; docs/architecture.md Deployment; owner conversation, 2026-11-25; PR #25; .github/workflows/migrations-gate.yml; commit 7f86409; PR #23/#24; backlog/slm-tickets-draft.md:158-164

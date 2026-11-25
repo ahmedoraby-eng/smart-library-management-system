@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** data
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -23,3 +24,11 @@ The status is computed in one SQL fragment (`loanSql.ts`), used by the list filt
 
 - The list, each row and the dashboard can't disagree.
 - Filtering by OVERDUE is an expression on the indexed `(returned_at, due_at)` pair, which is fine at this size.
+
+## Notes
+
+The filter status=ACTIVE means every open loan, overdue included. OVERDUE uses the injected clock, so tests can move time.
+
+## Sources
+
+docs/architecture.md; PR #9; Confluence page 19398657; Jira SLM-5; decisions/architecture.md:183; decisions/scope.md:45; backlog/slm-tickets-draft.md:119-126

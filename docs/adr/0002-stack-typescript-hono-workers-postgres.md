@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** stack
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -50,3 +51,13 @@ The front end was scored the same way. E, TanStack Start full-stack, scored 25: 
 - We gave up the JVM and Spring ecosystem, and an SSR framework.
 - Any Postgres works: only the connection string changes.
 - Revisit if the app gets public, SEO-relevant pages: TanStack Start fits then.
+
+## Notes
+
+Criteria named by the owner: support, how common, lightweight, fit, speed of development and change, easy to defend, plus free hosting. Hono was chosen over Express and NestJS because it is light and the design lives in our layers; Drizzle (node-postgres driver) over Prisma so the stock SQL stays visible. Filters, sort and page live in the URL as zod-validated search params. Hyperdrive's query cache is off so availability is never served stale; Supabase was rejected because it pauses after a week idle.
+
+> Ahmed Oraby: «تكون ليها سبورت كفايه، تكون كومن، تكون لايت ويت، مناسبه للابلكيشن، سريعه في الديفلوبمنت والتشينجز»
+
+## Sources
+
+decisions/architecture.md:3,48-64,75; decisions/architecture.md:10,15,22-47,122; backlog/slm-tickets-draft.md:5; handover notes; PR #27; README 'Stack' on origin/main; Confluence page 19267692; Confluence page 19365918; owner conversation, 2026-11-24; Jira SLM-2

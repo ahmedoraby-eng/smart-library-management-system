@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** data
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -28,3 +29,11 @@ Neon has pgvector. CI (`postgres:16`), docker-compose and the embedded Postgres 
 
 - The HNSW SQL path is proven only on Neon until CI uses a `pgvector/pgvector:pg16` image (a recommended follow-up).
 - Brute force is acceptable for a few hundred chunks only.
+
+## Notes
+
+schema-parity ignores embedding_v. Production was verified live with deep health reporting db ok and vector hnsw.
+
+## Sources
+
+design notes; Confluence page 19169328

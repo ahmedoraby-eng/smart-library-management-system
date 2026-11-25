@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** data
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -33,3 +34,11 @@ Borrow and return must stay consistent when librarians work at the same time. Th
 
 - Evidence: 20 parallel borrows of a 3-copy book give exactly 3 loans, on real Postgres.
 - If copies ever need identity, the migration path is `book_copies` + `loans.copy_id`, with `available_copies` as a view.
+
+## Notes
+
+Isolation is READ COMMITTED. FOR UPDATE (not FOR SHARE) on the member row also blocks a concurrent deactivate and serialises the loan-limit race. Edits can't lower total_copies below copies on loan (409 TOTAL_BELOW_LOANED), and available copies is never edited directly. A partial-unique violation maps to 409 ALREADY_BORROWED.
+
+## Sources
+
+Confluence page 19398657; Jira SLM-4; docs/architecture.md; commit cb7d6a2; design notes; owner conversation, 2026-11-24; decisions/architecture.md:17,186-189; decisions/scope.md:40; decisions/architecture.md:177,180,215; decisions/architecture.md:17,198-218

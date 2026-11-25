@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** ai
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -30,3 +31,11 @@ AI book discovery must never invent books, must show live availability, and must
 
 - The rest of the app never imports the discovery module.
 - Prompt injection is reduced, not eliminated. The tests prove that an injected request still returns only real books.
+
+## Notes
+
+Fallback reasons: NO_PROVIDER, TIMEOUT, PROVIDER_ERROR, INVALID_OUTPUT, NO_VALID_ITEMS; the UI shows a 'Keyword match' badge. Request length 3–500 characters. With 0 candidates the model isn't called and the answer is 'No matching books in the catalog.' Candidates carry public metadata with descriptions cut to 200 characters; fit is 1–5. No member cache is used when a member is selected.
+
+## Sources
+
+decisions/architecture.md:19,311-330; decisions/scope.md:50,59; owner conversation, 2026-11-24; docs/ai.md; PR #4; decisions/architecture.md:327; Confluence page 19398657; Jira SLM-9; Confluence page 19169328; master prompt

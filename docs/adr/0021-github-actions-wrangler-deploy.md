@@ -2,6 +2,7 @@
 
 - **Status:** Superseded by [0022](0022-workers-builds-auto-deploy.md)
 - **Date:** 2026-11-24
+- **Area:** cicd
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -21,3 +22,11 @@ Deploy from Actions, with the migrations in the deploy job.
 ## Consequences
 
 Replaced. Cloudflare's Git integration deploys without a token in GitHub, and migrations moved to a deliberate manual step behind a gate.
+
+## Notes
+
+Planned GitHub secrets were CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and the database string.
+
+## Sources
+
+design notes

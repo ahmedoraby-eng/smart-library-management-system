@@ -2,6 +2,7 @@
 
 - **Status:** Superseded by [0016](0016-hybrid-retrieval-rrf.md)
 - **Date:** 2026-11-24
+- **Area:** ai
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -21,3 +22,7 @@ Retrieve the top 20 by `ts_rank_cd` on a weighted `search` vector plus trigram s
 ## Consequences
 
 Replaced by hybrid retrieval. Full-text stays as one of the two retrievers, and as the fallback.
+
+## Sources
+
+Jira SLM-9; Confluence page 19398657; design notes

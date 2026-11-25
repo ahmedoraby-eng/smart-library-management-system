@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** ai
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -28,3 +29,11 @@ Vector search embeds book text. One vector per book blurs long descriptions; ver
 
 - Text is re-embedded only when the text or the model changes (sha-256 source hash).
 - A model change makes all chunks stale; the dimension is checked when the config loads.
+
+## Notes
+
+Before calling the model, sync copies a vector from any chunk with the same source_hash (sha-256 of model + text), so an unchanged demo reset costs 0 Neurons; orphans are removed after the sync so donors still exist. Copies, inserts and orphan removal run in one transaction.
+
+## Sources
+
+design notes; Confluence page 19169328; Jira SLM-16; owner conversation, 2026-11-24; Confluence page 19464205

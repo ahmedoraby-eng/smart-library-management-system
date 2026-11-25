@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
+- **Area:** security
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -34,3 +35,11 @@
 
 - We gave up a slow hash. Nothing is stored, so there is no hash to protect, and PBKDF2 at a safe cost would exceed the 10 ms CPU limit of Workers Free.
 - Demo accounts are locked against role and status changes (`409 PROTECTED_DEMO_ACCOUNT`).
+
+## Notes
+
+The demo form shows only when DEMO_ACCOUNTS_ENABLED=true (a kill switch). Demo accounts come from config, never from the seed, and are protected by the is_demo flag, not by email. SESSION_SECRET has at least 32 characters; SESSION_HOURS 1–24, default 8; cookie name slm_session. The X-Dev-User header and AUTH_MODE were removed; tests sign in through demo login or a test-signed cookie. The SHA-256 check was accepted on condition that the 12-character minimum stays and the rate limit really holds across requests.
+
+## Sources
+
+decisions/architecture.md:18,273-281; design notes; docs/architecture.md key decisions; owner conversation, 2026-11-24; Confluence page 19365918; Jira SLM-8; backlog/slm-tickets-draft.md:128-143; decisions/architecture.md:278; decisions/engineering-plan.md:93-96; PR #1

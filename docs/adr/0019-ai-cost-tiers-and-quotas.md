@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-25
+- **Area:** cost
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -40,3 +41,13 @@
 
 - Normal use can't exceed the free allocation. A burst can overshoot by a few calls, and the 20 % headroom absorbs it.
 - The rates come from the Cloudflare pricing page, read on 2026-11-25. A price change means updating the rates in config.
+
+## Notes
+
+The tier order was an open point on the ticket and was then confirmed by the owner. The red note follows the response's tier field, not the user's raw quota, so it doesn't show beside a cached AI-ranked answer. Neurons come from model usage or an estimate (characters/4; a timeout counts as the worst case, 26). The ranking cache key includes a catalogue version, so every borrow or return clears it. Search-as-you-type was rejected for cost. GET /api/ai/quota returns what is left, and each request logs tier, latency, candidate count and estimated Neurons.
+
+> Ahmed Oraby: «لازم نبقى حريصين جدا على الكوست، لانه هيبقى جزء اكيد من تقييم انك ازاي استخدمت اي اي بكوست معقول»
+
+## Sources
+
+owner conversation, 2026-11-24; owner conversation, 2026-11-25; commit c8099f7; docs/ai.md; PR #19; Jira SLM-16; Confluence page 19464205; design notes; docs/ai.md Cost controls; PR #20

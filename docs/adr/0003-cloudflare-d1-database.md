@@ -2,6 +2,7 @@
 
 - **Status:** Superseded by [0002](0002-stack-typescript-hono-workers-postgres.md)
 - **Date:** 2026-11-24
+- **Area:** stack
 - **Deciders:** Ahmed Oraby (owner), architecture review
 
 ## Context
@@ -21,3 +22,11 @@ Use D1, with stock safety in triggers and a `CHECK`.
 ## Consequences
 
 Replaced the same day. The infrastructure rule was relaxed to "any free or open-source service", and Postgres was preferred. Real transactions came back ([0006](0006-copies-as-counts-guarded-updates.md)).
+
+## Notes
+
+Draft v2 also used SQLite FTS5 for search, Cloudflare Access for sign-in and Workers AI; Kotlin was kept only as a rejected option because Cloudflare runs a JVM only in paid Containers. The owner preferred Postgres.
+
+## Sources
+
+owner conversation, 2026-11-24; decisions/architecture.md:9,395-403; design notes

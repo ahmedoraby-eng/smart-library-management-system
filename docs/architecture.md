@@ -146,7 +146,7 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 
 ## Key decisions
 
-Every significant decision, with the options we weighed and what we gave up, is an ADR in [`adr/`](adr/), listed in the [decision register](decisions.md). The main ones:
+Every decision taken so far (183 on 2026-11-25), with the options we weighed and what we gave up, is an ADR in [`adr/`](adr/), listed in the [decision register](decisions.md). The main ones:
 
 - Stack: TypeScript, Hono on Workers, PostgreSQL 16 ([ADR-0002](adr/0002-stack-typescript-hono-workers-postgres.md)).
 - Modular monolith with layers enforced in CI ([ADR-0004](adr/0004-modular-monolith-enforced-layers.md)).
@@ -154,6 +154,7 @@ Every significant decision, with the options we weighed and what we gave up, is 
 - Sign-in: Google OIDC plus demo accounts ([ADR-0009](adr/0009-google-oidc-and-demo-accounts.md)); roles read on every request ([ADR-0011](adr/0011-roles-read-per-request.md)).
 - AI: the model only ranks, behind a validator and a fallback ([ADR-0013](adr/0013-llm-ranks-only-validator-fallback.md)); hybrid retrieval ([ADR-0016](adr/0016-hybrid-retrieval-rrf.md)); cost tiers ([ADR-0019](adr/0019-ai-cost-tiers-and-quotas.md)).
 - Deploy: Workers Builds, with migrations behind a gate ([ADR-0022](adr/0022-workers-builds-auto-deploy.md)).
+- Rate limiting: Workers bindings with an in-memory fallback ([ADR-0103](adr/0103-rate-limiting.md)).
 
 ## Deployment
 
