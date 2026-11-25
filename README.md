@@ -74,7 +74,7 @@ Minimum features from the assessment:
 Bonus and extras:
 
 - [x] **Single sign-on with roles.** Sign in with Google (OpenID Connect, PKCE) plus two demo accounts. Three roles (Admin, Librarian, Supervisor), enforced by the API on every route. The role is read from the database on every request.
-- [x] **AI feature: Smart Book Discovery.** Describe what a member needs in words and get up to 5 real catalogue books with a reason and live availability. Falls back to keyword ranking when AI is not available. See [docs/ai.md](docs/ai.md).
+- [x] **AI feature: Smart Book Discovery.** Describe what a member needs in words and get up to 5 real catalogue books with a reason and live availability. Candidates come from **hybrid retrieval**: full-text search plus semantic search over embedded description chunks (Workers AI embeddings, pgvector HNSW), fused with Reciprocal Rank Fusion. The model only ranks and explains those candidates. Daily cost limits step down to cheaper tiers instead of failing, and discovery falls back to keyword ranking when AI is not available. See [docs/ai.md](docs/ai.md).
 - [x] **Loan history** with filters (status, member, book, borrowed date range, text) and sorting. Overdue is derived from the due date at read time, never stored.
 - [x] **Members.** Create, edit, deactivate and reactivate (no delete); search by name, member number or email; member page with open, overdue and past loans.
 - [x] **Dashboard.** Totals (titles, copies, available, borrowed), members, active and overdue loans, the 8 most recent borrowings, top 5 books by loans in the last 30 days, and the 3 most recently added books.
@@ -93,22 +93,38 @@ Bonus and extras:
 | UI | React, TypeScript, Vite, Tailwind, TanStack Router (typed routes; filters in the URL) and TanStack Query, served by the same Worker (one URL, no CORS) |
 | Contracts | zod schemas in `contracts/`, shared by the API and the UI |
 | Auth | Sign in with Google (OIDC) in the app, plus two demo staff accounts; HttpOnly session cookie; roles live in our database |
-| AI | Workers AI ranks real catalogue candidates; the app falls back to deterministic results if the AI isn't available |
-| Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), and a local Playwright smoke (`npm run e2e`) |
+| AI | Hybrid retrieval (Postgres full-text + Workers AI embeddings in pgvector, fused with RRF); a Workers AI model ranks and explains the candidates; deterministic fallback when AI isn't available |
+| Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), a 90% coverage gate, and a local Playwright smoke (`npm run e2e`) |
+| Delivery | GitHub Actions quality gates on every PR; every merge to `main` deploys through Cloudflare Workers Builds |
 
-More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md).
+More detail: [docs/architecture.md](docs/architecture.md), [docs/ai.md](docs/ai.md), and the decision register [docs/decisions.md](docs/decisions.md) (one ADR per decision in `docs/adr/`).
 
 ## Tests
 
 ```bash
-npm test             # API and contract tests on real PostgreSQL 16 (embedded, or TEST_DATABASE_URL)
-npm test -w web      # UI component tests (Vitest, jsdom, Testing Library)
-npm run typecheck    # tsc for contracts, api and web
-npm run lint:deps    # architecture rules (dependency-cruiser): domain stays pure, no cross-module table access
-npm run e2e          # local Playwright smoke in a real browser (not part of CI)
+npm run check          # typecheck, dependency rules, lint, format check, build (must pass before a PR)
+npm run test:coverage  # API + contracts tests, then the web tests, with the coverage gate
+npm test               # API and contract tests on real PostgreSQL 16 (embedded, or TEST_DATABASE_URL)
+npm test -w web        # UI component tests (Vitest, jsdom, Testing Library)
+npm run typecheck      # tsc for contracts, api, web and e2e
+npm run lint:deps      # architecture rules (dependency-cruiser): domain stays pure, no cross-module table access
+npm run lint           # ESLint
+npm run format         # Prettier (format:check in CI)
+npm run e2e            # local Playwright smoke in a real browser (not part of CI)
 ```
 
-The API tests run against a real PostgreSQL 16, with no database mocks.
+The API tests run against a real PostgreSQL 16, with no database mocks. The coverage gate is 90% for lines, statements and functions (branches: 85% for the API, 80% for the web app); the thresholds are in `vitest.config.ts` and `web/vitest.config.ts`.
+
+### Quality gates (CI)
+
+Every pull request runs:
+
+- **hygiene**: a secret scan (gitleaks) and a check that no employer or client name is in the repository.
+- **ci / Build and test**: `npm ci`, `npm run check`, `npm run test:coverage` (the API tests run on a PostgreSQL 16 container with pgvector, so the HNSW path is tested too), and an audit of production dependencies.
+- **AI guardrails**: an AI-assisted PR ticks the AI-assistance box, changes tests when it changes source, and needs an owner review label when it changes workflows, the guardrail policy or migrations (`.ai-guard.toml`).
+- **migrations gate**: a PR that adds or changes a migration fails until the migration has been applied to production and the PR has the label `migrations-applied`.
+
+Contribution rules (branch and PR naming, review replies) are in [AGENTS.md](AGENTS.md).
 
 `npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. It is local only (not part of CI) and needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
 
@@ -144,6 +160,9 @@ Set as Worker vars or secrets, or in `.dev.vars` locally. See `.dev.vars.example
 | `LOAN_DAYS`, `MAX_ACTIVE_LOANS` | loan period (1–60 days) and open-loan limit per member (1–50) | `14`, `5` |
 | `AI_MODEL` | Workers AI model id. If empty (and no `AI_FAKE`), discovery uses deterministic ranking | none (`wrangler.toml` sets `@cf/meta/llama-3.2-3b-instruct`) |
 | `AI_FAKE` | deterministic fake AI for local runs and tests (refused when `ENVIRONMENT=production`) | `false` |
+| `EMBEDDING_MODEL` | Workers AI embedding model for hybrid retrieval (768 dimensions, matches migration 0004). `off` means full-text only | `@cf/baai/bge-base-en-v1.5` |
+| `EMBEDDING_MIN_SIMILARITY` | minimum cosine similarity for a semantic match | `0.72` |
+| `AI_DAILY_NEURON_CAP`, `AI_USER_DAILY_SEARCHES` | daily AI budget for the library, and AI-assisted searches per staff user (UTC day); past them, discovery steps down a tier (see [docs/ai.md](docs/ai.md)) | `8000`, `50` |
 | `DATABASE_URL` | Postgres for scripts and local dev. In production, the `HYPERDRIVE` binding is used instead | none |
 
 Unknown Google accounts start as **Supervisor** (read-only), and an Admin can promote them. A staff user is bound to their Google account id (`sub`) on first sign-in, and Google sign-in never opens a demo account.
@@ -157,9 +176,12 @@ api/src/        Hono API. Each module (catalog, members, circulation, staff, dis
 api/test/       API tests on real PostgreSQL 16
 contracts/src/  zod request and response schemas, shared with web/
 migrations/     versioned SQL: 0001_init (schema, constraints), 0002_search (full-text and trigram indexes),
-                0003_google_sub (Google account id on staff users)
+                0003_google_sub (Google account id on staff users), 0004_book_chunks (embedded description
+                chunks; pgvector + HNSW where available), 0005_ai_cost (daily AI usage and a small cache)
 seed/           demo data (public book metadata, fictional members)
 web/            React SPA (features/, components/, routes/) with component tests
 scripts/        migrate, seed, local Postgres, demo-local
-docs/           architecture.md, ai.md
+docs/           architecture.md, ai.md, decisions.md (decision register) and adr/ (one file per decision)
+e2e/            local Playwright smoke
+.github/        CI workflows and the PR template; AGENTS.md has the contribution rules
 ```

@@ -10,11 +10,12 @@ flowchart LR
   subgraph W["One Cloudflare Worker"]
     A["Static assets<br/>web/dist (SPA fallback)"]
     H["Hono API<br/>/api/*"]
-    C["Cron Trigger<br/>00:00 UTC"]
+    C["Cron Triggers<br/>00:00 UTC reset<br/>hourly index sync"]
   end
-  H -->|"Hyperdrive (query cache off)"| N[("Neon PostgreSQL 16")]
-  C -->|"demo reset"| N
-  H -->|"AI binding"| AI["Workers AI"]
+  H -->|"Hyperdrive (query cache off)"| N[("Neon PostgreSQL 16<br/>+ pgvector")]
+  C -->|"demo reset, embeddings backfill"| N
+  H -->|"AI binding: embeddings, ranking"| AI["Workers AI"]
+  C -->|"embeddings"| AI
   H -->|"OIDC code + PKCE"| G["Google sign-in"]
   H -->|"ISBN lookup, 3 s timeout"| OL["Open Library"]
 ```
@@ -33,7 +34,7 @@ The API is a modular monolith. Each module is a folder under `api/src/`:
 | `members` | Members (no login, no delete) |
 | `circulation` | Borrow, return, loan history, derived loan status |
 | `staff` | Staff users, sign-in (Google, demo), role and status changes |
-| `discovery` | AI book discovery (see [ai.md](ai.md)) |
+| `discovery` | AI book discovery: hybrid retrieval, the search index (`book_chunks`), cost limits (see [ai.md](ai.md)) |
 | `dashboard` | One read-only summary query |
 | `demo` | Demo data reset (nightly job and Admin button) |
 | `platform` | Config, errors (Problem Details), clock, security (session, CSRF, rate limits, permissions) |
@@ -47,7 +48,7 @@ api  →  application  →  domain  ←  infrastructure
 - `api`: Hono routes. Parse the request with the zod schemas from `contracts/`, check the permission, call a service, map the result to JSON.
 - `application`: services that run one use case. They own transactions.
 - `domain`: rules and ports (interfaces). No framework, no driver.
-- `infrastructure`: Postgres repositories, the Workers AI provider, the Google OIDC client, the Open Library client.
+- `infrastructure`: Postgres repositories, the Workers AI provider and embedder, the Google OIDC client, the Open Library client.
 
 `npm run lint:deps` (dependency-cruiser, config in `.dependency-cruiser.cjs`) fails on:
 
@@ -64,7 +65,7 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ## Domain model and invariants
 
-Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`.
+Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry).
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
 - **Stock invariant.** `0 <= available_copies <= total_copies` is a `CHECK` constraint. Available plus on-loan always equals total, where on-loan is the number of open loans of that book.
@@ -116,6 +117,8 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `POST /loans/borrow`, `POST /loans/:id/return` | A, L | Borrow Book, Return Book |
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
+| `GET /ai/quota` | A, L, S | AI-assisted searches left today |
+| `GET /admin/discovery/usage`, `POST /admin/discovery/reindex` | A | AI usage today; rebuild the search index batch by batch |
 | `GET /staff-users`, `PUT /staff-users/:id` | A | Staff management |
 | `POST /admin/reset-demo` | A | Restore demo data |
 
@@ -163,7 +166,12 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 | Demo credentials in Worker secrets | Nothing sensitive in the repository. |
 | Nightly demo reset | Reviewer edits never degrade the demo. Staff accounts are kept. |
 | AI behind an interface, validated, with a fallback | The catalogue stays the source of truth, and core flows never depend on AI. See [ai.md](ai.md). |
+| Hybrid retrieval (full-text + embeddings, fused with RRF) | Full-text finds exact words and typos; embeddings find books close in meaning. Rank fusion needs no common score scale. pgvector HNSW where available, an in-app scan otherwise. |
+| AI cost tiers instead of hard failures | Daily limits step discovery down to cheaper tiers with a note, so it never breaks and spend stays bounded. |
+| Every merge to `main` deploys; migrations by hand | One path to production, and the schema is changed deliberately before the code that needs it. |
 | Staff-facing app | Every required feature is an operator action. |
+
+Every decision, with its context and consequences, is in the decision register: [decisions.md](decisions.md) (one ADR per decision in [adr/](adr/)).
 
 ## Deployment
 
@@ -171,4 +179,13 @@ Every merge to `main` deploys to production through Cloudflare Workers Builds (G
 
 Database migrations are not part of the deploy: they are run by hand on production (`DATABASE_URL=<connection string> npm run db:migrate`) before the PR that adds them is merged. The `migrations gate` check fails on a PR that adds or changes a file under `migrations/` until the PR has the label `migrations-applied`.
 
-CI (`.github/workflows/ci.yml`) runs a secret scan and a name check, then typecheck, `lint:deps`, tests on a PostgreSQL 16 service container, and the web build.
+## CI and quality gates
+
+Every pull request and every push to `main` runs:
+
+- **hygiene** (`.github/workflows/ci.yml`): a secret scan (gitleaks) and a check for employer or client names.
+- **ci / Build and test**: the shared Node CI. `npm ci`, then `npm run check` (typecheck, `lint:deps`, ESLint, Prettier check, build), then `npm run test:coverage` (`scripts/ci-test.sh`: the API and contracts tests on a PostgreSQL 16 container with pgvector, then the web tests; both fail under the coverage gate of 90% lines, statements and functions, with branches at 85% for the API and 80% for the web app), and an audit of production dependencies.
+- **AI guardrails** (`.ai-guard.toml`): an AI-assisted PR ticks the AI-assistance box, adds or updates tests when it changes `api/src`, `web/src` or `contracts/src`, and needs the owner's review label when it changes workflows, the policy itself or `migrations/`.
+- **migrations gate**: described above.
+
+A merged PR whose description says `Closes <issue key>` moves that issue to Released (`.github/workflows/jira-close.yml`). Contribution rules are in [AGENTS.md](../AGENTS.md).

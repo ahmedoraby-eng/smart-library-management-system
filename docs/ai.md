@@ -62,7 +62,7 @@ Order of checks: permission, then a rate limit of 10 requests per minute per sta
 
 - **Model:** `@cf/baai/bge-base-en-v1.5` (768 dimensions, `EMBEDDING_MODEL`; `off` turns vector search off). It's called through the `AI` binding: `env.AI.run(model, { text: [...] })`. Vectors are L2-normalised. Search queries get bge's retrieval instruction prefix.
 - **Chunking** (`domain/Chunking.ts`): the source text is title, author, category and description. The description is split into sentences and packed into windows of at most 120 words, with one sentence of overlap. Every chunk starts with a `Title — Author (Category)` header, so it stands on its own. Every seed book has a 180–220-word description in our own words, faithful to what the book is about (not a publisher's blurb), so each book makes 2–3 chunks and the windowing is visible.
-- **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (CI, the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
+- **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. CI runs the tests on a pgvector image (the HNSW path); local runs use the scan. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
 - **Query:** embed the request, take the nearest chunks, keep each live book's best chunk, drop anything below the minimum similarity (`EMBEDDING_MIN_SIMILARITY`, default 0.72: bge-base cosines sit high, and unrelated texts often score 0.6–0.7), top 20. Every request logs the top similarity (a number only), so the value can be checked against live queries and changed in config. `availableOnly` applies here too.
 - `book_chunks` belongs to the discovery module. It's a derived index that can be rebuilt at any time, with no foreign key to `books`: search joins live books, and the sync removes orphans.
 
@@ -171,7 +171,7 @@ If the model answers with a valid but empty list, the response is `mode: "AI"` w
 
 AI spend is bounded by design. Every step below costs nothing when it isn't needed, and every limit ends in a cheaper tier with a clear note, never in an error.
 
-### Tiers (Ahmed, 25/11)
+### Tiers
 
 | Tier | When | Retrieval | Ranking | Cost |
 |---|---|---|---|---|
