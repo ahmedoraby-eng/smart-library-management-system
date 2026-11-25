@@ -48,8 +48,9 @@ Yellow: the human. Purple: AI agents. Orange: automation and gates.
 
 Jira space **Smart Library** (key `SLM`), a team-managed Kanban board. Five statuses: **Refinement → In Development →
 In Testing → Ready for Release → Released** ([ADR-0051](adr/0051-board-flow-refinement-development-testing-released-review.md),
-and [ADR-0185](adr/0185-qa-tests-pr-before-merge.md) for Ready for Release). 16 issues: 14 stories (SLM-1 to SLM-13,
-and SLM-16, hybrid retrieval) under two Epics, SLM-14 (assessment minimum) and SLM-15 (differentiators).
+and [ADR-0185](adr/0185-qa-tests-pr-before-merge.md) for Ready for Release). 17 issues: 14 stories (SLM-1 to SLM-13,
+and SLM-16, hybrid retrieval) under two Epics, SLM-14 (assessment minimum) and SLM-15 (differentiators), and one
+sub-task, SLM-17 (the demo voice-over, under SLM-11).
 
 **Linked to GitHub.** The GitHub for Jira app connects the project to this repository, so each issue shows its
 branches, pull requests and commits, found by the `SLM-n` key in their names.
