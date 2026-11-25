@@ -19,7 +19,7 @@ import { PgChunkStore } from "../src/discovery/infrastructure/PgChunkStore";
 import { loadConfig } from "../src/platform/config";
 import { createDb } from "../src/platform/db";
 import { selectEmbedder } from "../src/discovery/infrastructure/selectProvider";
-import { as, pool, resetDb, seedStaff, testApp, testEnv } from "./support";
+import { as, pool, resetDb, seedStaff, testApp, testEnv, vectorPath } from "./support";
 
 afterAll(() => pool.end());
 
@@ -282,7 +282,8 @@ describe("SLM-16 cost: API", () => {
     const u = await app.request("/api/admin/discovery/usage", await as(staff.admin));
     expect(u.status).toBe(200);
     const body = (await u.json()) as Record<string, unknown>;
-    expect(body).toMatchObject({ searches: 1, neuronCap: 8000, userQuota: 50, vectorPath: "brute-force" });
+    // The path the database really has: hnsw on pgvector (CI), brute-force on the embedded Postgres.
+    expect(body).toMatchObject({ searches: 1, neuronCap: 8000, userQuota: 50, vectorPath: await vectorPath() });
     expect(body.neurons as number).toBeGreaterThan(0);
 
     const reindex = async () =>
@@ -292,7 +293,7 @@ describe("SLM-16 cost: API", () => {
 
   it("deep health reports the vector search path", async () => {
     const res = await testApp({ env: { AI_FAKE: "true" } }).request("/api/health?deep=1");
-    expect(await res.json()).toMatchObject({ status: "ok", vector: "brute-force" });
+    expect(await res.json()).toMatchObject({ status: "ok", vector: await vectorPath() });
   });
 });
 

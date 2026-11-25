@@ -12,6 +12,17 @@ import type { OidcProvider } from "../src/staff/domain/OidcProvider";
 
 export const pool = new pg.Pool({ connectionString: inject("databaseUrl"), max: 25 });
 
+/**
+ * The vector search path the test database really has: "hnsw" when migration 0004 found pgvector (CI's pgvector
+ * image) and added `book_chunks.embedding_v`, "brute-force" without it (the embedded Postgres used locally).
+ */
+export async function vectorPath(): Promise<"hnsw" | "brute-force"> {
+  const { rowCount } = await pool.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'",
+  );
+  return rowCount ? "hnsw" : "brute-force";
+}
+
 export const ORIGIN = "http://localhost";
 export const TEST_SECRET = "test-session-secret-0123456789abcdef";
 export const DEMO = {
