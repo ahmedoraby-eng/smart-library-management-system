@@ -1,6 +1,6 @@
 # 0176. Playwright E2E smoke: three flows, run locally on a throwaway stack, not in CI
 
-- **Status:** Accepted (supersedes [0175](0175-six-playwright-e2e-journeys-ci-plus-run.md))
+- **Status:** Superseded by [0184](0184-e2e-smoke-runs-github-ci-traces-kept.md) (supersedes [0175](0175-six-playwright-e2e-journeys-ci-plus-run.md))
 - **Date:** 2026-11-24
 - **Area:** testing
 - **Deciders:** QA, engineering

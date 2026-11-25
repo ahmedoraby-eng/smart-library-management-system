@@ -2,7 +2,7 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-183 decisions: 161 accepted (1 of them not yet in force), 21 superseded, 1 rejected, 0 proposed.
+185 decisions: 162 accepted (1 of them not yet in force), 22 superseded, 1 rejected, 0 proposed.
 
 Each ADR's **Sources** line starts with what a reader of this repository can open (a PR, a commit, a file); the owner's private working notes and conversations are listed after it.
 
@@ -183,7 +183,7 @@ Each ADR's **Sources** line starts with what a reader of this repository can ope
 | ADR-0173 | Session tests: cookie flags, OIDC checks, CSRF, logout; JWT revocation limit documented | 2026-11-24 | Accepted | testing | [adr/0173-session-tests-cookie-flags-oidc-checks-csrf.md](adr/0173-session-tests-cookie-flags-oidc-checks-csrf.md) |
 | ADR-0174 | Google faked at the HTTP boundary with a local OIDC stub | 2026-11-24 | Accepted | testing | [adr/0174-google-faked-http-boundary-local-oidc-stub.md](adr/0174-google-faked-http-boundary-local-oidc-stub.md) |
 | ADR-0175 | Six Playwright E2E journeys in CI, plus a run on the live URL | 2026-11-24 | Superseded by [0176](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md) | testing | [adr/0175-six-playwright-e2e-journeys-ci-plus-run.md](adr/0175-six-playwright-e2e-journeys-ci-plus-run.md) |
-| ADR-0176 | Playwright E2E smoke: three flows, run locally on a throwaway stack, not in CI | 2026-11-24 | Accepted | testing | [adr/0176-playwright-e2e-smoke-three-flows-run-locally.md](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md) |
+| ADR-0176 | Playwright E2E smoke: three flows, run locally on a throwaway stack, not in CI | 2026-11-24 | Superseded by [0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md) | testing | [adr/0176-playwright-e2e-smoke-three-flows-run-locally.md](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md) |
 | ADR-0177 | Manual checks: real Google sign-in, UX walk, axe scan, README on a clean clone | 2026-11-24 | Accepted | testing | [adr/0177-manual-checks-real-google-sign-ux-walk.md](adr/0177-manual-checks-real-google-sign-ux-walk.md) |
 | ADR-0178 | AI quality check: 10 fixed queries; pass if every book is real and ≥ 7 of 10 make sense | 2026-11-24 | Accepted | testing | [adr/0178-ai-quality-check-10-fixed-queries-pass.md](adr/0178-ai-quality-check-10-fixed-queries-pass.md) |
 | ADR-0179 | Defect severity S1–S4 and exit criteria for submission | 2026-11-24 | Accepted | testing | [adr/0179-defect-severity-s1-s4-exit-criteria-submission.md](adr/0179-defect-severity-s1-s4-exit-criteria-submission.md) |
@@ -191,6 +191,8 @@ Each ADR's **Sources** line starts with what a reader of this repository can ope
 | ADR-0181 | Record the demo after a manual reset, never around 02:00 Cairo; warm the app first | 2026-11-24 | Accepted | demo | [adr/0181-record-demo-after-manual-reset-around-02.md](adr/0181-record-demo-after-manual-reset-around-02.md) |
 | ADR-0182 | Submission package: ≤ 8-minute recording, live URL, filled RTM, final diagram | 2026-11-24 | Accepted | demo | [adr/0182-submission-package-8-minute-recording-live-url.md](adr/0182-submission-package-8-minute-recording-live-url.md) |
 | ADR-0183 | Three documented demo queries show lexical, semantic and both | 2026-11-25 | Accepted | demo | [adr/0183-three-documented-demo-queries-show-lexical-semantic.md](adr/0183-three-documented-demo-queries-show-lexical-semantic.md) |
+| ADR-0184 | E2E smoke runs in GitHub CI, with traces kept on failure | 2026-11-25 | Accepted | testing | [adr/0184-e2e-smoke-runs-github-ci-traces-kept.md](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md) |
+| ADR-0185 | QA tests on the pull request before merge; merge only after QA passes | 2026-11-25 | Accepted | process | [adr/0185-qa-tests-pr-before-merge.md](adr/0185-qa-tests-pr-before-merge.md) |
 
 ## Adding a decision
 
