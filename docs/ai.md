@@ -8,6 +8,8 @@ Code: `api/src/discovery/`. UI: `web/src/features/discovery/`.
 
 ## Flow
 
+![AI search stages as built: guards, lexical and semantic retrieval in parallel, RRF fusion, model ranking, validator, database re-read, fallback, and the index pipeline](img/ai-retrieval-stages.png)
+
 ```mermaid
 sequenceDiagram
   participant U as Librarian (browser)
