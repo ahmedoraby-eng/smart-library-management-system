@@ -45,6 +45,12 @@ export interface ChunkStore {
     query: number[],
     opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean },
   ): Promise<VectorHit[]>;
+  /**
+   * SLM-19 "More like this": other live books closest to the mean of this book's chunk vectors, each ranked by
+   * its best chunk, best first, the book itself excluded. Only positive similarities. [] when the book has no
+   * chunks for the model (not indexed yet, archived, or vector search off). No model call: stored vectors only.
+   */
+  similarTo(bookId: string, opts: { model: string; limit: number }): Promise<VectorHit[]>;
   /** True when the server has pgvector (the HNSW path). */
   usesPgvector(): Promise<boolean>;
 }
