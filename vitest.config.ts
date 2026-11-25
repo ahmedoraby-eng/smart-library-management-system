@@ -12,7 +12,7 @@ export default defineConfig({
     },
   ],
   test: {
-    include: ["api/test/**/*.test.ts", "contracts/**/*.test.ts"],
+    include: ["api/test/**/*.test.ts", "contracts/**/*.test.ts", "scripts/test/**/*.test.ts"],
     globalSetup: ["api/test/global-setup.ts"],
     testTimeout: 20_000,
     hookTimeout: 120_000,
