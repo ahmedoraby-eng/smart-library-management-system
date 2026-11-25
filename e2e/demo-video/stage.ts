@@ -37,7 +37,9 @@ export function captionScript(): string {
         bar.style.opacity = c.t ? "1" : "0";
       };
       window.__cap = (t, s, n) => { const c = { t, s, n }; try { sessionStorage.setItem("__cap", JSON.stringify(c)); } catch {} draw(c); };
-      try { draw(JSON.parse(sessionStorage.getItem("__cap") || "{}")); } catch { draw({}); }
+      // A title card starts clean; any other page keeps the caption of the page before it.
+      if (location.pathname.startsWith("/card/")) window.__cap("", "", "");
+      else try { draw(JSON.parse(sessionStorage.getItem("__cap") || "{}")); } catch { draw({}); }
     }
     document.documentElement.appendChild(root);
   };
@@ -64,6 +66,7 @@ export function cardPage(id: string): string {
   if (id === "close")
     return shell(`<div class="brand">Smart Library</div><h1>Built, tested and live</h1>
 <ul>
+<li>Live at <code>smart-library.ahmedoraby.workers.dev</code></li>
 <li>Deployed on Cloudflare Workers, with PostgreSQL on Neon. Every merge to <code>main</code> deploys.</li>
 <li>CI gates on every pull request: hygiene, tests with a 90% coverage gate, E2E, migrations gate, AI guardrails, Jira status.</li>
 <li>How it was built, with a team of AI agents: <code>docs/ai-team.md</code></li>
@@ -90,4 +93,24 @@ export function racePage(app: string): string {
   .lab{height:44px;line-height:44px;background:#312e81;color:#fff;font-size:20px;font-weight:600;padding-left:18px}
   iframe{border:0;width:1000px;height:910px;transform:scale(.792);transform-origin:0 0}
 </style><div style="height:10px"></div><div class="row">${pane("a", "Librarian A")}${pane("b", "Librarian B")}</div>`;
+}
+
+/** The pane's picture area (CSS px) and the viewport of each live window streamed into it (scale .792). */
+export const PANE = { w: 792, h: 728, viewW: 1000, viewH: 919 };
+
+/**
+ * Two windows side by side for the live recording: each pane is an <img> that `record-live.ts` fills with the
+ * screencast frames of a separate browser context (its own staff session), so the two sessions really are apart.
+ */
+export function pairPage(left: string, right: string): string {
+  const pane = (name: string, label: string) =>
+    `<div class="pane"><div class="lab">${label}</div><img id="${name}" alt=""></div>`;
+  return `<!doctype html><meta charset="utf-8"><title>Two desks</title>
+<style>
+  html,body{margin:0;height:100%;background:#0f1430;font-family:${FONT}}
+  .row{display:flex;gap:16px;padding:0 8px}
+  .pane{width:${PANE.w}px;height:${PANE.h + 44}px;overflow:hidden;border-radius:10px;background:#fff;position:relative}
+  .lab{height:44px;line-height:44px;background:#312e81;color:#fff;font-size:20px;font-weight:600;padding-left:18px}
+  img{display:block;width:${PANE.w}px;height:${PANE.h}px}
+</style><div style="height:10px"></div><div class="row">${pane("a", left)}${pane("b", right)}</div>`;
 }

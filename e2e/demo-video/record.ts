@@ -12,12 +12,12 @@ import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium, type Locator, type Page } from "@playwright/test";
+import { chromium } from "@playwright/test";
 import EmbeddedPostgres from "embedded-postgres";
 import { indexCatalogueWithFakeEmbedder, runMigrations, seed } from "../../scripts/lib/db-tools";
+import { click, encodeMp4, root, say, sleep, SPEED, typeInto } from "./lib";
 import { captionScript, cardPage, racePage } from "./stage";
 
-const root = new URL("../../", import.meta.url).pathname;
 const W = 1600;
 const H = 900;
 const FPS = 20;
@@ -25,9 +25,6 @@ const outIdx = process.argv.indexOf("--out");
 const extraOut = outIdx > 0 ? process.argv[outIdx + 1] : undefined;
 const outDir = join(root, "test-results/demo-video");
 
-// DEMO_SPEED=20 plays every pause and keystroke 20 times faster: a quick dry run of the whole script.
-const SPEED = Number(process.env.DEMO_SPEED ?? 1);
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms / SPEED));
 const rand = (n: number) => randomBytes(n).toString("hex");
 function freePort(preferred: number): Promise<number> {
   return new Promise((resolve) => {
@@ -76,29 +73,6 @@ async function waitForHealth(url: string): Promise<void> {
     await sleep(500);
   }
   throw new Error(`Timed out waiting for ${url}/api/health`);
-}
-
-// ---- captions, cursor and typing helpers ----
-async function say(page: Page, title: string, sub = "", scene = ""): Promise<void> {
-  await page.evaluate(
-    ([t, s, n]) => (window as unknown as { __cap: (...a: string[]) => void }).__cap(t!, s!, n!),
-    [title, sub, scene],
-  );
-}
-async function glide(page: Page, loc: Locator): Promise<void> {
-  const box = await loc.boundingBox();
-  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 18 });
-}
-async function click(page: Page, loc: Locator): Promise<void> {
-  await loc.scrollIntoViewIfNeeded();
-  await glide(page, loc);
-  await sleep(250);
-  await loc.click();
-}
-async function typeInto(page: Page, loc: Locator, text: string): Promise<void> {
-  await click(page, loc);
-  await loc.fill("");
-  await loc.pressSequentially(text, { delay: 55 / SPEED });
 }
 
 async function main(): Promise<void> {
@@ -438,7 +412,7 @@ async function main(): Promise<void> {
   if (!webm) throw new Error("no recording was written");
   const webmOut = join(outDir, "smart-library-demo.webm");
   copyFileSync(join(rawDir, webm), webmOut);
-  encodeMp4(webmOut, join(outDir, "smart-library-demo.mp4"));
+  encodeMp4(webmOut, join(outDir, "smart-library-demo.mp4"), tmp, FPS);
   if (extraOut) {
     mkdirSync(extraOut.replace(/^~/, homedir()), { recursive: true });
     copyFileSync(
@@ -447,25 +421,6 @@ async function main(): Promise<void> {
     );
   }
   console.log(`recorded: ${outDir}`);
-}
-
-/** webm → MP4 with Playwright's own ffmpeg and AVFoundation (encode.swift). macOS only. */
-function encodeMp4(webm: string, mp4: string): void {
-  const cache = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(homedir(), "Library/Caches/ms-playwright");
-  const dir = existsSync(cache) ? readdirSync(cache).find((d) => d.startsWith("ffmpeg-")) : undefined;
-  const ffmpeg = dir ? join(cache, dir, "ffmpeg-mac") : "";
-  if (!ffmpeg || !existsSync(ffmpeg)) return void console.log("no Playwright ffmpeg found: kept the .webm only");
-  const enc = join(tmp, "encode");
-  try {
-    execFileSync("swiftc", ["-O", join(root, "e2e/demo-video/encode.swift"), "-o", enc], { stdio: "inherit" });
-  } catch {
-    return void console.log("swiftc not available: kept the .webm only");
-  }
-  // Playwright's ffmpeg can only write webm or PNG frames, so: webm → PNG frames → encode.swift → H.264 MP4.
-  const frames = join(tmp, "frames");
-  mkdirSync(frames);
-  execFileSync(ffmpeg, ["-v", "error", "-i", webm, "-r", String(FPS), join(frames, "%06d.png")], { stdio: "inherit" });
-  execFileSync(enc, [frames, String(FPS), mp4], { stdio: "inherit" });
 }
 
 let code = 0;
