@@ -131,18 +131,20 @@ function finish(work: string, googleClip: string | undefined): void {
     ...(c2.clipTo !== undefined ? ["--line-end", String(c2.clipTo)] : []),
   ];
   const insert = googleClip ? ["--insert", `2:${googleClip}`, ...range] : [];
+  // A recording padded into a bigger video (an older run): only its top-left WxH is the page.
+  const crop = arg("--crop-main") ? ["--crop-main", arg("--crop-main")!] : [];
   // Extra scenes (9+) without their narration yet stay out of the main cut and go to a silent preview.
   const all = JSON.parse(readFileSync(marksFile, "utf8")) as { scene: number }[];
   const voiced = (n: number) => n <= 8 || existsSync(join(audioDir, `scene-${n}.m4a`));
   const mainMarks = join(work, "main-scenes.json");
   writeFileSync(mainMarks, JSON.stringify(all.filter((m) => voiced(m.scene))));
-  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert], { stdio: "inherit" });
+  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop], { stdio: "inherit" });
   const pending = all.filter((m) => !voiced(m.scene));
   if (pending.length) {
     const extrasMarks = join(work, "extras-scenes.json");
     writeFileSync(extrasMarks, JSON.stringify(pending));
     const preview = join(outDir, "extras-preview.mp4");
-    execFileSync(assemble, [silent, extrasMarks, join(work, "no-audio"), preview], { stdio: "inherit" });
+    execFileSync(assemble, [silent, extrasMarks, join(work, "no-audio"), preview, ...crop], { stdio: "inherit" });
     log(`extra scenes without narration yet: ${preview}`);
     if (extraOut) copyFileSync(preview, join(extraOut, "extras-preview.mp4"));
   }
