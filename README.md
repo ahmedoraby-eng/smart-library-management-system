@@ -99,6 +99,8 @@ Bonus and extras:
 
 More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md). Why each choice was made: the [decision register](docs/decisions.md) (one ADR per decision in [docs/adr/](docs/adr/)).
 
+How every assessment requirement is met, with the PR, tests and CI evidence for each: the [requirements traceability matrix](docs/traceability.md).
+
 ## Tests
 
 ```bash
