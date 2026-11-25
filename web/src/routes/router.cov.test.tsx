@@ -156,6 +156,7 @@ describe("routes", () => {
     expect(path()).toBe("/privacy");
     expect(screen.getByTestId("privacy")).toHaveTextContent("openid");
     expect(screen.getByTestId("privacy")).toHaveTextContent("support email on the Google sign-in screen");
+    expect(screen.getByTestId("privacy")).toHaveTextContent("theme choice (Reading Room or plain)");
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
     screen.getByTestId("privacy-back").click();
     await waitFor(() => expect(path()).toBe("/signin"));

@@ -53,8 +53,9 @@ export function PrivacyPage() {
         <Section title="Cookies">
           <p>
             One session cookie keeps you signed in, and a short-lived cookie protects the Google sign-in round trip.
-            There are no tracking, analytics or advertising cookies. Your light or dark theme choice is saved in your
-            own browser.
+            There are no tracking, analytics or advertising cookies. Your browser's local storage keeps two settings,
+            which never leave your browser: your theme choice (Reading Room or plain) and, for Supervisors, that the
+            read-only notice was dismissed.
           </p>
         </Section>
 
