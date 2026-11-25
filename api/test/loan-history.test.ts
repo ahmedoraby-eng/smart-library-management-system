@@ -66,7 +66,10 @@ describe("SLM-5 loan history", () => {
     const row = json.items[0];
     expect(Object.keys(row).sort()).toEqual(["book", "borrowedAt", "dueAt", "id", "member", "processedBy", "returnedAt", "returnedBy", "status"]);
     expect(row).toMatchObject({ book: { title: "Clean Code" }, member: { fullName: "Sara Haddad" }, processedBy: { name: "Layla Librarian" }, returnedAt: null });
-    expect(JSON.stringify(json)).not.toMatch(/fee|fine|payment/i);
+    // Keys only, at every depth: a random UUID or a title may contain "fee" (flaky on main 7a35f93).
+    const keys = (v: unknown): string[] =>
+      Array.isArray(v) ? v.flatMap(keys) : v && typeof v === "object" ? Object.entries(v).flatMap(([k, x]) => [k, ...keys(x)]) : [];
+    expect(keys(json).filter((k) => /fee|fine|payment/i.test(k))).toEqual([]);
   });
 
   it("SLM-5 AC2 filters (status, member, book, borrowed date range, q) and sorts; list, total and pages agree", async () => {
