@@ -1,0 +1,55 @@
+name: e2e
+
+# Playwright smoke in CI (SLM-11, 25/11/2026): `npm run e2e` on every PR and on push to main, on a GitHub-hosted
+# runner (free on this public repository). e2e/run.ts builds its own throwaway stack: an embedded PostgreSQL 16
+# (the same as a local run, with the fake AI, so pgvector isn't needed here; the ci job tests the HNSW path),
+# `wrangler dev` with a generated session secret and generated demo passwords. No repository secrets are used.
+# A failed test keeps its trace and screenshot; they are uploaded as the e2e-traces artifact.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium's system packages (browser from cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run e2e
+      - name: Upload traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-traces
+          path: test-results/e2e
+          retention-days: 7
+          if-no-files-found: ignore
