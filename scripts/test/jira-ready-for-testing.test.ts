@@ -13,7 +13,15 @@ import { listenLocal } from "./helpers/listen-local";
 const SCRIPT = fileURLToPath(new URL("../jira-ready-for-testing.mjs", import.meta.url));
 
 type Call = { method: string; path: string; body: string; auth: string };
-type Pr = { number: number; title: string; ref: string; body?: string; draft?: boolean; state?: string };
+type Pr = {
+  number: number;
+  title: string;
+  ref: string;
+  body?: string;
+  draft?: boolean;
+  state?: string;
+  fork?: boolean;
+};
 
 const servers: Server[] = [];
 afterEach(async () => {
@@ -51,7 +59,7 @@ async function fake(opts: {
           draft: opts.pr.draft ?? false,
           state: opts.pr.state ?? "open",
           html_url: `https://github.com/o/r/pull/${opts.pr.number}`,
-          head: { ref: opts.pr.ref },
+          head: { ref: opts.pr.ref, repo: { full_name: opts.pr.fork ? "someone/r" : "o/r" } },
         },
       ];
     const issue = /^\/jira\/rest\/api\/3\/issue\/([A-Z]+-\d+)(\/transitions|\/comment|\/assignee)?$/.exec(path);
@@ -260,6 +268,18 @@ describe("In Testing when the PR opens (ADR-0185)", () => {
     expect(r.code).toBe(1);
     expect(r.out).toContain("SLM-12: not moved: moved to In Testing, but not assigned to QA");
     expect(f.calls.some((c) => c.path.endsWith("/comment"))).toBe(false);
+  });
+
+  it("moves nothing, and never calls Jira, for a PR from a fork (F1 on #34)", async () => {
+    const f = await fake({
+      pr: { number: 7, title: "SLM-12", ref: "b", body: "Closes SLM-12", fork: true },
+      jira: { "SLM-12": "In Development" },
+    });
+    const r = await run(f.url, ["--pr", "7"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("#7: from a fork, nothing moved");
+    expect(f.jira["SLM-12"]).toBe("In Development");
+    expect(f.calls.some((c) => c.path.startsWith("/jira/"))).toBe(false);
   });
 
   it("never assigns an issue it does not move", async () => {

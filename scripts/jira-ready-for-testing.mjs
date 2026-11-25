@@ -19,7 +19,7 @@
 import { Buffer } from "node:buffer";
 import { appendFileSync, readFileSync } from "node:fs";
 import { URL, fileURLToPath } from "node:url";
-import { keysIn, loadRules } from "./jira-status-check.mjs";
+import { fromFork, keysIn, loadRules } from "./jira-status-check.mjs";
 
 const USAGE = "usage: node scripts/jira-ready-for-testing.mjs --pr <number> [--dry-run]";
 const RULES_FILE = fileURLToPath(new URL("../.github/jira-status.json", import.meta.url));
@@ -139,6 +139,9 @@ async function main(argv) {
   let failed = 0;
   if (pr.state !== "open" || pr.draft) {
     lines.push(`#${pr.number}: ${pr.draft ? "draft" : "not open"}, nothing moved`);
+  } else if (fromFork(repo, pr)) {
+    // Public repository: a fork PR never moves an issue (Yousef, F1 on #34). The workflow skips forks too.
+    lines.push(`#${pr.number}: from a fork, nothing moved`);
   } else {
     const keys = closedKeys(rules, pr);
     if (!keys.length)

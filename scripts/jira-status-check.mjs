@@ -225,7 +225,17 @@ async function waiverAddedBy(repo, number, label) {
   return added.length ? added[added.length - 1].actor?.login || "" : "";
 }
 
+/**
+ * A PR from a fork: on a public repository pull_request_target and the scheduled run would read Jira for anyone's
+ * PR (Yousef, F1 on #34). It is never checked against Jira and stays red: the team's PRs come from this repository.
+ */
+export function fromFork(repo, pr) {
+  return pr.head?.repo?.full_name !== repo;
+}
+export const FORK_DESCRIPTION = "From a fork: not checked against Jira. Open the PR from a branch of this repository";
+
 async function checkPr(rules, repo, pr, { dryRun }) {
+  if (fromFork(repo, pr)) return post(rules, repo, pr, { state: "failure", description: FORK_DESCRIPTION }, dryRun);
   const labels = (pr.labels || []).map((label) => label.name);
   const waiverBy = labels.includes(rules.waiver_label) ? await waiverAddedBy(repo, pr.number, rules.waiver_label) : "";
   const statuses = {};
@@ -253,6 +263,10 @@ async function checkPr(rules, repo, pr, { dryRun }) {
     statuses,
     files,
   });
+  return post(rules, repo, pr, decision, dryRun);
+}
+
+async function post(rules, repo, pr, decision, dryRun) {
   const sha = pr.head?.sha;
   if (!/^[0-9a-f]{40}$/.test(sha || "")) throw new Error(`PR #${pr.number} has no head commit`);
   const line = `#${pr.number} ${sha.slice(0, 7)}: ${decision.state}: ${decision.description}`;

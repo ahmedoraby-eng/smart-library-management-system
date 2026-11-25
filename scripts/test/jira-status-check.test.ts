@@ -279,6 +279,7 @@ type Pr = {
   state?: string;
   labels?: string[];
   sha?: string;
+  fork?: boolean;
 };
 
 const servers: Server[] = [];
@@ -304,7 +305,7 @@ async function fake(opts: {
     title: p.title,
     body: p.body ?? "",
     state: p.state ?? "open",
-    head: { ref: p.ref, sha: p.sha ?? SHA },
+    head: { ref: p.ref, sha: p.sha ?? SHA, repo: { full_name: p.fork ? "someone/r" : "o/r" } },
     labels: (p.labels ?? []).map((name) => ({ name })),
   });
   // One answer per path: [HTTP status, JSON body].
@@ -425,6 +426,21 @@ describe("the check against GitHub and Jira", () => {
     });
     await run(url, ["--pr", "14"]);
     expect(calls.some((c) => c.url.includes("/files"))).toBe(false);
+  });
+
+  it("posts red for a PR from a fork and never reads Jira, even in the scheduled run (F1 on #34)", async () => {
+    const f = await fake({
+      prs: [{ number: 7, title: "SLM-12: x", ref: "b", fork: true }],
+      jira: { "SLM-12": "Ready for Release" },
+    });
+    for (const args of [["--pr", "7"], ["--open"]]) {
+      const r = await run(f.url, args);
+      expect(r.code).toBe(0);
+    }
+    // One post per run (--pr, then --open), both red with the same reason.
+    const fork = ["failure", "From a fork: not checked against Jira. Open the PR from a branch of this repository"];
+    expect(posted(f.calls).map((p) => [p.state, p.description])).toEqual([fork, fork]);
+    expect(f.calls.some((c) => c.url.startsWith("/jira/"))).toBe(false);
   });
 
   it("posts green once the issue is Ready for Release", async () => {
