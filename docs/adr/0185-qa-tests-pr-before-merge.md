@@ -31,6 +31,9 @@ The board flow ([0051](0051-board-flow-refinement-development-testing-released-r
 - This replaces the earlier description of QA as post-release verification (wiki page 5 is to be updated).
 - The board gains one status, Ready for Release, between In Testing and Released.
 - Automation and the ruleset are DevOps work (ported from the other platform); until they land, the order is followed by hand.
+- The workflows act only on PRs from branches of this repository, never from forks (the repository is public and `pull_request_target` runs with secrets).
+- The status check reads Jira with the existing `ATL_TOKEN` (GET only, code from `main` only) until a read-only token exists.
+- The status refreshes every 15 minutes while the repository is public (free); when it turns private, the schedule drops to hourly to stay within the free Actions minutes.
 
 ## Sources
 
