@@ -1,0 +1,62 @@
+name: Jira ready for testing
+
+# ADR-0185: QA tests the PR before the merge. When a PR opens, reopens or leaves draft, each SLM issue on a
+# «Closes» / «Fixes» / «Resolves» line of its description that is still In Development moves to In Testing and is
+# assigned to QA, with a comment linking the PR. «Refs», the title and the branch move nothing, and an issue in any
+# other status is left as it is, so nothing moves backwards. QA then tests the PR and moves the issue to Ready for
+# Release when it passes; the "Jira status" check (jira-status.yml) turns green, and only then can the PR merge.
+# The logic and its tests: scripts/jira-ready-for-testing.mjs, scripts/test/.
+# - It runs only from main and checks out main, never the PR's code: a branch cannot change what it does, and the
+#   PR's title, branch and description are only data.
+# - Jira is written with ATL_TOKEN, the scoped token jira-close already uses, of the account in the ATL_EMAIL variable.
+#   Nothing here prints ATL_EMAIL or the token: the logs of a public repository are public (F7 on #34).
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: jira-ready-for-testing-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  ready-for-testing:
+    name: Move to In Testing
+    # Same-repository branches only (F1 on #34): on this public repository pull_request_target gives a fork PR the
+    # secrets, so a fork could make the token move a real issue. The script refuses forks too, also on "Run workflow".
+    if: >-
+      github.ref == 'refs/heads/main' && !github.event.pull_request.draft &&
+      (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the scripts and the rules from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/jira-ready-for-testing.mjs
+            scripts/jira-status-check.mjs
+            .github/jira-status.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Move the PR's SLM issues to In Testing
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # Passed through the environment, never interpolated into the script.
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          ATL_TOKEN: ${{ secrets.ATL_TOKEN }}
+          ATL_EMAIL: ${{ vars.ATL_EMAIL }}
+        run: node scripts/jira-ready-for-testing.mjs --pr "$PR"

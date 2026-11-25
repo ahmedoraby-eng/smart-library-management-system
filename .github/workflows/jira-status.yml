@@ -1,0 +1,75 @@
+name: Jira status
+
+# ADR-0185: merge only after QA passed. Sets the commit status "Jira status" on a PR's head commit: green only when
+# each SLM key in the PR's title, branch or a «Closes» / «Refs» line of its description is in Ready for Release (set
+# by QA when the PR passed; .github/jira-status.json), or the owner added the `jira-status-waived` label. A ruleset
+# on main makes this status required, so the merge button stays blocked until then. The logic and its tests:
+# scripts/jira-status-check.mjs, scripts/test/.
+# - It runs on every push, title edit and label change, and every 15 minutes for all open PRs, so the status follows
+#   the issue when QA moves it in Jira. "Run workflow" (with or without a PR number) refreshes it at once.
+# - It runs only from main and checks out main, never github.sha or the PR's code: a branch or a PR cannot change its
+#   own check.
+# - Jira is only read, with ATL_TOKEN of the account in the ATL_EMAIL variable. The script's one Jira call is a GET; a
+#   future write goes in a separate step with its own token (F2 on #34). Nothing here prints ATL_EMAIL or the token:
+#   the logs of a public repository are public (F7 on #34).
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited, labeled, unlabeled, ready_for_review]
+  schedule:
+    # Every 15 minutes while the repository is public (Actions minutes are free). When it turns private, change this to
+    # hourly ("7 * * * *"): every 15 minutes is about 2,900 runner-minutes a month, over the Free plan's 2,000 (F3 on #34).
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number (empty for every open PR)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read # who added the waiver label
+  statuses: write # the "Jira status" commit status
+
+concurrency:
+  group: jira-status-${{ github.event.pull_request.number || inputs.pr || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  jira-status:
+    name: Jira status update
+    # Same-repository PR events only (F1 on #34): a fork PR gets no token. The scheduled and "Run workflow" runs check
+    # every open PR, and the script marks a fork PR red without reading Jira.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the script and the rules from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/jira-status-check.mjs
+            .github/jira-status.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Set the Jira status
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # Passed through the environment, never interpolated into the script.
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          JIRA_READ_EMAIL: ${{ vars.ATL_EMAIL }}
+          JIRA_READ_TOKEN: ${{ secrets.ATL_TOKEN }}
+        run: |
+          if [ -n "$PR" ]; then
+            node scripts/jira-status-check.mjs --pr "$PR"
+          else
+            node scripts/jira-status-check.mjs --open
+          fi
