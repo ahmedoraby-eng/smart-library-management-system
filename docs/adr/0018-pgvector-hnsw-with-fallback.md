@@ -1,0 +1,41 @@
+# 0018. pgvector HNSW in production, with a `real[]` brute-force fallback
+
+- **Status:** Accepted
+- **Date:** 2026-11-25
+- **Area:** data
+- **Deciders:** Ahmed Oraby (owner), architecture review
+
+## Context
+
+Neon has pgvector. CI (`postgres:16`), docker-compose and the embedded Postgres used for local runs and e2e don't. The catalogue is demo-sized.
+
+## Options considered
+
+| Option | For | Against |
+|---|---|---|
+| pgvector everywhere | one code path | every dev and CI image must carry the extension |
+| No pgvector, scan in the app | works everywhere | slow at scale |
+| **Conditional: `vector(768)` + HNSW (cosine) where available; `real[]` scan otherwise** | fast in production, runs anywhere | two query paths |
+
+## Decision
+
+- Migration `0004_book_chunks.sql` always creates `embedding real[]`.
+- Where the extension is available, a `DO` block adds `embedding_v vector(768)` and an index `USING hnsw (embedding_v vector_cosine_ops)`.
+- The adapter checks once which path applies, and logs it once per isolate.
+- `/api/health?deep=1` reports `vector: "hnsw" | "brute-force" | "off" | "error"`, so production can't sit on brute force unnoticed.
+- With pgvector, only the `vector` column is written.
+
+## Consequences
+
+- The HNSW SQL path is proven only on Neon until the gates PR lands; then CI runs on `pgvector/pgvector:pg16` ([0163](0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)).
+- Brute force is acceptable for a few hundred chunks only.
+
+## Notes
+
+schema-parity ignores embedding_v. Production was verified live with deep health reporting db ok and vector hnsw.
+
+## Sources
+
+Public: docs/architecture.md
+
+Also from the owner's working notes and conversations (not published): design notes; Confluence page 19169328

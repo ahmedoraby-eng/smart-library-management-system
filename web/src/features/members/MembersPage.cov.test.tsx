@@ -116,11 +116,11 @@ describe("MembersPage filters", () => {
     await user.selectOptions(screen.getByTestId("filter-status"), "INACTIVE");
     await waitFor(() => expect(lastStatus()).toBe("INACTIVE"));
     expect(router.state.location.search).toMatchObject({ status: "INACTIVE" });
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("1 inactive member");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("1 inactive member"));
 
     await user.selectOptions(screen.getByTestId("filter-status"), "ALL");
     await waitFor(() => expect(lastStatus()).toBe("ALL"));
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("1 member");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("1 member"));
     expect(screen.getByTestId("result-line")).not.toHaveTextContent("inactive");
 
     await user.selectOptions(screen.getByTestId("filter-status"), "ACTIVE");
@@ -135,7 +135,7 @@ describe("MembersPage filters", () => {
     await user.type(screen.getByTestId("member-search"), "sara");
     await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "sara", page: "1" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes("q=sara"))).toBe(true));
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("1 member matches “sara”");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("1 member matches “sara”"));
   });
 
   it("several matches read '2 members match “x”'", async () => {
