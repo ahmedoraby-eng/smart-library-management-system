@@ -29,7 +29,7 @@ export function discoveryAdminRoutes(reindexLimiter: (c: Context<AppEnv>) => Lim
   r.post("/reindex", requirePermission("STAFF_MANAGE"), async (c) => {
     await reindexLimiter(c).check(`reindex:${c.var.principal.id}`); // 2/min: it can spend Neurons
     const index = c.var.container.bookIndex;
-    if (!index.enabled) return c.json({ result: "disabled", embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0 });
+    if (!index.enabled) return c.json({ result: "disabled", embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0, total: 0 });
     // One batch per call (Workers Free: 10 ms CPU). Call again while `remaining` > 0.
     const asked = Number(c.req.query("limit"));
     const batch = Number.isInteger(asked) && asked > 0 ? Math.min(asked, 100) : c.var.container.config.indexBatchBooks;

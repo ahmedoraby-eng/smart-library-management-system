@@ -17,6 +17,8 @@ export interface SyncResult {
   neurons: number;
   /** Stale books left for the next call (embedding is batched: Workers Free allows 10 ms CPU per call). */
   remaining: number;
+  /** Live books in the catalogue (the denominator of a progress bar: done = total − remaining). */
+  total: number;
 }
 
 /** Books embedded per call when the caller gives no batch size. */
@@ -54,7 +56,7 @@ export class BookIndexSync {
    * the model. Idempotent and resumable: call again while `remaining` > 0. Throws on failure.
    */
   async syncAll(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult> {
-    if (!this.embedder) return { embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0 };
+    if (!this.embedder) return { embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0, total: 0 };
     return this.sync(await this.store.liveBooks(), maxEmbedBooks);
   }
 
@@ -125,6 +127,7 @@ export class BookIndexSync {
       embeddedBooks: embedded.length, chunks: embedded.reduce((n, e) => n + e.rows.length, 0), reusedBooks: copied.length,
       upToDate: books.length - stale.length, removed, neurons: Math.round(neurons * 1000) / 1000,
       remaining: needEmbedding.length - toEmbed.length,
+      total: books.length,
     };
   }
 }

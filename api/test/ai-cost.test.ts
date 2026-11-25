@@ -290,9 +290,9 @@ describe("SLM-16 indexing within Workers Free CPU (10 ms per call)", () => {
   it("the endpoint takes ?limit and says partial/done", async () => {
     const app = testApp({ env: { AI_FAKE: "true" } });
     const r1 = await (await app.request("/api/admin/discovery/reindex?limit=2", await as(staff.admin, { method: "POST", body: {} }))).json();
-    expect(r1).toMatchObject({ result: "partial", embeddedBooks: 2, remaining: 2 });
+    expect(r1).toMatchObject({ result: "partial", embeddedBooks: 2, remaining: 2, total: 4 });
     const r2 = await (await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))).json();
-    expect(r2).toMatchObject({ result: "done", embeddedBooks: 2, remaining: 0 });
+    expect(r2).toMatchObject({ result: "done", embeddedBooks: 2, remaining: 0, total: 4 });
   });
 });
 

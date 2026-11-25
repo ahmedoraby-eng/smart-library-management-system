@@ -108,6 +108,13 @@ function AiUsageLine({ enabled }: { enabled: boolean }) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+interface RebuildProgress {
+  done: number;
+  total: number;
+  /** Seconds until the next batch while waiting out the 2-a-minute limit; null while a batch runs. */
+  waitS: number | null;
+}
+
 /**
  * Admin: rebuild the search-by-meaning index now (after a deploy, or a model change). Runs the reindex
  * batches (8 books each, to stay inside the Worker's CPU limit) until nothing is left, and waits out the
@@ -117,13 +124,14 @@ function RebuildIndex() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [progress, setProgress] = useState<RebuildProgress | null>(null);
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
 
   const run = async () => {
     setRunning(true);
-    setStatus("Rebuilding the search index…");
+    setProgress({ done: 0, total: 0, waitS: null });
+    let last: RebuildProgress = { done: 0, total: 0, waitS: null };
     try {
       for (let round = 0; round < 50 && alive.current; round++) {
         let batch;
@@ -131,10 +139,12 @@ function RebuildIndex() {
           batch = await reindexBatch();
         } catch (e) {
           if (e instanceof ApiError && e.status === 429) {
+            // Keep the bar where it is and count down to the next batch, so it never looks frozen.
             for (let s = e.retryAfter ?? 60; s > 0 && alive.current; s--) {
-              setStatus(`Waiting for the rate limit… ${s}s`);
+              setProgress({ ...last, waitS: s });
               await sleep(1000);
             }
+            setProgress({ ...last, waitS: null });
             continue;
           }
           throw e;
@@ -143,19 +153,20 @@ function RebuildIndex() {
           toast.error("Search by meaning isn't set up on this server.");
           return;
         }
+        last = { done: Math.max(batch.total - batch.remaining, 0), total: batch.total, waitS: null };
+        setProgress(last);
         if (batch.remaining <= 0) {
           toast.success("The search index is up to date.");
           void queryClient.invalidateQueries({ queryKey: ["ai-usage-today"] });
           return;
         }
-        setStatus(`Rebuilding the search index… ${batch.remaining} ${batch.remaining === 1 ? "book" : "books"} left`);
       }
     } catch {
       toast.error("Couldn't rebuild the search index. Try again.");
     } finally {
       if (alive.current) {
         setRunning(false);
-        setStatus(null);
+        setProgress(null);
       }
     }
   };
@@ -165,8 +176,32 @@ function RebuildIndex() {
       <Button size="sm" variant="ghost" onClick={() => void run()} loading={running} data-testid="rebuild-index">
         Rebuild search index
       </Button>
-      {status && <span role="status" aria-live="polite" className="tabular-nums" data-testid="rebuild-index-status">{status}</span>}
+      {progress && <RebuildBar progress={progress} />}
     </>
+  );
+}
+
+/** Determinate bar: "X of Y books · Z%", and a countdown to the next batch while the rate limit holds it. */
+function RebuildBar({ progress: { done, total, waitS } }: { progress: RebuildProgress }) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="basis-full" data-testid="rebuild-index-progress">
+      <div
+        role="progressbar"
+        aria-label="Rebuilding the search index"
+        aria-valuemin={0}
+        aria-valuemax={total || 100}
+        aria-valuenow={done}
+        aria-valuetext={total ? `${done} of ${total} books` : "Starting"}
+        className="mt-1.5 h-1.5 w-72 max-w-full overflow-hidden rounded-xs bg-neutral-100"
+      >
+        <div className="h-full rounded-xs bg-brand-600 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1 text-xs text-neutral-600 tabular-nums" role="status" aria-live="polite" data-testid="rebuild-index-status">
+        {total ? `${done} of ${total} books · ${pct}%` : "Starting…"}
+        {waitS !== null && <span data-testid="rebuild-index-wait"> · next batch in {waitS}s</span>}
+      </p>
+    </div>
   );
 }
 
