@@ -2,7 +2,7 @@
 
 const FONT = `-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif`;
 
-/** Injected in every page and frame: a visible mouse cursor with a click ripple, and (top frame only) the caption banner. */
+/** Injected in every page and frame: a visible mouse cursor with a click ripple, the __spot highlight, and (top frame only) the caption banner. */
 export function captionScript(): string {
   return `(() => {
   const FONT = ${JSON.stringify(FONT)};
@@ -24,6 +24,31 @@ export function captionScript(): string {
       setTimeout(() => r.remove(), 600);
     }, true);
     document.addEventListener("mouseup", () => { cur.style.transform = ""; }, true);
+    // __spot(el, {zoom, ms}): points at a key moment. The page zooms (about 1.3x) around the element's centre, so the
+    // element and the cursor on it stay put, a soft ring lights it while the rest dims a little, then all eases back.
+    window.__spot = (el, o) => {
+      o = o || {}; const zoom = o.zoom || 1, ms = o.ms || 2000, b = document.body;
+      const r0 = el.getBoundingClientRect();
+      const cx = r0.left + r0.width / 2 + scrollX, cy = r0.top + r0.height / 2 + scrollY;
+      const ease = "cubic-bezier(.22,.7,.2,1)";
+      if (zoom > 1) {
+        b.style.transformOrigin = cx + "px " + cy + "px";
+        b.style.transition = "transform .6s " + ease;
+        requestAnimationFrame(() => { b.style.transform = "scale(" + zoom + ")"; });
+      }
+      const ring = mk("position:absolute;border-radius:12px;border:3px solid #f59e0b;opacity:0;" +
+        "box-shadow:0 0 0 4px rgba(245,158,11,.25),0 0 24px rgba(245,158,11,.55),0 0 0 9999px rgba(15,20,48,.22);" +
+        "transition:opacity .35s ease,transform .35s " + ease + ";transform:scale(1.08)");
+      root.insertBefore(ring, cur);
+      setTimeout(() => {
+        const r = el.getBoundingClientRect(), pad = 8;
+        ring.style.left = (r.left - pad) + "px"; ring.style.top = (r.top - pad) + "px";
+        ring.style.width = (r.width + 2 * pad) + "px"; ring.style.height = (r.height + 2 * pad) + "px";
+        ring.style.opacity = "1"; ring.style.transform = "scale(1)";
+      }, zoom > 1 ? 620 : 0);
+      setTimeout(() => { ring.style.opacity = "0"; if (zoom > 1) b.style.transform = ""; }, ms);
+      setTimeout(() => { ring.remove(); b.style.transition = ""; b.style.transformOrigin = ""; }, ms + 700);
+    };
     if (window.top === window) {
       const bar = mk("position:absolute;left:0;right:0;bottom:0;padding:22px 48px 26px;color:#fff;font-family:" + FONT + ";" +
         "background:linear-gradient(0deg,rgba(15,20,48,.97) 0%,rgba(15,20,48,.93) 80%,rgba(15,20,48,0) 100%);transition:opacity .25s");

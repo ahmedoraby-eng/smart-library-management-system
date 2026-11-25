@@ -17,9 +17,8 @@
  *   --cues <file.json>   when things happen in each scene, in seconds from the scene's start ({"3": {"add": 9.3}, …}),
  *                   from the voice edit, so the screen follows the narration; without it, fixed shares of each scene
  *   --google-prepared <file.mp4>   a clip google-clip.swift has already prepared (blurred and checked): used as is
- *   --extras        also film the extra scenes 9–11 after scene 5 (as the demo admin): delete a book safely, add a book
- *                   by ISBN, the desk rules. Until their clips (scene-9.m4a …) exist they are left out of the main cut
- *                   and written to extras-preview.mp4.
+ *   DEMO_ORDER      the scenes to film, in order (default script v2: 1,2,3,10,4,12,5,9,6,7,13,14,8). Scenes without
+ *                   their clip yet (scene-N.m4a, N > 8) stay out of the main cut and go to extras-preview.mp4.
  *   --reuse         skip the recording: lay the narration (and the Google clip) over the last recorded run again
  *
  * Before recording, the admin account resets the demo data and rebuilds the search index; afterwards it resets again,
@@ -40,8 +39,8 @@ import {
 import { createServer } from "node:http";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, type BrowserContext, chromium, type Page } from "@playwright/test";
-import { click, encodeMp4, glide, root, say, sleep, SPEED, swiftTool, typeInto } from "./lib";
+import { type APIRequestContext, type BrowserContext, chromium, type Locator, type Page } from "@playwright/test";
+import { click, encodeMp4, glide, root, say, sleep, SPEED, spotlight, swiftTool, typeInto } from "./lib";
 import { captionScript, cardPage, PANE, pairPage } from "./stage";
 
 const LIVE = (process.env.SLM_LIVE_URL ?? "https://smart-library.ahmedoraby.workers.dev").replace(/\/$/, "");
@@ -73,9 +72,13 @@ const redact = (s: string) => [admin.password, librarian.password].reduce((acc, 
 const log = (s: string) => console.log(redact(s));
 
 // ---- narration: scene N lasts as long as scene-N.m4a ----
-const DEFAULT_S = [25, 20, 60, 50, 55, 20, 35, 20, 13, 13, 13]; // the script's timings, for a scene without a clip
-/** Scenes 9–11 (delete safely, ISBN look-up, desk rules) are filmed after scene 5 with --extras. */
-const extras = process.argv.includes("--extras");
+const DEFAULT_S = [25, 20, 60, 50, 55, 20, 35, 20, 13, 11, 13, 15, 12, 12]; // the script's timings, for a scene without a clip
+/**
+ * Script v2 order (Nora, 26/11): ISBN next to "add a book", renew + bell next to borrow and return, delete right after
+ * the last-copy race (the book is still on loan), More like this after AI discovery, ⌘K before the close. Scene 11 is
+ * dropped. DEMO_ORDER="1,2,…" films another order. A scene whose feature is not deployed yet is skipped.
+ */
+const ORDER = (process.env.DEMO_ORDER ?? "1,2,3,10,4,12,5,9,6,7,13,14,8").split(",").map(Number);
 function clipSeconds(n: number): number {
   const f = join(audioDir, `scene-${n}.m4a`);
   if (!existsSync(f)) return DEFAULT_S[n - 1]!;
@@ -173,12 +176,12 @@ const holdFor = (name: string, frac: number) => {
   const at = cueAt(name);
   return at === undefined ? holdUntil(frac) : holdUntil(at / (sceneMs / 1000));
 };
-async function scene(n: number, body: () => Promise<void>): Promise<void> {
+async function scene(n: number, body: () => Promise<void | false>): Promise<void> {
   sceneStart = Date.now();
   sceneNo = n;
   sceneMs = clips[n - 1]! * 1000;
   log(`scene ${n} (${clips[n - 1]!.toFixed(1)} s of narration)`);
-  await body();
+  if ((await body()) === false) return log(`scene ${n}: skipped`);
   await holdUntil(1);
   marks.push({ scene: n, start: (sceneStart - t0) / 1000, end: (Date.now() - t0) / 1000 });
 }
@@ -283,178 +286,250 @@ async function main(): Promise<void> {
   failShot = () => page.screenshot({ path: join(outDir, "failure.png") }).catch(() => undefined);
   const title = "Demo Book for Video";
 
-  await scene(1, async () => {
-    await page.goto(`${S}/card/title`);
-    await holdFor("page", 0.55);
-    await page.goto(`${LIVE}/signin`);
-    await say(page, "Live on Cloudflare", LIVE.replace(/^https:\/\//, ""), "1 · Intro");
-  });
-
-  await scene(2, async () => {
-    const tag = "2 · Sign in";
-    await say(page, "Staff sign in", "Librarians, admins and read-only staff. Members have no login.", tag);
-    const google = page.getByTestId("google-signin");
-    const showGoogle = process.env.DEMO_GOOGLE === "1" || cueAt("google") !== undefined;
-    if (showGoogle && (await google.isVisible())) {
-      await holdFor("google", 0);
-      await glide(page, google);
-      await say(page, "Or sign in with Google", "A first Google sign-in is read-only; an admin gives the role.", tag);
-      await sleep(3500);
-    }
-    await holdFor("signin", 0);
-    await sleep(1200);
-    await typeInto(page, page.getByTestId("signin-email"), librarian.email);
-    await typeInto(page, page.getByTestId("signin-password"), librarian.password);
-    await click(page, page.getByTestId("signin-submit"));
-    await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
-    await say(page, "The dashboard", "Catalogue size, books on loan and anything overdue.", tag);
-  });
-
-  await scene(3, async () => {
-    const tag = "3 · Books";
-    // Scene 2 may end on a hand-recorded Google sign-in; say plainly which account the rest of the demo uses.
-    await say(page, "From here on: the demo librarian account", "Same Librarian role, on the shared demo data.", tag);
-    await sleep(1800);
-    await click(page, page.getByRole("link", { name: "Books" }).first());
-    await say(page, "Search by title…", "The list narrows as you type.", tag);
-    await typeInto(page, page.getByTestId("book-search"), "clean");
-    await holdFor("author", 0.17);
-    await say(
-      page,
-      "…or by author, even misspelt",
-      '"Tolkein" still finds The Hobbit: the search forgives typos.',
-      tag,
-    );
-    await typeInto(page, page.getByTestId("book-search"), "Tolkein"); // misspelt on purpose: trigram search forgives it
-    await holdFor("add", 0.32);
-    await page.getByTestId("book-search").fill("");
-    await say(page, "Add a book", "A single copy: we will need it in a minute.", tag);
-    await click(page, page.getByTestId("add-book"));
-    await typeInto(page, page.getByTestId("field-title"), title);
-    await typeInto(page, page.getByTestId("field-author"), "Demo Author");
-    await typeInto(page, page.getByTestId("field-category"), "Programming");
-    await typeInto(page, page.getByTestId("field-totalCopies"), "1");
-    await sleep(800);
-    await click(page, page.getByTestId("save-book"));
+  // Script v2 (Nora, 26/11): every 👉 cue is a spotlight (the cursor goes there, the page zooms ~1.3× with a ring).
+  /** At the narration cue `name` (else at `frac` of the scene), points at `loc`. Skips quietly if it isn't there. */
+  const point = async (p: Page, loc: Locator, name: string, frac: number, ms = 2200, zoom = 1.3) => {
+    await holdFor(name, frac);
+    const shown = loc.filter({ visible: true }).first(); // lists render a hidden mobile copy of each row too
+    if (!(await shown.isVisible().catch(() => false))) return log(`  (nothing to point at for "${name}")`);
+    await spotlight(p, shown, { ms, zoom });
+  };
+  /** Switches the filmed window's session (its cookies) without a sign-in on camera. */
+  const switchTo = async (who: { email: string; password: string }) => {
+    const r = await context.request.post(`${LIVE}/api/auth/demo-login`, {
+      headers: { origin: LIVE },
+      data: { email: who.email, password: who.password },
+    });
+    if (!r.ok()) throw new Error(`demo sign-in answered ${r.status()}`);
+  };
+  page.on("dialog", (d) => void d.accept());
+  const openBook = async (q: string, name: RegExp) => {
+    await page.goto(`${LIVE}/books?q=${encodeURIComponent(q)}`);
+    await click(page, page.getByRole("link", { name }).first());
     await page.getByTestId("book-detail-title").waitFor();
-    await say(page, "Saved: 1 of 1 copies available", "", tag);
-    await holdFor("edit", 0.75);
-    await say(page, "Edit", "Every field is validated on the server, not just in the form.", tag);
-    await click(page, page.getByTestId("edit-book"));
-    await typeInto(page, page.getByTestId("field-category"), "Software engineering");
-    await sleep(600);
-    await click(page, page.getByTestId("save-book"));
-    await page.getByTestId("book-detail-title").waitFor();
-  });
+  };
 
-  await scene(4, async () => {
-    const tag = "4 · Borrow and return";
-    await say(page, "Borrow for a member", "Pick the member, pick the book, confirm.", tag);
-    await click(page, page.getByRole("link", { name: "Circulation" }));
-    await click(page, page.getByTestId("tab-borrow"));
-    await typeInto(page, page.getByTestId("member-combobox").getByRole("combobox"), "Nour Hassan");
-    await click(page, page.getByRole("option", { name: /Nour Hassan/ }).first());
-    await typeInto(page, page.getByTestId("book-combobox").getByRole("combobox"), title);
-    await click(page, page.getByRole("option", { name: new RegExp(title) }).first());
-    await sleep(1500);
-    await click(page, page.getByTestId("confirm-borrow"));
-    await page.getByTestId("borrow-success-text").first().waitFor();
-    await say(page, "Borrowed: due date set, 0 of 1 available", "", tag);
-    await holdFor("return", 0.5);
-    await say(page, "Return", "The loan closes with the return date; the history is kept.", tag);
-    await click(page, page.getByTestId("tab-return"));
-    await typeInto(page, page.getByTestId("return-search"), title);
-    const loan = page.getByTestId("loan-row").filter({ hasText: title });
-    await loan.waitFor();
-    await click(page, loan.getByTestId("return-button"));
-    await sleep(1200);
-    await click(page, page.getByTestId("return-dialog").getByRole("button", { name: "Confirm return" }));
-    await sleep(2000);
-    await page.goto(`${LIVE}/books?q=${encodeURIComponent(title)}`);
-    await say(page, "Back on the shelf: 1 of 1 available", "", tag);
-  });
+  const scenes: Record<number, () => Promise<void | false>> = {
+    1: async () => {
+      await page.goto(`${S}/card/title`);
+      await holdFor("page", 0.55);
+      await page.goto(`${LIVE}/signin`);
+      await say(page, "Live on Cloudflare", LIVE.replace(/^https:\/\//, ""), "1 · Intro");
+    },
 
-  await scene(5, async () => {
-    const tag = "5 · The last copy";
-    const statuses: { desk: string; status: number }[] = [];
-    for (const [p, desk] of [
-      [pa, "admin"],
-      [pb, "librarian"],
-    ] as const)
-      p.on("response", (r) => {
-        if (r.request().method() === "POST" && r.url().endsWith("/api/loans/borrow"))
-          statuses.push({ desk, status: r.status() });
-      });
-    await Promise.all([pa, pb].map((p) => p.goto(`${LIVE}/circulation/borrow`)));
-    await page.goto(`${S}/pair`);
-    const stops = [await stream(pa, page, "a"), await stream(pb, page, "b")];
-    await say(page, "Two desks, two staff sessions, the last copy", "Admin at desk 1, librarian at desk 2.", tag);
-    const prep = async (p: Page, member: string) => {
-      await typeInto(p, p.getByTestId("member-combobox").getByRole("combobox"), member);
-      await click(p, p.getByRole("option", { name: new RegExp(member) }).first());
-      await typeInto(p, p.getByTestId("book-combobox").getByRole("combobox"), title);
-      await click(p, p.getByRole("option", { name: new RegExp(title) }).first());
-      await glide(p, p.getByTestId("confirm-borrow"));
-    };
-    await prep(pa, "Omar Farouk");
-    await prep(pb, "Mariam Adel");
-    await say(page, "Both screens: 1 copy available", "Both click Confirm borrowing at the same moment…", tag);
-    await holdFor("click", 0.42);
-    await Promise.all([pa, pb].map((p) => p.getByTestId("confirm-borrow").click({ noWaitAfter: true })));
-    for (let i = 0; i < 40 && statuses.length < 2; i++) await new Promise((r) => setTimeout(r, 250));
-    const won = statuses.find((s) => s.status === 201)?.desk ?? "?";
-    const codes = statuses
-      .map((s) => s.status)
-      .sort()
-      .join(" and ");
-    await say(
-      page,
-      `One succeeds, the other is refused (${codes})`,
-      `The ${won} got the last copy; the other desk is told no copy is left (409). Never a second loan, never −1.`,
-      tag,
-    );
-    await holdFor("shelf", 0.72);
-    await Promise.all([pa, pb].map((p) => p.goto(`${LIVE}/books?q=${encodeURIComponent(title)}`)));
-    await say(
-      page,
-      "The shelf: 0 of 1 available, one loan",
-      "Tested too: 20 concurrent borrows on 3 copies → exactly 3 succeed, 17 refused.",
-      tag,
-    );
-    await holdUntil(0.98);
-    for (const stop of stops) await stop();
-    if (codes !== "201 and 409") log(`warning: the race answered ${codes || "nothing"}`);
-  });
+    2: async () => {
+      const tag = "2 · Sign in";
+      await say(page, "Staff sign in", "Librarians, admins and read-only staff. Members have no login.", tag);
+      const google = page.getByTestId("google-signin");
+      const showGoogle = process.env.DEMO_GOOGLE === "1" || cueAt("google") !== undefined;
+      if (showGoogle && (await google.isVisible())) {
+        await holdFor("google", 0);
+        await glide(page, google);
+        await say(page, "Or sign in with Google", "A first Google sign-in is read-only; an admin gives the role.", tag);
+        await sleep(3500);
+      }
+      // The Google clip covers clipFrom … clipTo of the narration: sign in under it, so the dashboard is ready when the
+      // recording shows again at clipTo. Without a clip, sign in when the voice says so.
+      await holdFor(cueAt("clipTo") !== undefined ? "clipFrom" : "signin", 0);
+      await sleep(1500);
+      await typeInto(page, page.getByTestId("signin-email"), librarian.email);
+      await typeInto(page, page.getByTestId("signin-password"), librarian.password);
+      await click(page, page.getByTestId("signin-submit"));
+      await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+      await say(page, "The dashboard", "Catalogue size, books on loan and anything overdue.", tag);
+      await point(page, page.getByTestId("kpi-overdue"), "overdue", 0.93, 2000);
+    },
 
-  if (extras) {
-    /** Switches the filmed window's session (its cookies) without a sign-in on camera. */
-    const switchTo = async (who: { email: string; password: string }) => {
-      const r = await context.request.post(`${LIVE}/api/auth/demo-login`, {
-        headers: { origin: LIVE },
-        data: { email: who.email, password: who.password },
-      });
-      if (!r.ok()) throw new Error(`demo sign-in answered ${r.status()}`);
-    };
-    page.on("dialog", (d) => void d.accept());
-    const openBook = async (q: string, name: RegExp) => {
-      await page.goto(`${LIVE}/books?q=${encodeURIComponent(q)}`);
-      await click(page, page.getByRole("link", { name }).first());
+    3: async () => {
+      const tag = "3 · Books";
+      // Scene 2 may end on a hand-recorded Google sign-in; say plainly which account the rest of the demo uses.
+      await say(page, "From here on: the demo librarian account", "Same Librarian role, on the shared demo data.", tag);
+      await sleep(1800);
+      await click(page, page.getByRole("link", { name: "Books" }).first());
+      await say(page, "Search by title…", "The list narrows as you type.", tag);
+      await typeInto(page, page.getByTestId("book-search"), "clean");
+      await holdFor("author", 0.17);
+      await say(
+        page,
+        "…or by author, even misspelt",
+        '"Tolkein" still finds The Hobbit: the search forgives typos.',
+        tag,
+      );
+      await typeInto(page, page.getByTestId("book-search"), "Tolkein"); // misspelt on purpose: trigram search forgives it
+      await holdFor("add", 0.32);
+      await page.getByTestId("book-search").fill("");
+      await say(page, "Add a book", "A single copy: we will need it in a minute.", tag);
+      await click(page, page.getByTestId("add-book"));
+      await typeInto(page, page.getByTestId("field-title"), title);
+      await typeInto(page, page.getByTestId("field-author"), "Demo Author");
+      await typeInto(page, page.getByTestId("field-category"), "Programming");
+      await typeInto(page, page.getByTestId("field-totalCopies"), "1");
+      await point(page, page.getByTestId("field-totalCopies"), "single", 0.6, 2000);
+      await click(page, page.getByTestId("save-book"));
       await page.getByTestId("book-detail-title").waitFor();
-    };
-    const deleteFromMenu = async () => {
-      await click(page, page.getByTestId("detail-actions"));
-      await click(page, page.getByRole("menuitem", { name: "Delete" }));
-    };
+      await say(page, "Saved: 1 of 1 copies available", "", tag);
+      await holdFor("edit", 0.75);
+      await say(page, "Edit", "Every field is validated on the server, not just in the form.", tag);
+      await click(page, page.getByTestId("edit-book"));
+      await typeInto(page, page.getByTestId("field-category"), "Software engineering");
+      await sleep(600);
+      await click(page, page.getByTestId("save-book"));
+      await page.getByTestId("book-detail-title").waitFor();
+    },
 
-    await scene(9, async () => {
-      const tag = "Extra · Delete safely";
+    10: async () => {
+      const tag = "Add a book by ISBN";
+      await page.goto(`${LIVE}/books/new`);
+      await say(page, "Add a book by its ISBN", "Type it, click Look up.", tag);
+      await typeInto(page, page.getByTestId("field-isbn"), "9780132350884");
+      await point(page, page.getByTestId("isbn-lookup"), "lookup", 0.45, 1400, 1.25);
+      await click(page, page.getByTestId("isbn-lookup"));
+      await page.getByTestId("isbn-lookup-hint").waitFor({ timeout: 15_000 });
+      await say(page, "Filled from Open Library", "Title, author, publisher and cover. Check, then save.", tag);
+      await point(page, page.getByTestId("field-title"), "fill", 0.7, 1300, 1.2);
+      await spotlight(page, page.getByTestId("cover-preview"), { ms: 1300, zoom: 1.2 }).catch(() => undefined);
+      await holdUntil(0.97);
+      await click(page, page.getByTestId("cancel-book"));
+      const discard = page.getByRole("button", { name: /discard|leave/i });
+      if (await discard.isVisible().catch(() => false)) await click(page, discard.first());
+    },
+
+    4: async () => {
+      const tag = "4 · Borrow and return";
+      await say(page, "Borrow for a member", "Pick the member, pick the book, confirm.", tag);
+      await click(page, page.getByRole("link", { name: "Circulation" }));
+      await click(page, page.getByTestId("tab-borrow"));
+      await typeInto(page, page.getByTestId("member-combobox").getByRole("combobox"), "Nour Hassan");
+      await click(page, page.getByRole("option", { name: /Nour Hassan/ }).first());
+      await typeInto(page, page.getByTestId("book-combobox").getByRole("combobox"), title);
+      await click(page, page.getByRole("option", { name: new RegExp(title) }).first());
+      await sleep(1000);
+      await click(page, page.getByTestId("confirm-borrow"));
+      await page.getByTestId("borrow-success-text").first().waitFor();
+      await say(page, "Borrowed: due date set, 0 of 1 available", "", tag);
+      const done = page.getByTestId("borrow-success-text");
+      await point(page, done, "duedate", 0.3, 1800);
+      await point(page, done, "down", 0.42, 2000);
+      await holdFor("return", 0.5);
+      await say(page, "Return", "The loan closes with the return date; the history is kept.", tag);
+      await click(page, page.getByTestId("tab-return"));
+      await typeInto(page, page.getByTestId("return-search"), title);
+      const loan = page.getByTestId("loan-row").filter({ hasText: title });
+      await loan.waitFor();
+      await click(page, loan.getByTestId("return-button"));
+      await sleep(1200);
+      await click(page, page.getByTestId("return-dialog").getByRole("button", { name: "Confirm return" }));
+      await sleep(2000);
+      await page.goto(`${LIVE}/books?q=${encodeURIComponent(title)}`);
+      await say(page, "Back on the shelf: 1 of 1 available", "", tag);
+      await point(
+        page,
+        page.getByTestId("availability-badge").or(page.getByTestId("availability")),
+        "shelf",
+        0.85,
+        1800,
+      );
+    },
+
+    12: async () => {
+      const tag = "Renew and the overdue bell";
+      await page.goto(`${LIVE}/circulation/return`);
+      const renew = page.getByTestId("renew-button").first();
+      if (!(await renew.isVisible({ timeout: 10_000 }).catch(() => false))) {
+        log("  scene 12: no Renew button on the live site yet (SLM-18 not deployed)");
+        return false;
+      }
+      await say(page, "Renew a loan once, before it is late", "", tag);
+      await holdFor("renew", 0.15);
+      await click(page, renew);
+      const toast = page.getByTestId("toast").filter({ hasText: /Renewed/ });
+      await toast.waitFor({ timeout: 10_000 }).catch(() => undefined);
+      await say(page, "Renewed: a new due date", "", tag);
+      await point(page, toast, "renewed", 0.3, 2000);
+      await point(page, page.getByTestId("overdue-count"), "bell", 0.55, 1800, 1.4);
+      await say(page, "The bell: how many loans are late", "Click it: who has which book.", tag);
+      await click(page, page.getByTestId("overdue-bell"));
+      await page
+        .getByTestId("overdue-popover")
+        .waitFor({ timeout: 10_000 })
+        .catch(() => undefined);
+      await point(page, page.getByTestId("overdue-popover"), "click", 0.75, 2200, 1.15);
+      await holdUntil(0.97);
+      await page.keyboard.press("Escape");
+    },
+
+    5: async () => {
+      const tag = "5 · The last copy";
+      const statuses: { desk: string; status: number }[] = [];
+      for (const [p, desk] of [
+        [pa, "admin"],
+        [pb, "librarian"],
+      ] as const)
+        p.on("response", (r) => {
+          if (r.request().method() === "POST" && r.url().endsWith("/api/loans/borrow"))
+            statuses.push({ desk, status: r.status() });
+        });
+      await Promise.all([pa, pb].map((p) => p.goto(`${LIVE}/circulation/borrow`)));
+      await page.goto(`${S}/pair`);
+      const stops = [await stream(pa, page, "a"), await stream(pb, page, "b")];
+      await say(page, "Two desks, two staff sessions, the last copy", "Admin at desk 1, librarian at desk 2.", tag);
+      const prep = async (p: Page, member: string) => {
+        await typeInto(p, p.getByTestId("member-combobox").getByRole("combobox"), member);
+        await click(p, p.getByRole("option", { name: new RegExp(member) }).first());
+        await typeInto(p, p.getByTestId("book-combobox").getByRole("combobox"), title);
+        await click(p, p.getByRole("option", { name: new RegExp(title) }).first());
+      };
+      await prep(pa, "Omar Farouk");
+      await prep(pb, "Mariam Adel");
+      await say(page, "Both screens: 1 copy available", "Both click Confirm borrowing at the same moment…", tag);
+      await point(pa, pa.getByTestId("copies-change"), "look", 0.25, 1500);
+      await spotlight(pb, pb.getByTestId("copies-change"), { ms: 1500 });
+      await Promise.all([pa, pb].map((p) => glide(p, p.getByTestId("confirm-borrow"))));
+      await holdFor("click", 0.4);
+      await Promise.all([pa, pb].map((p) => p.getByTestId("confirm-borrow").click({ noWaitAfter: true })));
+      for (let i = 0; i < 40 && statuses.length < 2; i++) await new Promise((r) => setTimeout(r, 250));
+      const won = statuses.find((s) => s.status === 201)?.desk ?? "?";
+      const [winP, loseP] = won === "librarian" ? [pb, pa] : [pa, pb];
+      const codes = statuses
+        .map((s) => s.status)
+        .sort()
+        .join(" and ");
+      await say(page, "One gets the book…", `The ${won} desk: borrowed.`, tag);
+      await point(winP, winP.getByTestId("borrow-success"), "gets", 0.5, 2000, 1.45);
+      await say(page, "…the other is refused: no copies available (409)", "Never a second loan, never −1.", tag);
+      // The refusal shows under the Book field (book-notice) or above the form (borrow-error), depending on the code path.
+      const refused = loseP.getByTestId("book-notice").or(loseP.getByTestId("borrow-error"));
+      await point(loseP, refused, "message", 0.6, 3000, 1.6);
+      await holdFor("minus", 0.7);
+      await Promise.all([pa, pb].map((p) => p.goto(`${LIVE}/books?q=${encodeURIComponent(title)}`)));
+      await click(winP, winP.getByRole("link", { name: new RegExp(title) }).first());
+      await winP.getByTestId("book-detail-title").waitFor();
+      await say(
+        page,
+        "The shelf: 0 available, one loan",
+        "Tested too: 20 borrows at once on 3 copies → 3 succeed, 17 refused.",
+        tag,
+      );
+      await spotlight(winP, winP.getByTestId("copies-available"), { ms: 2200, zoom: 1.6 });
+      await holdUntil(0.98);
+      for (const stop of stops) await stop();
+      if (codes !== "201 and 409") log(`warning: the race answered ${codes || "nothing"}`);
+    },
+
+    9: async () => {
+      const tag = "Delete a book, safely";
+      const deleteFromMenu = async () => {
+        await click(page, page.getByTestId("detail-actions"));
+        await click(page, page.getByRole("menuitem", { name: "Delete" }));
+      };
       await switchTo(admin);
       await openBook(title, new RegExp(title));
-      await say(page, "As the demo admin: delete a book", "It is out on loan…", tag);
+      await say(page, "Only an admin can delete a book", "This one is out on loan…", tag);
       await deleteFromMenu();
-      await page.getByTestId("delete-dialog-blocked").waitFor();
+      const blocked = page.getByTestId("delete-dialog-blocked");
+      await blocked.waitFor();
       await say(page, "…so it can't be deleted", "Record its return first.", tag);
-      await holdFor("archive", 0.38);
+      await point(page, blocked.getByText(/on loan/).last(), "loan", 0.3, 2000);
       await click(page, page.getByTestId("dialog-cancel"));
       await openBook("Refactoring", /Refactoring/);
       await deleteFromMenu();
@@ -466,118 +541,159 @@ async function main(): Promise<void> {
         "Hidden from Books and search; its loan history stays.",
         tag,
       );
-      await sleep(1600);
+      await holdFor("archived", 0.6);
       await click(page, dlg.getByRole("button", { name: "Archive book" }));
-      // Archiving goes back to Books with a toast: the book is gone from the list, its history stays.
       await page.waitForURL(/\/books(\?|$)/);
+      await spotlight(page, page.getByTestId("toast").first(), { ms: 1800, zoom: 1.25 }).catch(() => undefined);
+      await holdUntil(0.97);
+      await switchTo(librarian); // back to the librarian for the rest of the demo
+    },
+
+    6: async () => {
+      const tag = "6 · Permissions";
+      await page.goto(`${LIVE}/dashboard`);
+      await say(page, "A librarian opens an admin screen", "Staff users: /admin/users", tag);
+      await sleep(1500);
+      await page.goto(`${LIVE}/admin/users`);
+      await page.waitForURL(/\/403/);
+      await say(page, "403: not allowed for this role", "Checked on the server for every request.", tag);
+      await point(page, page.getByText("You don't have access to this page"), "forbidden", 0.55, 2200, 1.35);
+      await holdFor("api", 0.65);
+      const api = await context.request.post(`${LIVE}/api/admin/reset-demo`, { headers: { origin: LIVE }, data: {} });
       await say(
         page,
-        "Archived: gone from Books and search",
-        "Its loan history stays. A never-borrowed book is deleted for good.",
+        `The admin API says no too: ${api.status()}`,
+        "POST /api/admin/reset-demo as the librarian. The role is read from the database each time.",
         tag,
       );
-    });
+    },
 
-    await scene(10, async () => {
-      const tag = "Extra · ISBN look-up";
-      await page.goto(`${LIVE}/books/new`);
-      await say(page, "Add a book by ISBN", "Bad input gets a clear message…", tag);
-      await typeInto(page, page.getByTestId("field-isbn"), "12345");
-      await page.keyboard.press("Tab");
-      await holdFor("lookup", 0.35);
-      await page.getByTestId("field-isbn").fill("");
-      await typeInto(page, page.getByTestId("field-isbn"), "9780441172719");
-      await click(page, page.getByTestId("isbn-lookup"));
-      await page.getByTestId("isbn-lookup-hint").waitFor({ timeout: 15_000 });
+    7: async () => {
+      const tag = "7 · AI discovery";
+      await page.goto(`${LIVE}/discover`);
+      await say(page, "Describe what a member needs, in plain words", "", tag);
+      const q = page.getByTestId("discovery-query");
+      await holdFor("type", 0.08);
+      await spotlight(page, q, { ms: 1200, zoom: 1.15 });
+      await typeInto(page, q, "a short book about building good habits for a busy student");
+      await click(page, page.getByTestId("discovery-submit"));
+      await page.getByTestId("mode-badge").first().waitFor({ timeout: 60_000 });
+      await page.getByTestId("discovery-results").evaluate((el) => el.scrollIntoView({ block: "start" }));
+      const badge = (await page.getByTestId("mode-badge").first().innerText()).trim();
+      const fallback = /keyword|fallback/i.test(badge);
+      log(`discovery mode: ${badge}`);
+      const how = "How it finds books";
+      await holdFor("step1", 0.3);
+      await say(page, how, "1 · Search by words + by meaning (hybrid search)", tag);
+      await holdFor("step2", 0.38);
+      await say(page, how, "2 · Merge the two lists into one", tag);
+      await holdFor("step3", 0.46);
+      await say(page, how, "3 · The AI model ranks them and writes a reason for each", tag);
       await say(
         page,
-        "…and a good one fills the form from Open Library",
-        "Title, author, publisher and cover. Duplicate ISBNs are refused.",
+        fallback ? "AI is unavailable right now: keyword search answers" : "Why this book",
+        fallback ? "The badge says so. The desk never gets stuck." : "Every reason is written for this request.",
         tag,
       );
-      await holdFor("leave", 0.95);
-      await click(page, page.getByTestId("cancel-book"));
-      const discard = page.getByRole("button", { name: /discard|leave/i });
-      if (await discard.isVisible().catch(() => false)) await click(page, discard.first());
-    });
+      await point(page, page.getByTestId("reason"), "reason", 0.56, 3000, 1.3);
+      await say(page, how, "4 · Only books we own · keyword search if the AI is down", tag);
+      await point(page, page.getByTestId("discovery-item").first().getByTestId("availability"), "invent", 0.68, 2000);
+      await holdFor("counter", 0.88);
+      await say(page, "50 AI-assisted searches per person per day", "The counter goes down with each one.", tag);
+      const left = page.getByTestId("ai-searches-left");
+      await left.evaluate((el) => el.scrollIntoView({ block: "center" })).catch(() => undefined);
+      await spotlight(page, left, { ms: 2200, zoom: 1.35 }).catch(() => undefined);
+    },
 
-    await scene(11, async () => {
-      const tag = "Extra · The desk stops mistakes";
-      await page.goto(`${LIVE}/circulation/borrow`);
-      await say(page, "An inactive member can't borrow", "Greyed out, with the way to fix it.", tag);
-      await typeInto(page, page.getByTestId("member-combobox-input"), "Ziad");
-      await page.getByTestId("member-combobox-option").first().waitFor();
-      await holdFor("book", 0.3);
-      await page.getByTestId("member-combobox-input").fill("");
-      await typeInto(page, page.getByTestId("member-combobox-input"), "Nour");
-      await click(page, page.getByTestId("member-combobox-option").filter({ hasText: "Nour Hassan" }).first());
-      await say(page, "No copies left: when the next one is due back", "", tag);
-      await typeInto(page, page.getByTestId("book-combobox-input"), "Kotlin");
-      await page.getByTestId("book-combobox-option").first().waitFor();
-      await holdFor("overdue", 0.65);
-      await page.goto(`${LIVE}/loans?status=OVERDUE`);
-      await say(page, "Overdue loans, one filter away", "", tag);
-      await switchTo(librarian); // back to the librarian for the rest of the demo (no visible change until scene 6)
-    });
+    13: async () => {
+      const tag = "More like this";
+      await openBook("H Is for Hawk", /H Is for Hawk/);
+      const strip = page.getByTestId("similar-books");
+      if (!(await strip.isVisible({ timeout: 8000 }).catch(() => false))) {
+        log("  scene 13: no More like this on the live site yet (SLM-19 not deployed)");
+        return false;
+      }
+      await say(
+        page,
+        "More like this: books close in meaning",
+        "From the AI data we already store: no model call, no cost per click.",
+        tag,
+      );
+      await holdFor("more", 0.15);
+      await strip.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }));
+      await sleep(700);
+      for (const card of (await page.getByTestId("similar-book").all()).slice(0, 4)) {
+        await glide(page, card);
+        await sleep(450);
+      }
+      await spotlight(page, strip, { ms: 1600, zoom: 1.1 });
+      await holdFor("costs", 0.7);
+      await click(page, page.getByTestId("similar-book-link").first());
+      await page.getByTestId("book-detail-title").waitFor();
+      await page
+        .getByTestId("similar-books")
+        .evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }))
+        .catch(() => undefined);
+    },
+
+    14: async () => {
+      const tag = "Command K";
+      await page.goto(`${LIVE}/dashboard`);
+      if (
+        !(await page
+          .getByTestId("palette-trigger")
+          .isVisible({ timeout: 8000 })
+          .catch(() => false))
+      ) {
+        log("  scene 14: no command palette on the live site yet (SLM-20 not deployed)");
+        return false;
+      }
+      await say(page, "⌘K: the whole desk from the keyboard", "Any book, member or action.", tag);
+      await holdFor("keyboard", 0.1);
+      await page.keyboard.press("Control+k"); // the palette takes Ctrl or ⌘; headless Chromium on macOS swallows ⌘K
+      const input = page.getByTestId("palette-input");
+      await input.waitFor();
+      await input.pressSequentially("nour", { delay: 90 / SPEED });
+      const opt = page.getByTestId("palette-option").filter({ hasText: /Borrow for Nour Hassan/ });
+      await point(page, opt, "finds", 0.4, 1800, 1.25);
+      await click(page, opt.first());
+      await page.waitForURL(/\/circulation\/borrow/);
+      await say(page, "Only what your role is allowed to do", "", tag);
+      await holdFor("role", 0.7);
+      await page.keyboard.press("Control+k"); // the palette takes Ctrl or ⌘; headless Chromium on macOS swallows ⌘K
+      await input.waitFor();
+      await input.pressSequentially("overdue", { delay: 90 / SPEED });
+      await sleep(900);
+      await page.keyboard.press("Enter");
+      await holdUntil(0.97);
+    },
+
+    8: async () => {
+      const tag = "8 · Close";
+      await page.goto(REPO);
+      await say(page, "The code is public", REPO.replace(/^https:\/\//, ""), tag);
+      await point(page, page.locator("strong[itemprop=name] a, [itemprop=name]").first(), "link", 0.3, 2200, 1.4);
+      await holdFor("checks", 0.4);
+      await say(
+        page,
+        "Every change passes all the checks first",
+        "Tests with 90% coverage, end-to-end tests, database checks. Then it goes live by itself.",
+        tag,
+      );
+      for (let i = 0; i < 12; i++) {
+        await page.mouse.wheel(0, 120);
+        await sleep(250);
+      }
+      await holdFor("close", 0.82);
+      await page.goto(`${S}/card/close`);
+    },
+  };
+
+  for (const n of ORDER) {
+    const body = scenes[n];
+    if (!body) throw new Error(`no scene ${n} in this recorder`);
+    await scene(n, body);
   }
-
-  await scene(6, async () => {
-    const tag = "6 · Permissions";
-    await page.goto(`${LIVE}/dashboard`);
-    await say(page, "A librarian opens an admin screen", "Staff users: /admin/users", tag);
-    await sleep(1500);
-    await page.goto(`${LIVE}/admin/users`);
-    await page.waitForURL(/\/403/);
-    await say(page, "403: not allowed for this role", "Checked on the server for every request.", tag);
-    await holdFor("api", 0.6);
-    const api = await context.request.post(`${LIVE}/api/admin/reset-demo`, { headers: { origin: LIVE }, data: {} });
-    await say(
-      page,
-      `The admin API says no too: ${api.status()}`,
-      "POST /api/admin/reset-demo as the librarian. The role is read from the database each time.",
-      tag,
-    );
-  });
-
-  await scene(7, async () => {
-    const tag = "7 · AI discovery";
-    await page.goto(`${LIVE}/discover`);
-    await say(page, "Describe what a member needs, in plain words", "", tag);
-    await typeInto(
-      page,
-      page.getByTestId("discovery-query"),
-      "a short book about building good habits for a busy student",
-    );
-    await click(page, page.getByTestId("discovery-submit"));
-    await page.getByTestId("mode-badge").first().waitFor({ timeout: 60_000 });
-    await page.getByTestId("discovery-results").evaluate((el) => el.scrollIntoView({ block: "start" }));
-    const badge = (await page.getByTestId("mode-badge").first().innerText()).trim();
-    const fallback = /keyword|fallback/i.test(badge);
-    log(`discovery mode: ${badge}`);
-    await say(
-      page,
-      fallback
-        ? "AI is unavailable right now: keyword search answers"
-        : "Books from our own catalogue, each with a reason",
-      fallback
-        ? "The badge says so. The desk never gets stuck."
-        : "If the AI service is down, it falls back to keyword search, so the desk never gets stuck.",
-      tag,
-    );
-  });
-
-  await scene(8, async () => {
-    const tag = "8 · Close";
-    await page.goto(REPO);
-    await say(page, "Code, README and architecture on GitHub", "Every change passes CI before it is merged.", tag);
-    for (let i = 0; i < 12; i++) {
-      await page.mouse.wheel(0, 120);
-      await sleep(250);
-    }
-    await holdFor("close", 0.6);
-    await page.goto(`${S}/card/close`);
-  });
-
   await context.close();
   const webm = readdirSync(rawDir).find((f) => f.endsWith(".webm"));
   if (!webm) throw new Error("no recording was written");

@@ -23,6 +23,18 @@ export async function glide(page: Page, loc: Locator): Promise<void> {
   const box = await loc.boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 18 });
 }
+/**
+ * Points at a key moment (Ahmed, 26/11: "نشاور عليها بالكرسر عشان تبقى باينه"): the cursor glides onto the element,
+ * the page zooms ~1.3x around it with a soft ring, holds, and eases back. Returns after the page is back to normal.
+ */
+export async function spotlight(page: Page, loc: Locator, opts: { zoom?: number; ms?: number } = {}): Promise<void> {
+  const o = { zoom: opts.zoom ?? 1.3, ms: Math.round((opts.ms ?? 2400) / SPEED) };
+  await loc.scrollIntoViewIfNeeded().catch(() => undefined);
+  await glide(page, loc);
+  await sleep(250);
+  await loc.evaluate((el, x) => (window as unknown as { __spot?: (e: Element, o: object) => void }).__spot?.(el, x), o);
+  await new Promise((r) => setTimeout(r, o.ms + 750));
+}
 export async function click(page: Page, loc: Locator): Promise<void> {
   await loc.scrollIntoViewIfNeeded();
   await glide(page, loc);
