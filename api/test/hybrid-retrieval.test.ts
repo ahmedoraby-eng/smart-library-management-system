@@ -11,7 +11,7 @@ import { PgCatalogRetrieval } from "../src/discovery/infrastructure/PgCatalogRet
 import { PgChunkStore } from "../src/discovery/infrastructure/PgChunkStore";
 import { WorkersAiEmbedder } from "../src/discovery/infrastructure/WorkersAiEmbedder";
 import { createDb } from "../src/platform/db";
-import { as, pool, resetDb, seedStaff, testApp } from "./support";
+import { as, pool, resetDb, seedStaff, testApp, vectorPath } from "./support";
 
 afterAll(() => pool.end());
 
@@ -158,11 +158,17 @@ describe("SLM-16 indexing (book_chunks)", () => {
     const sync = new BookIndexSync(store(), new FakeEmbedder());
     expect(await sync.syncAll()).toMatchObject({ embeddedBooks: 4, chunks: 4, upToDate: 0 });
     expect(await sync.syncAll()).toMatchObject({ embeddedBooks: 0, upToDate: 4 });
+    // One representation per path (PgChunkStore.save): with pgvector the vector is in embedding_v only and the
+    // array column stays empty; without it the vector is the real[] array.
+    const hnsw = (await vectorPath()) === "hnsw";
     const { rows } = await pool.query(
-      "SELECT book_id, content, model, array_length(embedding, 1) AS dims FROM book_chunks",
+      hnsw
+        ? "SELECT book_id, model, vector_dims(embedding_v) AS dims, embedding IS NULL AS array_empty FROM book_chunks"
+        : "SELECT book_id, model, array_length(embedding, 1) AS dims, true AS array_empty FROM book_chunks",
     );
     expect(rows).toHaveLength(4);
-    expect(rows.every((r) => r.model === "fake-embedding-v1" && r.dims === 768)).toBe(true);
+    expect(rows.map((r) => [r.model, r.dims])).toEqual(Array(4).fill(["fake-embedding-v1", 768]));
+    if (hnsw) expect(rows.every((r) => r.array_empty)).toBe(true);
   });
 
   it("only a book whose text changed is re-embedded; an archived book's chunks are removed", async () => {
