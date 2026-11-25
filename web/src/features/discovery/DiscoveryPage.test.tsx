@@ -211,6 +211,26 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
       expect(screen.getByTestId("ai-quota-note")).not.toHaveTextContent("by meaning");
     });
 
+    it("the red note follows the answer's tier: none on a cached AI answer or on «no matching books», even at 0 left", async () => {
+      const cachedAi: DiscoveryResponse = { ...ai, tier: 1, cached: true, aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", cachedAi, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      expect(await screen.findByTestId("ai-quota-note")).toBeInTheDocument(); // before any search: warns up front
+      await ask();
+      await screen.findByTestId("results-title");
+      expect(screen.queryByTestId("ai-quota-note")).toBeNull();
+      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("0 of 50 AI-assisted searches left today");
+    });
+
+    it("no red note on «no matching books» at 0 left", async () => {
+      const none: DiscoveryResponse = { mode: "AI", items: [], note: "No matching books in the catalog.", tier: 1, aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", none, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      await ask();
+      await screen.findByTestId("discovery-empty");
+      expect(screen.queryByTestId("ai-quota-note")).toBeNull();
+    });
+
     it("tier 3: the library budget is used up → a calm (info) note with the results", async () => {
       const tier3: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "BUDGET_EXHAUSTED", note: "Today's AI budget for the library is used up, so results are matched by keywords only.", aiSearches: { left: 12, limit: 50 } };
       stubApi("LIBRARIAN", tier3, { left: 12, limit: 50 });

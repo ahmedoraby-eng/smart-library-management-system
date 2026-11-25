@@ -158,7 +158,7 @@ export function DiscoveryPage() {
               </Button>
             </div>
           </div>
-          <QuotaLine quota={quota.data} keywordsOnly={discover.data?.retrieval === "lexical"} />
+          <QuotaLine quota={quota.data} last={discover.isPending ? undefined : discover.data} />
         </form>
       </Card>
 
@@ -180,9 +180,12 @@ export function DiscoveryPage() {
 }
 
 /** SLM-16 cost tiers, visible: what's left today, and a red note once the user's AI-assisted searches are used up. */
-function QuotaLine({ quota, keywordsOnly }: { quota: { left: number; limit: number } | undefined; keywordsOnly: boolean }) {
+function QuotaLine({ quota, last }: { quota: { left: number; limit: number } | undefined; last: DiscoveryResponse | undefined }) {
   if (!quota) return null;
-  const out = quota.left <= 0;
+  // The note describes the answer on screen (its tier), not just the counter: a cached AI-ranked answer or
+  // "no matching books" gets no note even at 0 left. Before the first search, 0 left warns up front.
+  const out = last ? last.fallbackReason === "QUOTA_EXCEEDED" : quota.left <= 0;
+  const keywordsOnly = last?.retrieval === "lexical";
   return (
     <div className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
       {out ? (
