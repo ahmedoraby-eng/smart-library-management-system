@@ -117,7 +117,7 @@ The API tests run against a real PostgreSQL 16, with no database mocks. The cove
 
 ### Quality gates (CI)
 
-Every pull request runs:
+These gates arrive with PR #29; until it merges, CI runs the hygiene job, one `test` job (typecheck, dependency rules, API tests, build) and the migrations gate. Once it merges, every pull request runs:
 
 - **hygiene**: a secret scan (gitleaks) and a check that no employer or client name is in the repository.
 - **ci / Build and test**: `npm ci`, `npm run check`, `npm run test:coverage` (the API tests run on a PostgreSQL 16 container with pgvector, so the HNSW path is tested too), and an audit of production dependencies.
