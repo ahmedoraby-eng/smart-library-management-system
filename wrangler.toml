@@ -99,9 +99,9 @@ DEMO_LIBRARIAN_EMAIL = "librarian@smartlibrary.example"
 DEMO_ADMIN_EMAIL = "admin@smartlibrary.example"
 # FILL: the Google account(s) that become Admin on first Google sign-in (comma-separated).
 BOOTSTRAP_ADMIN_EMAILS = ""
-# FILL when the Google OAuth client exists (public value). Leave empty and Google sign-in stays off
-# (the button is hidden). GOOGLE_CLIENT_SECRET must then be set as a secret too, or left unset.
-GOOGLE_CLIENT_ID = ""
+# The production Google OAuth client (SLM-8; public value, not a secret). Config needs it together with the
+# GOOGLE_CLIENT_SECRET secret: set that secret before this deploys. Empty = Google sign-in off (button hidden).
+GOOGLE_CLIENT_ID = "176114443031-pubkcubbk2hhkmjdavq4bj7odo37lido.apps.googleusercontent.com"
 # Secrets, never here (wrangler secret put <NAME> --env production):
 #   SESSION_SECRET (32+ random chars), DEMO_LIBRARIAN_PASSWORD, DEMO_ADMIN_PASSWORD (12+ each),
 #   GOOGLE_CLIENT_SECRET (only with GOOGLE_CLIENT_ID).
