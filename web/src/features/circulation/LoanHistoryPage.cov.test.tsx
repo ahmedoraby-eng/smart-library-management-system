@@ -107,7 +107,7 @@ describe("LoanHistoryPage filters", () => {
     await user.type(screen.getByTestId("loan-search"), "clean");
     await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "clean", page: "1" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes("q=clean"))).toBe(true));
-    expect(await screen.findByTestId("result-line")).toHaveTextContent("45 loans match these filters");
+    await waitFor(() => expect(screen.getByTestId("result-line")).toHaveTextContent("45 loans match these filters"));
   });
 
   it("emptying the search box removes q from the URL", async () => {
