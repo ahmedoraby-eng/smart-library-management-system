@@ -158,6 +158,8 @@ for m in marks {
   at = at + length
 }
 
+// No clip at all: an empty audio track would make the export fail.
+if aOut.segments.isEmpty { comp.removeTrack(aOut) }
 let out = URL(fileURLWithPath: pos[3])
 try? FileManager.default.removeItem(at: out)
 guard let export = AVAssetExportSession(asset: comp, presetName: AVAssetExportPresetHighestQuality) else {
