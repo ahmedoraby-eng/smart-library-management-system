@@ -1,9 +1,9 @@
 import type { DashboardSummary } from "@slm/contracts";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   AvailabilityBadge, Badge, BookIcon, Button, buttonClasses, Card, CardHeader, EmptyState, HistoryIcon, InlineAlert, PlusIcon,
-  Skeleton, SwapIcon, Table, Td, Th, Thead, Tr, UsersIcon,
+  Skeleton, SwapIcon, Table, Td, Th, Thead, Tr, UsersIcon, useToast,
 } from "../../components/ui";
 import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
@@ -11,7 +11,9 @@ import { formatDate, formatDay } from "../../lib/format";
 import { useCan, useMe } from "../auth/session";
 import { BookCover } from "../books/BookCover";
 import { LoanStatusBadge } from "../circulation/LoanStatusBadge";
-import { useAiUsageToday, useDashboard } from "./api";
+import { useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "../../lib/apiClient";
+import { reindexBatch, useAiUsageToday, useDashboard } from "./api";
 import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } from "./model";
 
 /** Card-header links: brand-700, semibold. */
@@ -95,9 +97,76 @@ function AiUsageLine({ enabled }: { enabled: boolean }) {
   const u = usage.data;
   const n = (x: number) => Math.round(x).toLocaleString("en-GB");
   return (
-    <p className="mt-0.5 text-sm text-neutral-500 tabular-nums" data-testid="ai-usage-today">
-      AI usage today: {n(u.neurons)} / {n(u.neuronCap)} Neurons · {u.searches} AI {u.searches === 1 ? "search" : "searches"}
-    </p>
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-500">
+      <p className="tabular-nums" data-testid="ai-usage-today">
+        AI usage today: {n(u.neurons)} / {n(u.neuronCap)} Neurons · {u.searches} AI-assisted {u.searches === 1 ? "search" : "searches"}
+      </p>
+      <RebuildIndex />
+    </div>
+  );
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Admin: rebuild the search-by-meaning index now (after a deploy, or a model change). Runs the reindex
+ * batches (8 books each, to stay inside the Worker's CPU limit) until nothing is left, and waits out the
+ * endpoint's 2-a-minute limit instead of failing. Only missing or changed books cost AI; the rest is copied.
+ */
+function RebuildIndex() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
+
+  const run = async () => {
+    setRunning(true);
+    setStatus("Rebuilding the search index…");
+    try {
+      for (let round = 0; round < 50 && alive.current; round++) {
+        let batch;
+        try {
+          batch = await reindexBatch();
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 429) {
+            for (let s = e.retryAfter ?? 60; s > 0 && alive.current; s--) {
+              setStatus(`Waiting for the rate limit… ${s}s`);
+              await sleep(1000);
+            }
+            continue;
+          }
+          throw e;
+        }
+        if (batch.result === "disabled") {
+          toast.error("Search by meaning isn't set up on this server.");
+          return;
+        }
+        if (batch.remaining <= 0) {
+          toast.success("The search index is up to date.");
+          void queryClient.invalidateQueries({ queryKey: ["ai-usage-today"] });
+          return;
+        }
+        setStatus(`Rebuilding the search index… ${batch.remaining} ${batch.remaining === 1 ? "book" : "books"} left`);
+      }
+    } catch {
+      toast.error("Couldn't rebuild the search index. Try again.");
+    } finally {
+      if (alive.current) {
+        setRunning(false);
+        setStatus(null);
+      }
+    }
+  };
+
+  return (
+    <>
+      <Button size="sm" variant="ghost" onClick={() => void run()} loading={running} data-testid="rebuild-index">
+        Rebuild search index
+      </Button>
+      {status && <span role="status" aria-live="polite" className="tabular-nums" data-testid="rebuild-index-status">{status}</span>}
+    </>
   );
 }
 

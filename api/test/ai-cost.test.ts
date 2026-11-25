@@ -312,7 +312,7 @@ describe("SLM-16 config", () => {
   it("the cost numbers come from config", () => {
     const c = loadConfig({ ...testEnv, AI_DAILY_NEURON_CAP: "1234", AI_USER_DAILY_SEARCHES: "7", INDEX_BATCH_BOOKS: "9" });
     expect(c).toMatchObject({ aiDailyNeuronCap: 1234, aiUserDailySearches: 7, indexBatchBooks: 9 });
-    expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 16 });
+    expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 8 });
   });
 });
 
@@ -325,6 +325,12 @@ describe("SLM-16 demo queries for the assessors (full seed; foundBy as documente
     await pool.query("DELETE FROM books");
     await pool.query(await readFile(fileURLToPath(new URL("../../seed/demo.sql", import.meta.url).href), "utf8"));
     await index();
+  });
+
+  it("every seed book has a real description that chunks into 2–3 windows (so the chunking is visible)", async () => {
+    const { rows } = await pool.query("SELECT book_id, count(*)::int AS n FROM book_chunks GROUP BY book_id");
+    expect(rows).toHaveLength(64);
+    expect(rows.every((r) => r.n >= 2 && r.n <= 3)).toBe(true);
   });
 
   it("keyword only: an author typo «Daniel Kahnemann» finds Kahneman's book through trigram similarity", async () => {

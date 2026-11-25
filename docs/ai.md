@@ -61,7 +61,7 @@ Order of checks: permission, then a rate limit of 10 requests per minute per sta
 ### 2. Vector (semantic): `book_chunks` + Workers AI embeddings
 
 - **Model:** `@cf/baai/bge-base-en-v1.5` (768 dimensions, `EMBEDDING_MODEL`; `off` turns vector search off). It's called through the `AI` binding: `env.AI.run(model, { text: [...] })`. Vectors are L2-normalised. Search queries get bge's retrieval instruction prefix.
-- **Chunking** (`domain/Chunking.ts`): the source text is title, author, category and description. The description is split into sentences and packed into windows of at most 120 words, with one sentence of overlap. Every chunk starts with a `Title — Author (Category)` header, so it stands on its own. Today's descriptions are short, so most books make one chunk; the windowing is there for long text.
+- **Chunking** (`domain/Chunking.ts`): the source text is title, author, category and description. The description is split into sentences and packed into windows of at most 120 words, with one sentence of overlap. Every chunk starts with a `Title — Author (Category)` header, so it stands on its own. Every seed book has a 180–220-word description in our own words, faithful to what the book is about (not a publisher's blurb), so each book makes 2–3 chunks and the windowing is visible.
 - **Index** (migration `0004_book_chunks.sql`): one row per chunk (unique `book_id, chunk_index, model`) with `content`, `source_hash`, `model` and `embedding real[]`. Where the server has pgvector (Neon), the migration also adds `embedding_v vector(768)` and an **HNSW index with cosine distance** (`vector_cosine_ops`), and the query uses `<=>`. Without pgvector (CI, the embedded Postgres used for local runs and e2e), the same port scans `embedding` in the app. That's fine for a demo-size catalogue. The path is logged once per isolate and reported by `/api/health?deep=1` (`vector: "hnsw" | "brute-force" | "off"`).
 - **Query:** embed the request, take the nearest chunks, keep each live book's best chunk, drop anything below the minimum similarity (`EMBEDDING_MIN_SIMILARITY`, default 0.72: bge-base cosines sit high, and unrelated texts often score 0.6–0.7), top 20. Every request logs the top similarity (a number only), so the value can be checked against live queries and changed in config. `availableOnly` applies here too.
 - `book_chunks` belongs to the discovery module. It's a derived index that can be rebuilt at any time, with no foreign key to `books`: search joins live books, and the sync removes orphans.
@@ -82,7 +82,8 @@ Each candidate carries its id, title, author, category, year, a description cut 
 |---|---|
 | A book is created, edited or archived | Inline in the same request, 2 s budget. A failure never fails the save; the next sync catches up |
 | Demo reset (Admin button and nightly cron) | `syncAll` after the seed, since the seed gives books new ids |
-| Backfill (after the migration, or a model change) | `POST /api/admin/discovery/reindex` (Admin, 2 a minute), which returns the counts |
+| Backfill (after the migration, or a model change) | **Admin dashboard → «Rebuild search index»**: it calls `POST /api/admin/discovery/reindex` batch after batch until nothing is left, shows progress, and waits out the 2-a-minute limit |
+| Automatically, hourly (minute 5) | A light cron trigger runs one batch when something is missing or stale (post-deploy backfill, failed inline syncs). When everything is up to date it's two cheap queries and no AI call. Hourly, not more often, so Neon can sleep (free compute hours), and at minute 5 so it never runs with the 00:00 reset |
 | Local runs and e2e (`AI_FAKE`) | `demo:local` and `npm run e2e` index the seed with the deterministic fake embedder |
 
 Embedding happens inside the Worker through its binding, so no Cloudflare token is needed in scripts or the repository.
@@ -133,7 +134,7 @@ The model's answer is untrusted. `RecommendationValidator` is the guard:
 | `INVALID_OUTPUT` | The answer has no usable shape |
 | `NO_VALID_ITEMS` | The model returned ids, but every one was dropped |
 | `SINGLE_CANDIDATE` | Only one book matched: the model is skipped on purpose (shown as an info note, not a warning) |
-| `QUOTA_EXCEEDED` | This staff user has used today's AI searches (see Cost controls) |
+| `QUOTA_EXCEEDED` | This staff user has used today's AI-assisted searches (see Cost controls) |
 | `BUDGET_EXHAUSTED` | The library's daily Neuron cap is reached (see Cost controls) |
 
 If retrieval finds no candidates, the model is not called. The response is an empty list with the note "No matching books in the catalog."
@@ -175,12 +176,12 @@ AI spend is bounded by design. Every step below costs nothing when it isn't need
 | Tier | When | Retrieval | Ranking | Cost |
 |---|---|---|---|---|
 | **1** | normal | hybrid (full-text + vector, RRF) | AI model, with reasons | ≈ 16 Neurons (≤ 26) + ≈ 0.1 |
-| **2** | the user's 50 AI searches today are used (`QUOTA_EXCEEDED`) | hybrid | RRF order, no model, no reasons | ≈ 0.1 Neuron (0 on a cached query) |
+| **2** | the user's 50 AI-assisted searches today are used (`QUOTA_EXCEEDED`) | hybrid | RRF order, no model, no reasons | ≈ 0.1 Neuron (0 on a cached query) |
 | **3** | the library's 8,000 Neurons today are used (`BUDGET_EXHAUSTED`); embeddings stop too | full-text only | deterministic | 0 |
 
-The response carries `tier` and `aiSearches: { left, limit }`. `GET /api/ai/quota` returns the same count for the page load. The discovery page shows "N of 50 AI searches left today" next to the search, a red note under the search box at 0, and a calm info note in tier 3.
+The response carries `tier` and `aiSearches: { left, limit }`. `GET /api/ai/quota` returns the same count for the page load. The discovery page shows "N of 50 AI-assisted searches left today" next to the search, a red note under the search box at 0, and a calm info note in tier 3.
 
-If embeddings fail (an error, or more than 1.5 s) while the user still has AI searches, retrieval drops to full-text only and the model still ranks. A failed embedding isn't a cost signal, so the reasons are kept. The response then says `retrieval: "lexical"`.
+If embeddings fail (an error, or more than 1.5 s) while the user still has AI-assisted searches, retrieval drops to full-text only and the model still ranks. A failed embedding isn't a cost signal, so the reasons are kept. The response then says `retrieval: "lexical"`.
 
 | Control | What it does |
 |---|---|
@@ -190,11 +191,11 @@ If embeddings fail (an error, or more than 1.5 s) while the user still has AI se
 | Query embedding cache | One embedding call per new normalised query. The vector is cached for 24 h (key: model + normalised text). |
 | Result cache | The ranked ids and reasons are reused for **15 minutes** for the same normalised query, `availableOnly`, limit and catalogue version. The books are always re-read from the database, and a missing book forces a fresh run. **Never cached when `memberId` is set.** Only AI rankings are cached. |
 | Skip the model | At 0 candidates, and at exactly 1 (`SINGLE_CANDIDATE`). With 2 or more the model always runs: the reasons are the product. |
-| Per-user quota | **50 AI searches per staff user per UTC day** (`AI_USER_DAILY_SEARCHES`), counted with an atomic conditional upsert. Cache hits and fallbacks don't count. Past it: `QUOTA_EXCEEDED`. |
+| Per-user quota | **50 AI-assisted searches per staff user per UTC day** (`AI_USER_DAILY_SEARCHES`), counted with an atomic conditional upsert. Cache hits and fallbacks don't count. Past it: `QUOTA_EXCEEDED`. |
 | Global cap | **8,000 Neurons per UTC day** (`AI_DAILY_NEURON_CAP`, 80 % of the free 10,000). Past it: `BUDGET_EXHAUSTED` for everyone, and query embeddings stop too (full-text only). A burst can overshoot by a few calls, which the 20 % headroom absorbs. |
 | `max_tokens` 600 | Caps the output of a ranking call. |
 | Reindex | Admin only, 2 a minute, embeds only missing or stale chunks. |
-| CPU (Workers Free: 10 ms per call) | Reindex, the demo reset and the cron embed at most `INDEX_BATCH_BOOKS` books per call (default 16). They're idempotent and resumable: `POST /api/admin/discovery/reindex?limit=N` answers `partial` with `remaining`, and you call it again. Copies of unchanged text are plain SQL. With pgvector, only the `vector` column is written (no second `real[]` copy). |
+| CPU (Workers Free: 10 ms per call) | Reindex, the demo reset and the cron embed at most `INDEX_BATCH_BOOKS` books per call (default 8; each book is 2–3 chunks). They're idempotent and resumable: `POST /api/admin/discovery/reindex?limit=N` answers `partial` with `remaining`, and you call it again. Copies of unchanged text are plain SQL. With pgvector, only the `vector` column is written (no second `real[]` copy). |
 | Dimensions | The index is `vector(768)`; `loadConfig` refuses an `EMBEDDING_MODEL` of another known size. |
 
 **Where it lives:** Postgres, in `ai_usage(day, scope)` and `ai_cache(key, value, expires_at)` (migration `0005_ai_cost.sql`). Days are UTC. The nightly cron purges expired cache rows. The Workers Cache API isn't used because it's a no-op on `*.workers.dev` hosts. The AI Gateway isn't used either: the caches and caps above already cover it, inside our own code and tests.
@@ -210,9 +211,9 @@ The token `usage` the model returns is used when present; otherwise text length 
 | One AI search | ≈ 16 typical, ≤ 26 at worst, plus ≈ 0.1 for the query embedding (0 on a cache hit) |
 | One book saved | ≈ 1 (its chunk) |
 | Full reindex of the seed | ≈ 70 the first time; 0 after a reset |
-| Daily ceiling | 8,000 ≈ 300+ AI searches at worst |
+| Daily ceiling | 8,000 ≈ 300+ AI-assisted searches at worst |
 
-**Visibility.** Every discovery log line has `neurons` (embedding + ranking), `cacheHit`, `neuronsToday`, the retrieval mode and the fallback reason, never the request text. The retrieval log adds `embeddingCacheHit` and `topSimilarity`. Admins see one line on the dashboard ("AI usage today: N / 8,000 Neurons · M AI searches") from `GET /api/admin/discovery/usage`.
+**Visibility.** Every discovery log line has `neurons` (embedding + ranking), `cacheHit`, `neuronsToday`, the retrieval mode and the fallback reason, never the request text. The retrieval log adds `embeddingCacheHit` and `topSimilarity`. Admins see one line on the dashboard ("AI usage today: N / 8,000 Neurons · M AI-assisted searches") from `GET /api/admin/discovery/usage`.
 
 ## Demo queries for the assessors
 

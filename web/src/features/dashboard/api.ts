@@ -13,3 +13,14 @@ export function useDashboard() {
 export function useAiUsageToday(enabled: boolean) {
   return useQuery({ queryKey: ["ai-usage-today"], queryFn: () => api<AiUsageToday>("/admin/discovery/usage"), enabled, staleTime: 60_000 });
 }
+
+/** POST /api/admin/discovery/reindex answer: one batch of the discovery index (SLM-16). */
+export interface ReindexBatch {
+  result: "done" | "partial" | "disabled";
+  embeddedBooks: number;
+  reusedBooks: number;
+  upToDate: number;
+  remaining: number;
+}
+
+export const reindexBatch = () => api<ReindexBatch>("/admin/discovery/reindex", { method: "POST", body: {} });

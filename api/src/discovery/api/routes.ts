@@ -13,7 +13,7 @@ export function discoveryRoutes(limiter: (c: Context<AppEnv>) => Limiter) {
     const input = parseOr400(DiscoveryRequestSchema, await c.req.json().catch(() => null));
     return c.json(await c.var.container.discovery.discover(input, { userId: c.var.principal.id }));
   });
-  // SLM-16: the counter next to the search box ("49 of 50 AI searches left today"). Read-only, no limiter.
+  // SLM-16: the counter next to the search box ("49 of 50 AI-assisted searches left today"). Read-only, no limiter.
   r.get("/quota", requirePermission("AI_DISCOVER"), async (c) => c.json(await c.var.container.discovery.quota(c.var.principal.id)));
   return r;
 }

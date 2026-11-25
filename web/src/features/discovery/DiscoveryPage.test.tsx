@@ -181,18 +181,18 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
       expect(sent(f)).toHaveLength(0);
     });
 
-    it("shows the AI searches left today, and updates it from each answer", async () => {
+    it("shows the AI-assisted searches left today, and updates it from each answer", async () => {
       stubApi("LIBRARIAN", { ...ai, tier: 1, aiSearches: { left: 41, limit: 50 } }, { left: 42, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
-      expect(await screen.findByTestId("ai-searches-left")).toHaveTextContent("42 of 50 AI searches left today");
+      expect(await screen.findByTestId("ai-searches-left")).toHaveTextContent("42 of 50 AI-assisted searches left today");
       await ask();
       await screen.findByTestId("results-title");
-      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("41 of 50 AI searches left today");
+      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("41 of 50 AI-assisted searches left today");
       expect(screen.queryByTestId("ai-quota-note")).toBeNull();
     });
 
     it("tier 2: none left → a red note under the search box, results still shown, no extra warning", async () => {
-      const tier2: DiscoveryResponse = { ...fallback, tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches.", aiSearches: { left: 0, limit: 50 } };
+      const tier2: DiscoveryResponse = { ...fallback, tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI-assisted searches.", aiSearches: { left: 0, limit: 50 } };
       stubApi("LIBRARIAN", tier2, { left: 0, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
       expect(await screen.findByTestId("ai-quota-note")).toHaveTextContent("Results are still matched by meaning, without AI ranking or reasons.");
@@ -202,13 +202,33 @@ describe("SLM-9 discovery page (ux.md §5)", () => {
     });
 
     it("quota used up with keyword-only results: the server's keyword note is shown too", async () => {
-      const kw: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI searches, and search by meaning is unavailable right now, so results are matched by keywords only.", aiSearches: { left: 0, limit: 50 } };
+      const kw: DiscoveryResponse = { ...fallback, tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: "You've used today's 50 AI-assisted searches, and search by meaning is unavailable right now, so results are matched by keywords only.", aiSearches: { left: 0, limit: 50 } };
       stubApi("LIBRARIAN", kw, { left: 0, limit: 50 });
       await renderWithProviders(<DiscoveryPage />);
       await ask();
       expect(await screen.findByTestId("discovery-fallback-notice")).toHaveTextContent("matched by keywords only");
       expect(screen.getByTestId("ai-quota-note")).toHaveTextContent("matched by keywords only right now");
       expect(screen.getByTestId("ai-quota-note")).not.toHaveTextContent("by meaning");
+    });
+
+    it("the red note follows the answer's tier: none on a cached AI answer or on «no matching books», even at 0 left", async () => {
+      const cachedAi: DiscoveryResponse = { ...ai, tier: 1, cached: true, aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", cachedAi, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      expect(await screen.findByTestId("ai-quota-note")).toBeInTheDocument(); // before any search: warns up front
+      await ask();
+      await screen.findByTestId("results-title");
+      expect(screen.queryByTestId("ai-quota-note")).toBeNull();
+      expect(screen.getByTestId("ai-searches-left")).toHaveTextContent("0 of 50 AI-assisted searches left today");
+    });
+
+    it("no red note on «no matching books» at 0 left", async () => {
+      const none: DiscoveryResponse = { mode: "AI", items: [], note: "No matching books in the catalog.", tier: 1, aiSearches: { left: 0, limit: 50 } };
+      stubApi("LIBRARIAN", none, { left: 0, limit: 50 });
+      await renderWithProviders(<DiscoveryPage />);
+      await ask();
+      await screen.findByTestId("discovery-empty");
+      expect(screen.queryByTestId("ai-quota-note")).toBeNull();
     });
 
     it("tier 3: the library budget is used up → a calm (info) note with the results", async () => {

@@ -2,7 +2,7 @@ import type { AiQuota, DiscoveryRequest, DiscoveryResponse } from "@slm/contract
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/apiClient";
 
-/** SLM-16: the caller's AI searches left today ("49 of 50 AI searches left today"). */
+/** SLM-16: the caller's AI-assisted searches left today ("49 of 50 AI-assisted searches left today"). */
 export const aiQuotaKey = ["ai-quota"] as const;
 
 export function useAiQuota() {
