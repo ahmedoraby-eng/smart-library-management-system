@@ -8,7 +8,16 @@ import { Combobox } from "./Combobox";
 type Opt = { id: string; name: string; blocked?: boolean };
 const many: Opt[] = Array.from({ length: 12 }, (_, i) => ({ id: `o${i}`, name: `Book ${i}` }));
 
-function Harness({ options, initial = "", onSelect = () => {}, loading = false, hint, emptyText, testId = "bk", reason }: {
+function Harness({
+  options,
+  initial = "",
+  onSelect = () => {},
+  loading = false,
+  hint,
+  emptyText,
+  testId = "bk",
+  reason,
+}: {
   options: Opt[] | undefined;
   initial?: string;
   onSelect?: (o: Opt) => void;
@@ -21,9 +30,24 @@ function Harness({ options, initial = "", onSelect = () => {}, loading = false, 
   const [text, setText] = useState(initial);
   return (
     <Combobox<Opt>
-      label="Book" placeholder="Search" value={text} onValueChange={setText} options={options} loading={loading}
-      getKey={(o) => o.id} renderOption={(o, s) => <span>{o.name}{s.disabledReason ? ` (${s.disabledReason})` : ""}</span>}
-      disabledReason={reason} onSelect={onSelect} hint={hint} emptyText={emptyText} testId={testId}
+      label="Book"
+      placeholder="Search"
+      value={text}
+      onValueChange={setText}
+      options={options}
+      loading={loading}
+      getKey={(o) => o.id}
+      renderOption={(o, s) => (
+        <span>
+          {o.name}
+          {s.disabledReason ? ` (${s.disabledReason})` : ""}
+        </span>
+      )}
+      disabledReason={reason}
+      onSelect={onSelect}
+      hint={hint}
+      emptyText={emptyText}
+      testId={testId}
     />
   );
 }
@@ -132,7 +156,14 @@ describe("Combobox", () => {
   it("an option the data forbids is listed with its reason, cannot be picked by click or Enter", async () => {
     const onSelect = vi.fn();
     const opts: Opt[] = [{ id: "a", name: "Clean Code", blocked: true }];
-    render(<Harness options={opts} initial="c" onSelect={onSelect} reason={(o) => (o.blocked ? "Already borrowed" : null)} />);
+    render(
+      <Harness
+        options={opts}
+        initial="c"
+        onSelect={onSelect}
+        reason={(o) => (o.blocked ? "Already borrowed" : null)}
+      />,
+    );
     await userEvent.click(screen.getByLabelText("Book"));
     const opt = screen.getByRole("option");
     expect(opt).toHaveAttribute("aria-disabled", "true");
@@ -176,13 +207,33 @@ describe("Combobox", () => {
   it("forwards the input ref and names test ids from testId", async () => {
     const ref = createRef<HTMLInputElement>();
     render(
-      <Combobox<Opt> label="Member" value="" onValueChange={() => {}} options={undefined} getKey={(o) => o.id} renderOption={(o) => o.name} onSelect={() => {}} inputRef={ref} testId="mem" />,
+      <Combobox<Opt>
+        label="Member"
+        value=""
+        onValueChange={() => {}}
+        options={undefined}
+        getKey={(o) => o.id}
+        renderOption={(o) => o.name}
+        onSelect={() => {}}
+        inputRef={ref}
+        testId="mem"
+      />,
     );
     expect(ref.current).toBe(screen.getByTestId("mem-input"));
   });
 
   it("omits test ids when none is given", () => {
-    render(<Combobox<Opt> label="Member" value="" onValueChange={() => {}} options={undefined} getKey={(o) => o.id} renderOption={(o) => o.name} onSelect={() => {}} />);
+    render(
+      <Combobox<Opt>
+        label="Member"
+        value=""
+        onValueChange={() => {}}
+        options={undefined}
+        getKey={(o) => o.id}
+        renderOption={(o) => o.name}
+        onSelect={() => {}}
+      />,
+    );
     expect(screen.getByRole("combobox")).not.toHaveAttribute("data-testid");
   });
 });

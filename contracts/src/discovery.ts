@@ -34,12 +34,14 @@ export type FoundBy = z.infer<typeof FoundBy>;
 
 export const DiscoveryResponseSchema = z.object({
   mode: DiscoveryMode,
-  items: z.array(z.object({
-    book: DiscoveryBookSchema,
-    reason: z.string(), // plain text, at most 300 characters
-    matchedTerms: z.array(z.string()),
-    foundBy: FoundBy.optional(),
-  })),
+  items: z.array(
+    z.object({
+      book: DiscoveryBookSchema,
+      reason: z.string(), // plain text, at most 300 characters
+      matchedTerms: z.array(z.string()),
+      foundBy: FoundBy.optional(),
+    }),
+  ),
   /** SLM-16: "hybrid" = full-text + vector fused; "lexical" = full-text only (embeddings off or failed). */
   retrieval: z.enum(["hybrid", "lexical"]).optional(),
   /** Why the model wasn't used (FALLBACK only), e.g. SINGLE_CANDIDATE, QUOTA_EXCEEDED, BUDGET_EXHAUSTED. */

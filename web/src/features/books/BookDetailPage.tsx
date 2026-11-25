@@ -2,8 +2,20 @@ import type { BookDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ActionMenu, ArrowLeftIcon, AvailabilityBadge, Badge, Button, buttonClasses, Card, CardHeader, CardBody, EditIcon, EmptyState,
-  InlineAlert, Skeleton, TrashIcon,
+  ActionMenu,
+  ArrowLeftIcon,
+  AvailabilityBadge,
+  Badge,
+  Button,
+  buttonClasses,
+  Card,
+  CardHeader,
+  CardBody,
+  EditIcon,
+  EmptyState,
+  InlineAlert,
+  Skeleton,
+  TrashIcon,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { useCan } from "../auth/session";
@@ -17,7 +29,11 @@ const route = getRouteApi("/app/books/$bookId");
 
 export function BackToBooks() {
   return (
-    <Link to="/books" search={{ page: 1, size: 20 }} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900">
+    <Link
+      to="/books"
+      search={{ page: 1, size: 20 }}
+      className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900"
+    >
       <ArrowLeftIcon size={16} /> Books
     </Link>
   );
@@ -49,11 +65,23 @@ export function BookLoadState({ query }: { query: ReturnType<typeof useBook> }) 
           <EmptyState
             testId="book-not-found"
             title="This book doesn't exist or was deleted."
-            action={<Link to="/books" search={{ page: 1, size: 20 }} className={buttonClasses()}>Back to Books</Link>}
+            action={
+              <Link to="/books" search={{ page: 1, size: 20 }} className={buttonClasses()}>
+                Back to Books
+              </Link>
+            }
           />
         </Card>
       ) : (
-        <InlineAlert variant="danger" testId="book-error" action={<Button size="sm" onClick={() => void query.refetch()}>Try again</Button>}>
+        <InlineAlert
+          variant="danger"
+          testId="book-error"
+          action={
+            <Button size="sm" onClick={() => void query.refetch()}>
+              Try again
+            </Button>
+          }
+        >
           Couldn't load this book. Check your connection and try again.
         </InlineAlert>
       )}
@@ -71,7 +99,9 @@ export function BookDetailPage() {
 function BookDetail({ book }: { book: BookDto }) {
   const can = useCan();
   const [deleting, setDeleting] = useState(false);
-  const meta = [book.category, book.publisher, book.publicationYear, book.isbn ? `ISBN ${book.isbn}` : null].filter(Boolean);
+  const meta = [book.category, book.publisher, book.publicationYear, book.isbn ? `ISBN ${book.isbn}` : null].filter(
+    Boolean,
+  );
   const writable = !book.archived;
 
   return (
@@ -102,7 +132,12 @@ function BookDetail({ book }: { book: BookDto }) {
           <div className="flex items-center gap-2">
             {can("LOAN_PROCESS") &&
               (book.availableCopies > 0 ? (
-                <Link to="/circulation/borrow" search={{ book: book.id }} className={buttonClasses({ variant: "primary" })} data-testid="detail-borrow">
+                <Link
+                  to="/circulation/borrow"
+                  search={{ book: book.id }}
+                  className={buttonClasses({ variant: "primary" })}
+                  data-testid="detail-borrow"
+                >
                   Borrow
                 </Link>
               ) : (
@@ -116,7 +151,12 @@ function BookDetail({ book }: { book: BookDto }) {
                 </span>
               ))}
             {can("BOOK_WRITE") && (
-              <Link to="/books/$bookId/edit" params={{ bookId: book.id }} className={buttonClasses()} data-testid="edit-book">
+              <Link
+                to="/books/$bookId/edit"
+                params={{ bookId: book.id }}
+                className={buttonClasses()}
+                data-testid="edit-book"
+              >
                 <EditIcon size={16} /> Edit
               </Link>
             )}
@@ -124,7 +164,15 @@ function BookDetail({ book }: { book: BookDto }) {
               <ActionMenu
                 label="More actions"
                 testId="detail-actions"
-                items={[{ key: "delete", label: "Delete", icon: <TrashIcon size={16} />, danger: true, onSelect: () => setDeleting(true) }]}
+                items={[
+                  {
+                    key: "delete",
+                    label: "Delete",
+                    icon: <TrashIcon size={16} />,
+                    danger: true,
+                    onSelect: () => setDeleting(true),
+                  },
+                ]}
               />
             )}
           </div>
@@ -141,7 +189,11 @@ function BookDetail({ book }: { book: BookDto }) {
         <Card>
           <CardHeader title="Description" />
           <CardBody>
-            {book.description ? <p className="whitespace-pre-line text-neutral-800">{book.description}</p> : <p className="text-neutral-600">No description</p>}
+            {book.description ? (
+              <p className="whitespace-pre-line text-neutral-800">{book.description}</p>
+            ) : (
+              <p className="text-neutral-600">No description</p>
+            )}
           </CardBody>
           {can("LOAN_READ") && <BookLoans bookId={book.id} activeCount={book.activeLoans} />}
         </Card>
@@ -162,7 +214,9 @@ function BookDetail({ book }: { book: BookDto }) {
         </Card>
       </div>
 
-      {deleting && <DeleteBookDialog book={book} onClose={() => setDeleting(false)} onDone={() => setDeleting(false)} />}
+      {deleting && (
+        <DeleteBookDialog book={book} onClose={() => setDeleting(false)} onDone={() => setDeleting(false)} />
+      )}
     </>
   );
 }

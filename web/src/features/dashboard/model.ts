@@ -1,7 +1,9 @@
 import type { DashboardSummary } from "@slm/contracts";
 
 /** Segments of the stacked availability bar (ux.md §3.1): available / on loan / overdue, in copies. */
-export function availabilitySegments(k: Pick<DashboardSummary["kpis"], "totalCopies" | "availableCopies" | "borrowedCopies" | "overdueLoans">) {
+export function availabilitySegments(
+  k: Pick<DashboardSummary["kpis"], "totalCopies" | "availableCopies" | "borrowedCopies" | "overdueLoans">,
+) {
   const overdue = Math.min(k.overdueLoans, k.borrowedCopies);
   return { available: k.availableCopies, onLoan: k.borrowedCopies - overdue, overdue, total: k.totalCopies };
 }

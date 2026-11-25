@@ -34,9 +34,14 @@ export class WorkersAiEmbedder implements Embedder {
       const call = this.ai.run(this.model, { text: batch }) as Promise<{ data?: unknown }>;
       const result = signal ? await Promise.race([call, aborted(signal)]) : await call;
       const data = result?.data;
-      if (!Array.isArray(data) || data.length !== batch.length) throw new Error("Embedding response has the wrong shape");
+      if (!Array.isArray(data) || data.length !== batch.length)
+        throw new Error("Embedding response has the wrong shape");
       for (const v of data) {
-        if (!Array.isArray(v) || v.length !== this.dimensions || !v.every((x) => typeof x === "number" && Number.isFinite(x))) {
+        if (
+          !Array.isArray(v) ||
+          v.length !== this.dimensions ||
+          !v.every((x) => typeof x === "number" && Number.isFinite(x))
+        ) {
           throw new Error("Embedding vector has the wrong size");
         }
         out.push(normalise(v as number[]));

@@ -12,14 +12,27 @@ const MEMBER_ID = "1c7a8d9e-2e3b-4c4d-8e5f-6a7b8c9d0e1f";
 const DAY = 86_400_000;
 
 const loan = (id: string, patch: Partial<LoanDto> = {}): LoanDto => ({
-  id, status: "ACTIVE",
+  id,
+  status: "ACTIVE",
   book: { id: BOOK_ID, title: "Clean Code", author: "Robert C. Martin" },
   member: { id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad" },
-  processedBy: { id: "s1", name: "Layla Librarian" }, returnedBy: null,
-  borrowedAt: "2026-11-01T10:00:00.000Z", dueAt: new Date(Date.now() + 5 * DAY).toISOString(), returnedAt: null, ...patch,
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: "2026-11-01T10:00:00.000Z",
+  dueAt: new Date(Date.now() + 5 * DAY).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
 const problem = (status: number, code: string, detail?: string, context?: Record<string, unknown>) => ({
-  status, body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}), ...(context ? { context } : {}) },
+  status,
+  body: {
+    type: "about:blank",
+    title: code,
+    status,
+    code,
+    ...(detail ? { detail } : {}),
+    ...(context ? { context } : {}),
+  },
 });
 
 type Req = { method: string; url: URL; body: unknown };
@@ -43,7 +56,15 @@ describe("ReturnPage list states", () => {
 
   it("overdue rows are tinted, the due date is emphasised, and the borrowed and due dates are shown", async () => {
     await renderApp("/circulation/return", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1", { status: "OVERDUE", dueAt: new Date(Date.now() - 2 * DAY - 1000).toISOString() }), loan("l2")]) } : undefined);
+      url.pathname === "/api/loans"
+        ? {
+            body: page([
+              loan("l1", { status: "OVERDUE", dueAt: new Date(Date.now() - 2 * DAY - 1000).toISOString() }),
+              loan("l2"),
+            ]),
+          }
+        : undefined,
+    );
     const rows = await screen.findAllByTestId("loan-row");
     expect(rows[0]!.className).toContain("bg-overdue");
     expect(rows[1]!.className).not.toContain("bg-overdue");
@@ -95,7 +116,8 @@ describe("ReturnPage search", () => {
   it("clearing the box removes q from the URL", async () => {
     const user = userEvent.setup();
     const { router } = await renderApp("/circulation/return?q=clean", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined);
+      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined,
+    );
     await screen.findByTestId("loan-row");
     expect(screen.getByTestId("return-search")).toHaveValue("clean");
     await user.clear(screen.getByTestId("return-search"));
@@ -104,21 +126,24 @@ describe("ReturnPage search", () => {
 
   it("an exact member number that yields one loan focuses that loan's Return button (scanner flow)", async () => {
     await renderApp("/circulation/return?q=m-000142", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined);
+      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined,
+    );
     const button = await screen.findByTestId("return-button");
     await waitFor(() => expect(button).toHaveFocus());
   });
 
   it("an ISBN-shaped query that yields one loan focuses Return too", async () => {
     await renderApp("/circulation/return?q=978-0-13-235088-4", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined);
+      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined,
+    );
     const button = await screen.findByTestId("return-button");
     await waitFor(() => expect(button).toHaveFocus());
   });
 
   it("a free-text query with one match does not steal focus", async () => {
     await renderApp("/circulation/return?q=clean", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined);
+      url.pathname === "/api/loans" ? { body: page([loan("l1")]) } : undefined,
+    );
     const button = await screen.findByTestId("return-button");
     await waitFor(() => expect(screen.getByTestId("return-search")).toHaveFocus());
     expect(button).not.toHaveFocus();
@@ -126,19 +151,22 @@ describe("ReturnPage search", () => {
 
   it("an exact member number with several loans does not focus a button", async () => {
     await renderApp("/circulation/return?q=M-000142", ({ url }) =>
-      url.pathname === "/api/loans" ? { body: page([loan("l1"), loan("l2")]) } : undefined);
+      url.pathname === "/api/loans" ? { body: page([loan("l1"), loan("l2")]) } : undefined,
+    );
     const buttons = await screen.findAllByTestId("return-button");
     for (const b of buttons) expect(b).not.toHaveFocus();
   });
 });
 
 describe("ReturnPage returning a book", () => {
-  const stub = (returnHandler: (req: Req) => { status?: number; body: unknown } | undefined, bookBody?: unknown) => ({ method, url, body }: Req) => {
-    if (url.pathname === "/api/loans" && method === "GET") return { body: page([loan("l1")]) };
-    if (url.pathname === "/api/loans/l1/return") return returnHandler({ method, url, body });
-    if (url.pathname === `/api/books/${BOOK_ID}`) return bookBody ? { body: bookBody } : problem(500, "INTERNAL");
-    return undefined;
-  };
+  const stub =
+    (returnHandler: (req: Req) => { status?: number; body: unknown } | undefined, bookBody?: unknown) =>
+    ({ method, url, body }: Req) => {
+      if (url.pathname === "/api/loans" && method === "GET") return { body: page([loan("l1")]) };
+      if (url.pathname === "/api/loans/l1/return") return returnHandler({ method, url, body });
+      if (url.pathname === `/api/books/${BOOK_ID}`) return bookBody ? { body: bookBody } : problem(500, "INTERNAL");
+      return undefined;
+    };
   const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(await screen.findByTestId("return-button"));
     return screen.findByTestId("return-dialog");
@@ -146,7 +174,10 @@ describe("ReturnPage returning a book", () => {
 
   it("Cancel closes the dialog and posts nothing", async () => {
     const user = userEvent.setup();
-    const { fetchMock } = await renderApp("/circulation/return", stub(() => ({ body: loan("l1") })));
+    const { fetchMock } = await renderApp(
+      "/circulation/return",
+      stub(() => ({ body: loan("l1") })),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-cancel"));
     expect(screen.queryByTestId("return-dialog")).not.toBeInTheDocument();
@@ -155,7 +186,10 @@ describe("ReturnPage returning a book", () => {
 
   it("when the book can't be read after the return, the toast still confirms the return (no copy count)", async () => {
     const user = userEvent.setup();
-    await renderApp("/circulation/return", stub(() => ({ body: { ...loan("l1"), status: "RETURNED" } })));
+    await renderApp(
+      "/circulation/return",
+      stub(() => ({ body: { ...loan("l1"), status: "RETURNED" } })),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     const toast = await screen.findByTestId("toast");
@@ -165,7 +199,10 @@ describe("ReturnPage returning a book", () => {
 
   it("a single-copy book reads '1 of 1 copy now available.'", async () => {
     const user = userEvent.setup();
-    await renderApp("/circulation/return", stub(() => ({ body: loan("l1") }), { id: BOOK_ID, availableCopies: 1, totalCopies: 1 }));
+    await renderApp(
+      "/circulation/return",
+      stub(() => ({ body: loan("l1") }), { id: BOOK_ID, availableCopies: 1, totalCopies: 1 }),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     expect(await screen.findByTestId("toast")).toHaveTextContent("Returned: Clean Code. 1 of 1 copy now available.");
@@ -173,7 +210,10 @@ describe("ReturnPage returning a book", () => {
 
   it("404: toast says the loan no longer exists and the dialog closes", async () => {
     const user = userEvent.setup();
-    await renderApp("/circulation/return", stub(() => problem(404, "NOT_FOUND")));
+    await renderApp(
+      "/circulation/return",
+      stub(() => problem(404, "NOT_FOUND")),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     const toast = await screen.findByTestId("toast");
@@ -184,19 +224,29 @@ describe("ReturnPage returning a book", () => {
 
   it("5xx: toast says nothing was saved", async () => {
     const user = userEvent.setup();
-    await renderApp("/circulation/return", stub(() => problem(500, "INTERNAL")));
+    await renderApp(
+      "/circulation/return",
+      stub(() => problem(500, "INTERNAL")),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
-    expect(await screen.findByTestId("toast")).toHaveTextContent("Couldn't record the return. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Couldn't record the return. Nothing was saved. Try again.",
+    );
   });
 
   it("any other 4xx closes the dialog without a toast", async () => {
     const user = userEvent.setup();
-    const { fetchMock } = await renderApp("/circulation/return", stub(() => problem(403, "FORBIDDEN")));
+    const { fetchMock } = await renderApp(
+      "/circulation/return",
+      stub(() => problem(403, "FORBIDDEN")),
+    );
     const dialog = await openDialog(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     await waitFor(() => expect(screen.queryByTestId("return-dialog")).not.toBeInTheDocument());
-    expect(fetchMock.mock.calls.some(([u, init]) => String(u).endsWith("/return") && init?.method === "POST")).toBe(true);
+    expect(fetchMock.mock.calls.some(([u, init]) => String(u).endsWith("/return") && init?.method === "POST")).toBe(
+      true,
+    );
     expect(screen.queryByTestId("toast")).not.toBeInTheDocument();
   });
 

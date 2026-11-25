@@ -22,7 +22,11 @@ describe("Toast", () => {
   afterEach(() => vi.useRealTimers());
 
   it("a success toast is a polite status and goes away after 4 s", () => {
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     click("ok");
     const t = screen.getByRole("status");
     expect(t).toHaveTextContent("Saved");
@@ -34,14 +38,22 @@ describe("Toast", () => {
   });
 
   it("an info toast renders rich content as a status", () => {
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     click("info");
     expect(screen.getByRole("status")).toContainHTML("<b>Heads up</b>");
     expect(screen.getByTestId("toast")).toHaveAttribute("data-kind", "info");
   });
 
   it("an error toast is an alert and stays until it is closed", () => {
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     click("err");
     const t = screen.getByRole("alert");
     expect(t).toHaveAttribute("data-kind", "error");
@@ -50,7 +62,11 @@ describe("Toast", () => {
   });
 
   it("the close button dismisses just that toast", () => {
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     click("err");
     click("ok");
     expect(screen.getAllByTestId("toast")).toHaveLength(2);
@@ -60,7 +76,11 @@ describe("Toast", () => {
   });
 
   it("keeps at most 3, dropping the oldest", () => {
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     click("err");
     click("ok");
     click("info");
@@ -73,7 +93,11 @@ describe("Toast", () => {
 
   it("closing with the keyboard works too", () => {
     vi.useRealTimers();
-    render(<ToastProvider><Buttons /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
     return (async () => {
       await userEvent.click(screen.getByRole("button", { name: "err" }));
       await userEvent.tab(); // from "err" button to the toast's close button

@@ -13,7 +13,11 @@ type Scheduled = (ctl: unknown, e: unknown, c: ExecutionContext) => Promise<void
 const url = () => inject("databaseUrl");
 const ctx = () => {
   const pending: Promise<unknown>[] = [];
-  const c = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException: vi.fn(), props: {} } as unknown as ExecutionContext;
+  const c = {
+    waitUntil: (p: Promise<unknown>) => pending.push(p),
+    passThroughOnException: vi.fn(),
+    props: {},
+  } as unknown as ExecutionContext;
   return { c, settle: () => Promise.allSettled(pending) };
 };
 const callFetch = async (req: Request, env: Record<string, unknown>) => {
@@ -39,7 +43,9 @@ describe("Worker entry: database binding", () => {
     const body = await res.json();
     expect(body).toMatchObject({ status: 500, code: "INTERNAL", requestId: expect.any(String) });
     expect(JSON.stringify(body)).not.toContain("HYPERDRIVE");
-    expect(String((JSON.parse(err.mock.calls[0]![0] as string) as { message: string }).message)).toContain("No database binding (HYPERDRIVE or DATABASE_URL)");
+    expect(String((JSON.parse(err.mock.calls[0]![0] as string) as { message: string }).message)).toContain(
+      "No database binding (HYPERDRIVE or DATABASE_URL)",
+    );
   });
 
   it("the public liveness check needs no database at all", async () => {
@@ -62,26 +68,41 @@ describe("Worker entry: database binding", () => {
 
   it("an unusable configuration (production with demo accounts, say) is refused the same way", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const res = await callFetch(deepHealth(), { ...testEnv, DATABASE_URL: url(), ENVIRONMENT: "production", AI_FAKE: "true" });
+    const res = await callFetch(deepHealth(), {
+      ...testEnv,
+      DATABASE_URL: url(),
+      ENVIRONMENT: "production",
+      AI_FAKE: "true",
+    });
     expect(res.status).toBe(500);
   });
 });
 
 describe("Worker entry: scheduled handlers", () => {
-  const book = async (title: string) => (await pool.query(
-    "INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ($1,'A','Science','Stars and planets.',1,1) RETURNING id", [title])).rows[0].id as string;
+  const book = async (title: string) =>
+    (
+      await pool.query(
+        "INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ($1,'A','Science','Stars and planets.',1,1) RETURNING id",
+        [title],
+      )
+    ).rows[0].id as string;
 
   it("the nightly trigger restores the demo data, re-indexes it, purges expired cache rows and says so in one log line", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     await book("Not In The Seed");
-    await pool.query("INSERT INTO ai_cache (key, value, expires_at) VALUES ('old', '{}', now() - interval '1 hour'), ('fresh', '{}', now() + interval '1 hour')");
+    await pool.query(
+      "INSERT INTO ai_cache (key, value, expires_at) VALUES ('old', '{}', now() - interval '1 hour'), ('fresh', '{}', now() + interval '1 hour')",
+    );
     const results = await cron("0 0 * * *", { ...testEnv, DATABASE_URL: url(), AI_FAKE: "true" });
     expect(results.map((r) => r.status)).toEqual(["fulfilled"]);
     expect((await pool.query("SELECT count(*)::int n FROM books WHERE title = 'Not In The Seed'")).rows[0].n).toBe(0);
     expect((await pool.query("SELECT count(*)::int n FROM books")).rows[0].n).toBeGreaterThanOrEqual(55);
     expect((await pool.query("SELECT count(*)::int n FROM book_chunks")).rows[0].n).toBeGreaterThan(0); // indexed after the reset
     expect((await pool.query("SELECT key FROM ai_cache")).rows.map((r) => r.key)).toEqual(["fresh"]);
-    expect(log.mock.calls.map((c) => JSON.parse(c[0] as string))).toContainEqual({ level: "info", message: "demo data reset (cron)" });
+    expect(log.mock.calls.map((c) => JSON.parse(c[0] as string))).toContainEqual({
+      level: "info",
+      message: "demo data reset (cron)",
+    });
   });
 
   it("without an embedder the nightly reset still works (the re-index is a no-op)", async () => {
@@ -107,14 +128,19 @@ describe("Worker entry: scheduled handlers", () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const originalQuery = pg.Client.prototype.query as (...a: unknown[]) => unknown;
     const originalEnd = pg.Client.prototype.end as (...a: unknown[]) => Promise<void>;
-    const queryText = (a: unknown) => (typeof a === "string" ? a : (a as { text?: string } | undefined)?.text ?? "");
-    const query = vi.spyOn(pg.Client.prototype, "query").mockImplementation(function (this: unknown, ...args: unknown[]) {
-      return queryText(args[0]).includes("DELETE FROM ai_cache") ? Promise.reject(new Error("purge failed")) : originalQuery.apply(this, args);
+    const queryText = (a: unknown) => (typeof a === "string" ? a : ((a as { text?: string } | undefined)?.text ?? ""));
+    const query = vi.spyOn(pg.Client.prototype, "query").mockImplementation(function (
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      return queryText(args[0]).includes("DELETE FROM ai_cache")
+        ? Promise.reject(new Error("purge failed"))
+        : originalQuery.apply(this, args);
     } as never);
-    const end = vi.spyOn(pg.Client.prototype, "end").mockImplementation((async function (this: unknown) {
+    const end = vi.spyOn(pg.Client.prototype, "end").mockImplementation(async function (this: unknown) {
       await originalEnd.call(this);
       throw new Error("close failed");
-    }) as never);
+    } as never);
     let results: PromiseSettledResult<unknown>[];
     let closes = 0;
     try {
@@ -131,10 +157,10 @@ describe("Worker entry: scheduled handlers", () => {
 
   it("a request whose connection fails to close still gets its answer (the close is deferred to waitUntil and swallowed)", async () => {
     const originalEnd = pg.Client.prototype.end as (...a: unknown[]) => Promise<void>;
-    const end = vi.spyOn(pg.Client.prototype, "end").mockImplementation((async function (this: unknown) {
+    const end = vi.spyOn(pg.Client.prototype, "end").mockImplementation(async function (this: unknown) {
       await originalEnd.call(this);
       throw new Error("close failed");
-    }) as never);
+    } as never);
     try {
       const res = await callFetch(deepHealth(), { ...testEnv, DATABASE_URL: url() });
       expect(await res.json()).toMatchObject({ status: "ok", db: "ok" });
@@ -147,7 +173,9 @@ describe("Worker entry: scheduled handlers", () => {
   it("a failing reset is logged with its cause and rethrown to the platform, and the connection is still closed", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const end = vi.spyOn(pg.Client.prototype, "end");
-    const query = vi.spyOn(pg.Client.prototype, "query").mockImplementation((() => Promise.reject(new Error("disk on fire"))) as never);
+    const query = vi
+      .spyOn(pg.Client.prototype, "query")
+      .mockImplementation((() => Promise.reject(new Error("disk on fire"))) as never);
     let results: PromiseSettledResult<unknown>[];
     try {
       results = await cron("0 0 * * *", { ...testEnv, DATABASE_URL: url(), AI_FAKE: "true" });
@@ -163,7 +191,9 @@ describe("Worker entry: scheduled handlers", () => {
 
   it("a failing top-up is logged and rethrown too", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const query = vi.spyOn(pg.Client.prototype, "query").mockImplementation((() => Promise.reject(new Error("index store down"))) as never);
+    const query = vi
+      .spyOn(pg.Client.prototype, "query")
+      .mockImplementation((() => Promise.reject(new Error("index store down"))) as never);
     let results: PromiseSettledResult<unknown>[];
     try {
       results = await cron("5 * * * *", { ...testEnv, DATABASE_URL: url(), AI_FAKE: "true" });
@@ -179,7 +209,10 @@ describe("Worker entry: scheduled handlers", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const results = await cron("0 0 * * *", { ...testEnv, DATABASE_URL: closedPort });
     expect(results[0]).toMatchObject({ status: "rejected" });
-    expect(JSON.parse(err.mock.calls[0]![0] as string)).toMatchObject({ level: "error", message: "demo reset failed (cron)" });
+    expect(JSON.parse(err.mock.calls[0]![0] as string)).toMatchObject({
+      level: "error",
+      message: "demo reset failed (cron)",
+    });
     const noBinding = await cron("0 0 * * *", { ...testEnv });
     expect(noBinding[0]).toMatchObject({ status: "rejected" });
   });

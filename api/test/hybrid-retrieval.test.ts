@@ -22,8 +22,13 @@ describe("SLM-16 chunking", () => {
   const book = { title: "H Is for Hawk", author: "Helen Macdonald", category: "Memoir" };
 
   it("a short description is one chunk with the book header first", () => {
-    const chunks = chunkBook({ ...book, description: "After her father's sudden death, a naturalist trains a goshawk." });
-    expect(chunks).toEqual(["H Is for Hawk — Helen Macdonald (Memoir)\nAfter her father's sudden death, a naturalist trains a goshawk."]);
+    const chunks = chunkBook({
+      ...book,
+      description: "After her father's sudden death, a naturalist trains a goshawk.",
+    });
+    expect(chunks).toEqual([
+      "H Is for Hawk — Helen Macdonald (Memoir)\nAfter her father's sudden death, a naturalist trains a goshawk.",
+    ]);
   });
 
   it("no description still gives one chunk (the header), so every book is searchable", () => {
@@ -64,14 +69,24 @@ describe("SLM-16 Reciprocal Rank Fusion", () => {
 
   it("scores by 1/(k + rank), marks which retriever found each item, best first", () => {
     const fused = reciprocalRankFusion(["a", "b", "c"], ["c", "d"], id, 20);
-    expect(fused.map((f) => [f.item, f.foundBy])).toEqual([["c", "both"], ["a", "lexical"], ["b", "lexical"], ["d", "semantic"]]);
+    expect(fused.map((f) => [f.item, f.foundBy])).toEqual([
+      ["c", "both"],
+      ["a", "lexical"],
+      ["b", "lexical"],
+      ["d", "semantic"],
+    ]);
     expect(fused[0]!.score).toBeCloseTo(1 / (RRF_K + 3) + 1 / (RRF_K + 1));
     expect(fused[0]).toMatchObject({ lexicalRank: 3, semanticRank: 1 });
   });
 
   it("a tie goes to the better lexical rank; duplicates count once; the result is capped", () => {
     // b (lexical #2) and d (semantic #2) tie at 1/(k+2): b first.
-    expect(reciprocalRankFusion(["a", "b", "b"], ["x", "d", "d"], id, 20).map((f) => f.item)).toEqual(["a", "x", "b", "d"]);
+    expect(reciprocalRankFusion(["a", "b", "b"], ["x", "d", "d"], id, 20).map((f) => f.item)).toEqual([
+      "a",
+      "x",
+      "b",
+      "d",
+    ]);
     expect(reciprocalRankFusion(["a", "b", "c"], ["d", "e"], id, 2)).toHaveLength(2);
     expect(reciprocalRankFusion([], [], id, 20)).toEqual([]);
   });
@@ -85,7 +100,14 @@ describe("SLM-16 Reciprocal Rank Fusion", () => {
 
 // ── Index + hybrid retrieval on Postgres (brute-force path here; pgvector + HNSW on Neon) ───────────
 const ids: Record<string, string> = {};
-async function addBook(key: string, title: string, author: string, category: string, description: string, available = 2) {
+async function addBook(
+  key: string,
+  title: string,
+  author: string,
+  category: string,
+  description: string,
+  available = 2,
+) {
   const r = await pool.query(
     `INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
     [title, author, category, description, Math.max(available, 1), available],
@@ -101,10 +123,34 @@ let staff: Awaited<ReturnType<typeof seedStaff>>;
 beforeEach(async () => {
   await resetDb();
   staff = await seedStaff();
-  await addBook("hawk", "H Is for Hawk", "Helen Macdonald", "Memoir", "After her father's sudden death, a naturalist trains a goshawk and works through her grief.");
-  await addBook("hmart", "Crying in H Mart", "Michelle Zauner", "Memoir", "A musician remembers her Korean mother through food, illness and mourning.");
-  await addBook("clean", "Clean Code", "Robert C. Martin", "Programming", "A handbook of agile software craftsmanship: naming, functions, tests and readable code.");
-  await addBook("cosmos", "Cosmos", "Carl Sagan", "Science", "A tour of the universe, the stars and our place among the galaxies.");
+  await addBook(
+    "hawk",
+    "H Is for Hawk",
+    "Helen Macdonald",
+    "Memoir",
+    "After her father's sudden death, a naturalist trains a goshawk and works through her grief.",
+  );
+  await addBook(
+    "hmart",
+    "Crying in H Mart",
+    "Michelle Zauner",
+    "Memoir",
+    "A musician remembers her Korean mother through food, illness and mourning.",
+  );
+  await addBook(
+    "clean",
+    "Clean Code",
+    "Robert C. Martin",
+    "Programming",
+    "A handbook of agile software craftsmanship: naming, functions, tests and readable code.",
+  );
+  await addBook(
+    "cosmos",
+    "Cosmos",
+    "Carl Sagan",
+    "Science",
+    "A tour of the universe, the stars and our place among the galaxies.",
+  );
 });
 
 describe("SLM-16 indexing (book_chunks)", () => {
@@ -112,7 +158,9 @@ describe("SLM-16 indexing (book_chunks)", () => {
     const sync = new BookIndexSync(store(), new FakeEmbedder());
     expect(await sync.syncAll()).toMatchObject({ embeddedBooks: 4, chunks: 4, upToDate: 0 });
     expect(await sync.syncAll()).toMatchObject({ embeddedBooks: 0, upToDate: 4 });
-    const { rows } = await pool.query("SELECT book_id, content, model, array_length(embedding, 1) AS dims FROM book_chunks");
+    const { rows } = await pool.query(
+      "SELECT book_id, content, model, array_length(embedding, 1) AS dims FROM book_chunks",
+    );
     expect(rows).toHaveLength(4);
     expect(rows.every((r) => r.model === "fake-embedding-v1" && r.dims === 768)).toBe(true);
   });
@@ -137,8 +185,18 @@ describe("SLM-16 indexing (book_chunks)", () => {
 
   it("a failing embedder never fails a book save (syncBookSafely swallows and logs)", async () => {
     const logs: Record<string, unknown>[] = [];
-    const broken: Embedder = { model: "x", dimensions: 768, queryPrefix: "", minSimilarity: 0.2, embed: async () => { throw new Error("down"); } };
-    await expect(new BookIndexSync(store(), broken, (e) => logs.push(e)).syncBookSafely(ids.hawk!)).resolves.toBeUndefined();
+    const broken: Embedder = {
+      model: "x",
+      dimensions: 768,
+      queryPrefix: "",
+      minSimilarity: 0.2,
+      embed: async () => {
+        throw new Error("down");
+      },
+    };
+    await expect(
+      new BookIndexSync(store(), broken, (e) => logs.push(e)).syncBookSafely(ids.hawk!),
+    ).resolves.toBeUndefined();
     expect(logs[0]).toMatchObject({ event: "book_index_sync_failed", reason: "down" });
   });
 });
@@ -157,13 +215,21 @@ describe("SLM-16 hybrid retrieval", () => {
     const hawk = c.find((x) => x.id === ids.hawk);
     expect(hawk).toMatchObject({ foundBy: "semantic", related: false });
     expect(c.find((x) => x.id === ids.hmart)?.foundBy).toBe("semantic");
-    expect(c.slice(0, 2).map((x) => x.id).sort()).toEqual([ids.hawk, ids.hmart].sort());
+    expect(
+      c
+        .slice(0, 2)
+        .map((x) => x.id)
+        .sort(),
+    ).toEqual([ids.hawk, ids.hmart].sort());
     expect(r.lastMode()).toBe("hybrid");
   });
 
   it("a book both retrievers find is marked «both» and ranks first", async () => {
     await new BookIndexSync(store(), new FakeEmbedder()).syncAll();
-    const c = await hybrid(new FakeEmbedder()).candidates("a memoir about grief and mourning", { limit: 20, availableOnly: false });
+    const c = await hybrid(new FakeEmbedder()).candidates("a memoir about grief and mourning", {
+      limit: 20,
+      availableOnly: false,
+    });
     expect(c[0]!.foundBy).toBe("both");
     expect([ids.hawk, ids.hmart]).toContain(c[0]!.id);
   });
@@ -178,7 +244,15 @@ describe("SLM-16 hybrid retrieval", () => {
   it("fallback: an embedder error leaves full-text only, and discovery still answers", async () => {
     await new BookIndexSync(store(), new FakeEmbedder()).syncAll();
     const logs: Parameters<RetrievalLog>[0][] = [];
-    const broken: Embedder = { model: "fake-embedding-v1", dimensions: 768, queryPrefix: "", minSimilarity: 0.2, embed: async () => { throw new Error("AI down"); } };
+    const broken: Embedder = {
+      model: "fake-embedding-v1",
+      dimensions: 768,
+      queryPrefix: "",
+      minSimilarity: 0.2,
+      embed: async () => {
+        throw new Error("AI down");
+      },
+    };
     const r = hybrid(broken, (e) => logs.push(e));
     const c = await r.candidates("clean readable code", { limit: 20, availableOnly: false });
     expect(c[0]).toMatchObject({ id: ids.clean, foundBy: "lexical" });
@@ -192,7 +266,13 @@ describe("SLM-16 hybrid retrieval", () => {
 
   it("fallback: a slow embedder times out to full-text only", async () => {
     const logs: Parameters<RetrievalLog>[0][] = [];
-    const slow: Embedder = { model: "m", dimensions: 768, queryPrefix: "", minSimilarity: 0.2, embed: () => new Promise((resolve) => setTimeout(() => resolve([[1]]), 500)) };
+    const slow: Embedder = {
+      model: "m",
+      dimensions: 768,
+      queryPrefix: "",
+      minSimilarity: 0.2,
+      embed: () => new Promise((resolve) => setTimeout(() => resolve([[1]]), 500)),
+    };
     const r = hybrid(slow, (e) => logs.push(e), 30);
     const c = await r.candidates("clean readable code", { limit: 20, availableOnly: false });
     expect(c[0]!.id).toBe(ids.clean);
@@ -215,29 +295,62 @@ describe("SLM-16 hybrid retrieval", () => {
 describe("SLM-16 Workers AI embedder (binding contract)", () => {
   it("sends the texts in batches, normalises the vectors, rejects a wrong shape", async () => {
     const calls: unknown[] = [];
-    const ai = { run: async (_m: string, input: Record<string, unknown>) => { calls.push(input); return { data: (input.text as string[]).map(() => Array.from({ length: 768 }, () => 2)) }; } };
+    const ai = {
+      run: async (_m: string, input: Record<string, unknown>) => {
+        calls.push(input);
+        return { data: (input.text as string[]).map(() => Array.from({ length: 768 }, () => 2)) };
+      },
+    };
     const e = new WorkersAiEmbedder(ai);
     const v = await e.embed(Array.from({ length: 60 }, (_, i) => `t${i}`));
     expect(calls).toHaveLength(2); // 50 + 10
     expect(v).toHaveLength(60);
     expect(cosine(v[0]!, v[0]!)).toBeCloseTo(1);
     expect(Math.hypot(...v[0]!)).toBeCloseTo(1);
-    await expect(new WorkersAiEmbedder({ run: async () => ({ data: [[1, 2]] }) }).embed(["x"])).rejects.toThrow(/wrong size/);
+    await expect(new WorkersAiEmbedder({ run: async () => ({ data: [[1, 2]] }) }).embed(["x"])).rejects.toThrow(
+      /wrong size/,
+    );
   });
 });
 
 describe("SLM-16 API wiring", () => {
   const app = () => testApp({ env: { AI_FAKE: "true" } });
-  const chunkCount = async (bookId: string) => Number((await pool.query("SELECT count(*) FROM book_chunks WHERE book_id = $1", [bookId])).rows[0].count);
+  const chunkCount = async (bookId: string) =>
+    Number((await pool.query("SELECT count(*) FROM book_chunks WHERE book_id = $1", [bookId])).rows[0].count);
 
   it("creating and editing a book indexes it in the same request", async () => {
     const a = app();
-    const res = await a.request("/api/books", await as(staff.librarian, { method: "POST", body: { title: "A Grief Observed", author: "C. S. Lewis", category: "Memoir", totalCopies: 1, description: "Notes on mourning." } }));
+    const res = await a.request(
+      "/api/books",
+      await as(staff.librarian, {
+        method: "POST",
+        body: {
+          title: "A Grief Observed",
+          author: "C. S. Lewis",
+          category: "Memoir",
+          totalCopies: 1,
+          description: "Notes on mourning.",
+        },
+      }),
+    );
     expect(res.status).toBe(201);
     const book = (await res.json()) as { id: string; version: number };
     expect(await chunkCount(book.id)).toBe(1);
 
-    const put = await a.request(`/api/books/${book.id}`, await as(staff.librarian, { method: "PUT", body: { version: book.version, title: "A Grief Observed", author: "C. S. Lewis", category: "Memoir", totalCopies: 1, description: "Short notes written after his wife died." } }));
+    const put = await a.request(
+      `/api/books/${book.id}`,
+      await as(staff.librarian, {
+        method: "PUT",
+        body: {
+          version: book.version,
+          title: "A Grief Observed",
+          author: "C. S. Lewis",
+          category: "Memoir",
+          totalCopies: 1,
+          description: "Short notes written after his wife died.",
+        },
+      }),
+    );
     expect(put.status).toBe(200);
     const { rows } = await pool.query("SELECT content FROM book_chunks WHERE book_id = $1", [book.id]);
     expect(rows[0].content).toContain("after his wife died");
@@ -249,7 +362,10 @@ describe("SLM-16 API wiring", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ result: "done", embeddedBooks: 4, chunks: 4 });
 
-    const ask = await a.request("/api/ai/book-discovery", await as(staff.librarian, { method: "POST", body: { query: SYNONYM_QUERY } }));
+    const ask = await a.request(
+      "/api/ai/book-discovery",
+      await as(staff.librarian, { method: "POST", body: { query: SYNONYM_QUERY } }),
+    );
     const json = (await ask.json()) as DiscoveryResponse;
     expect(json.retrieval).toBe("hybrid");
     const hawk = json.items.find((i) => i.book.id === ids.hawk);
@@ -257,7 +373,10 @@ describe("SLM-16 API wiring", () => {
   });
 
   it("without an embedder the reindex endpoint says so and changes nothing", async () => {
-    const res = await testApp().request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }));
+    const res = await testApp().request(
+      "/api/admin/discovery/reindex",
+      await as(staff.admin, { method: "POST", body: {} }),
+    );
     expect(await res.json()).toMatchObject({ result: "disabled" });
   });
 });

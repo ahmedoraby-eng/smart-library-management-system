@@ -7,7 +7,17 @@ describe("safeNext (post sign-in redirect)", () => {
     expect(safeNext("/books/abc/edit")).toBe("/books/abc/edit");
   });
   it("rejects anything that could leave the origin or loop", () => {
-    for (const bad of [undefined, "", "books", "//evil.com", "/\\evil.com", "https://evil.com", "javascript:alert(1)", "/signin", "/signin?next=/books"]) {
+    for (const bad of [
+      undefined,
+      "",
+      "books",
+      "//evil.com",
+      "/\\evil.com",
+      "https://evil.com",
+      "javascript:alert(1)",
+      "/signin",
+      "/signin?next=/books",
+    ]) {
       expect(safeNext(bad)).toBeUndefined();
     }
   });

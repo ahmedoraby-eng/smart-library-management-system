@@ -32,8 +32,14 @@ export const testEnv: RawEnv = {
 
 export function testApp(opts: { env?: RawEnv; clock?: Clock; oidc?: OidcProvider; isbnLookup?: IsbnLookup } = {}) {
   const config = loadConfig({ ...testEnv, ...opts.env });
-  const container = buildContainer(createDb(pool), config, opts.clock ?? (() => new Date()), undefined, { oidc: opts.oidc, isbnLookup: opts.isbnLookup });
-  return Object.assign(createApp(async () => ({ container })), { container });
+  const container = buildContainer(createDb(pool), config, opts.clock ?? (() => new Date()), undefined, {
+    oidc: opts.oidc,
+    isbnLookup: opts.isbnLookup,
+  });
+  return Object.assign(
+    createApp(async () => ({ container })),
+    { container },
+  );
 }
 
 export async function resetDb(): Promise<void> {
@@ -42,7 +48,10 @@ export async function resetDb(): Promise<void> {
 
 /** Staff fixtures (one per role + a disabled one). Returns ids by key. */
 export async function seedStaff(): Promise<Record<"admin" | "librarian" | "supervisor" | "disabled", string>> {
-  const r = await pool.query<{ id: string; email: string }>(`INSERT INTO staff_users (email, full_name, role, status) VALUES
+  const r = await pool.query<{
+    id: string;
+    email: string;
+  }>(`INSERT INTO staff_users (email, full_name, role, status) VALUES
     ('admin@library.test', 'Amira Admin', 'ADMIN', 'ACTIVE'),
     ('librarian@library.test', 'Layla Librarian', 'LIBRARIAN', 'ACTIVE'),
     ('supervisor@library.test', 'Samir Supervisor', 'SUPERVISOR', 'ACTIVE'),
@@ -53,8 +62,12 @@ export async function seedStaff(): Promise<Record<"admin" | "librarian" | "super
 
 /** Test helper (not an app feature): a session cookie signed with the test secret, as after a real sign-in. */
 export async function cookieFor(staffId: string, secret = TEST_SECRET): Promise<string> {
-  const jwt = await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).setSubject(staffId)
-    .setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(secret));
+  const jwt = await new SignJWT({})
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(staffId)
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(new TextEncoder().encode(secret));
   return `${SESSION_COOKIE}=${jwt}`;
 }
 

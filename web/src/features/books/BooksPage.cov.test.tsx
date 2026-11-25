@@ -9,42 +9,90 @@ import { renderApp } from "../circulation/testApp";
 afterEach(() => vi.unstubAllGlobals());
 
 const me = (role: "ADMIN" | "LIBRARIAN" | "SUPERVISOR"): Me => ({
-  id: "u1", email: "u@library.test", fullName: "Test User", role, permissions: [...ROLE_PERMISSIONS[role]], isDemo: false,
+  id: "u1",
+  email: "u@library.test",
+  fullName: "Test User",
+  role,
+  permissions: [...ROLE_PERMISSIONS[role]],
+  isDemo: false,
 });
 const book = (id: string, patch: Partial<BookDto> = {}): BookDto => ({
-  id, title: `Title ${id}`, author: `Author ${id}`, isbn: "9780134757599", description: "", category: "Software", publisher: "",
-  publicationYear: 2018, coverImageUrl: null, totalCopies: 3, availableCopies: 2, activeLoans: 1, nextDueAt: null,
-  hasLoanHistory: false, archived: false, version: 0, createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-01T00:00:00.000Z", ...patch,
+  id,
+  title: `Title ${id}`,
+  author: `Author ${id}`,
+  isbn: "9780134757599",
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: 2018,
+  coverImageUrl: null,
+  totalCopies: 3,
+  availableCopies: 2,
+  activeLoans: 1,
+  nextDueAt: null,
+  hasLoanHistory: false,
+  archived: false,
+  version: 0,
+  createdAt: "2026-11-01T00:00:00.000Z",
+  updatedAt: "2026-11-01T00:00:00.000Z",
+  ...patch,
 });
-const problem = (status: number, code: string) => ({ status, body: { type: "about:blank", title: code, status, code } });
+const problem = (status: number, code: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code },
+});
 
 type Req = Parameters<Parameters<typeof renderApp>[1]>[0];
 /** Records the /api/books list URLs; `list` decides the answer. */
-function visit(path: string, list: (url: URL) => BookDto[] | { status: number; body: unknown }, who: Me = me("LIBRARIAN"), extra?: (r: Req) => { status?: number; body: unknown } | undefined, total = 45) {
+function visit(
+  path: string,
+  list: (url: URL) => BookDto[] | { status: number; body: unknown },
+  who: Me = me("LIBRARIAN"),
+  extra?: (r: Req) => { status?: number; body: unknown } | undefined,
+  total = 45,
+) {
   const urls: URL[] = [];
-  const app = renderApp(path, (r) => {
-    if (r.url.pathname === "/api/books/categories") return { body: { items: ["Fiction", "Software"] } };
-    if (r.url.pathname === "/api/books" && r.method === "GET") {
-      urls.push(r.url);
-      const res = list(r.url);
-      if (Array.isArray(res)) return { body: { items: res, page: Number(r.url.searchParams.get("page") ?? 1), size: 20, total: res.length === 0 ? 0 : total } };
-      return res;
-    }
-    return extra?.(r);
-  }, who);
+  const app = renderApp(
+    path,
+    (r) => {
+      if (r.url.pathname === "/api/books/categories") return { body: { items: ["Fiction", "Software"] } };
+      if (r.url.pathname === "/api/books" && r.method === "GET") {
+        urls.push(r.url);
+        const res = list(r.url);
+        if (Array.isArray(res))
+          return {
+            body: {
+              items: res,
+              page: Number(r.url.searchParams.get("page") ?? 1),
+              size: 20,
+              total: res.length === 0 ? 0 : total,
+            },
+          };
+        return res;
+      }
+      return extra?.(r);
+    },
+    who,
+  );
   return { urls, app };
 }
 
 describe("Books page rows and navigation", () => {
   it("lists books with cover, author, category, year, isbn and availability", async () => {
-    const { app } = visit("/books", () => [book("1", { coverImageUrl: "https://img.test/1.jpg" }), book("2", { publicationYear: null, isbn: null, availableCopies: 0, nextDueAt: "2026-12-24T10:00:00.000Z" })]);
+    const { app } = visit("/books", () => [
+      book("1", { coverImageUrl: "https://img.test/1.jpg" }),
+      book("2", { publicationYear: null, isbn: null, availableCopies: 0, nextDueAt: "2026-12-24T10:00:00.000Z" }),
+    ]);
     await app;
     const rows = await screen.findAllByTestId("book-row");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByText("Author 1")).toBeInTheDocument();
     expect(within(rows[0]!).getByText("9780134757599")).toBeInTheDocument();
     expect(within(rows[0]!).getByText("2018")).toBeInTheDocument();
-    expect(within(rows[0]!).getByTestId("book-cover").querySelector("img")).toHaveAttribute("src", "https://img.test/1.jpg");
+    expect(within(rows[0]!).getByTestId("book-cover").querySelector("img")).toHaveAttribute(
+      "src",
+      "https://img.test/1.jpg",
+    );
     expect(within(rows[1]!).getAllByText("—")).toHaveLength(2); // year and ISBN
     expect(within(rows[1]!).getByTestId("availability")).toHaveTextContent("0 of 3 available");
     expect(within(rows[1]!).getByTestId("next-due")).toHaveTextContent("Next copy due back");
@@ -92,8 +140,13 @@ describe("Books page rows and navigation", () => {
 
   it("confirming Delete sends DELETE for that book and closes the dialog", async () => {
     const user = userEvent.setup();
-    const { app } = visit("/books", () => [book("1", { activeLoans: 0, availableCopies: 3 })], me("ADMIN"), ({ method, url }) =>
-      method === "DELETE" && url.pathname === "/api/books/1" ? { body: { result: "deleted" } } : undefined);
+    const { app } = visit(
+      "/books",
+      () => [book("1", { activeLoans: 0, availableCopies: 3 })],
+      me("ADMIN"),
+      ({ method, url }) =>
+        method === "DELETE" && url.pathname === "/api/books/1" ? { body: { result: "deleted" } } : undefined,
+    );
     const { fetchMock } = await app;
     await user.click(await screen.findByTestId("row-actions"));
     await user.click(await screen.findByTestId("menu-delete"));
@@ -120,7 +173,9 @@ describe("Books page filters, sort and paging (state lives in the URL)", () => {
     await screen.findByTestId("book-row");
     await user.type(screen.getByTestId("book-search"), "  dune ");
     expect(router.state.location.search).not.toHaveProperty("q"); // not yet: debounce
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "dune", page: "1" }), { timeout: 2000 });
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "dune", page: "1" }), {
+      timeout: 2000,
+    });
     await waitFor(() => expect(urls.at(-1)!.searchParams.get("q")).toBe("dune"));
   });
 
@@ -145,7 +200,11 @@ describe("Books page filters, sort and paging (state lives in the URL)", () => {
     await waitFor(() => expect(urls.at(-1)!.searchParams.get("availability")).toBe("unavailable"));
     await user.selectOptions(screen.getByTestId("sort-select"), "-availableCopies");
     await waitFor(() => expect(urls.at(-1)!.searchParams.get("sort")).toBe("-availableCopies"));
-    expect(router.state.location.search).toMatchObject({ category: "Fiction", availability: "unavailable", sort: "-availableCopies" });
+    expect(router.state.location.search).toMatchObject({
+      category: "Fiction",
+      availability: "unavailable",
+      sort: "-availableCopies",
+    });
     // back to "All": the params leave the URL
     await user.selectOptions(screen.getByTestId("filter-availability"), "all");
     await user.selectOptions(screen.getByTestId("filter-category"), "");
@@ -202,13 +261,18 @@ describe("Books page states", () => {
     const { app } = visit("/books", () => []);
     await app;
     expect(await screen.findByTestId("books-empty")).toHaveTextContent("Add your first book to start lending.");
-    expect(within(screen.getByTestId("books-empty")).getByRole("link", { name: "Add book" })).toHaveAttribute("href", "/books/new");
+    expect(within(screen.getByTestId("books-empty")).getByRole("link", { name: "Add book" })).toHaveAttribute(
+      "href",
+      "/books/new",
+    );
   });
 
   it("no books at all: a supervisor gets read-only wording and no Add button", async () => {
     const { app } = visit("/books", () => [], me("SUPERVISOR"));
     await app;
-    expect(await screen.findByTestId("books-empty")).toHaveTextContent("Books added by the library team will show here.");
+    expect(await screen.findByTestId("books-empty")).toHaveTextContent(
+      "Books added by the library team will show here.",
+    );
     expect(within(screen.getByTestId("books-empty")).queryByRole("link")).not.toBeInTheDocument();
   });
 
@@ -223,7 +287,9 @@ describe("Books page states", () => {
     let calls = 0;
     const { app } = visit("/books?sort=nope", () => (++calls === 1 ? problem(400, "VALIDATION_FAILED") : [book("1")]));
     await app;
-    expect(await screen.findByTestId("books-error")).toHaveTextContent("These filters aren't valid. Clear them and try again.");
+    expect(await screen.findByTestId("books-error")).toHaveTextContent(
+      "These filters aren't valid. Clear them and try again.",
+    );
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByTestId("book-row")).toBeInTheDocument();
     expect(screen.queryByTestId("books-error")).not.toBeInTheDocument();
@@ -232,7 +298,9 @@ describe("Books page states", () => {
   it("any other failure shows the connection message", async () => {
     const { app } = visit("/books", () => problem(500, "INTERNAL"));
     await app;
-    expect(await screen.findByTestId("books-error")).toHaveTextContent("Couldn't load books. Check your connection and try again.");
+    expect(await screen.findByTestId("books-error")).toHaveTextContent(
+      "Couldn't load books. Check your connection and try again.",
+    );
   });
 
   it("the result line is singular for one book", async () => {

@@ -5,17 +5,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test/render";
 import { ComingSoonPage, ForbiddenPage, NotFoundPage } from "./pages";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 function stubMe(role: Role | null) {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    if (url === "/api/me") {
-      return role
-        ? json({ id: "u1", email: "x@y.test", fullName: "Test User", role, permissions: ROLE_PERMISSIONS[role], isDemo: false })
-        : json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401);
-    }
-    return json({}, 404);
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url === "/api/me") {
+        return role
+          ? json({
+              id: "u1",
+              email: "x@y.test",
+              fullName: "Test User",
+              role,
+              permissions: ROLE_PERMISSIONS[role],
+              isDemo: false,
+            })
+          : json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401);
+      }
+      return json({}, 404);
+    }),
+  );
 }
 afterEach(() => vi.unstubAllGlobals());
 

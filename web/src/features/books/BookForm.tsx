@@ -6,11 +6,19 @@ import { ApiError } from "../../lib/apiClient";
 import { lookupIsbn } from "./api";
 import { BookCover } from "./BookCover";
 import {
-  type BookField, type BookFormValues, emptyValues, FIELD_ORDER, isDirty, isHttpsUrl, valuesFromBook, validateBook,
+  type BookField,
+  type BookFormValues,
+  emptyValues,
+  FIELD_ORDER,
+  isDirty,
+  isHttpsUrl,
+  valuesFromBook,
+  validateBook,
 } from "./bookFormModel";
 
 const DESCRIPTION_MAX = 2000;
-const STALE_MESSAGE = "Someone else changed this book while you were editing. Reload to see their version; your changes are not saved.";
+const STALE_MESSAGE =
+  "Someone else changed this book while you were editing. Reload to see their version; your changes are not saved.";
 
 interface Props {
   /** Present when editing. The form pins this snapshot (and its version) until it is remounted. */
@@ -47,7 +55,8 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
     setServerErrors((s) => (s[field] ? { ...s, [field]: undefined } : s));
   };
   const blur = (field: BookField) => () => setTouched((t) => ({ ...t, [field]: true }));
-  const errorOf = (field: BookField): ReactNode => serverErrors[field] ?? (touched[field] || submitted ? errors[field] : undefined);
+  const errorOf = (field: BookField): ReactNode =>
+    serverErrors[field] ?? (touched[field] || submitted ? errors[field] : undefined);
   const props = (field: BookField) => ({
     id: `book-${field}`,
     name: field,
@@ -78,7 +87,8 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
           else rest ??= e.message;
         }
         setServerErrors(next);
-        if (rest || Object.keys(next).length === 0) setGeneral(rest ?? err.problem.detail ?? "Check the highlighted fields and try again.");
+        if (rest || Object.keys(next).length === 0)
+          setGeneral(rest ?? err.problem.detail ?? "Check the highlighted fields and try again.");
         const first = FIELD_ORDER.find((f) => next[f]);
         if (first) focusField(first);
         return;
@@ -89,7 +99,12 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
             <>
               Another book already uses this ISBN: <em>{String(ctx.title ?? "another book")}</em>.{" "}
               {typeof ctx.bookId === "string" && (
-                <Link to="/books/$bookId" params={{ bookId: ctx.bookId }} className="font-semibold text-brand-700" data-testid="open-duplicate">
+                <Link
+                  to="/books/$bookId"
+                  params={{ bookId: ctx.bookId }}
+                  className="font-semibold text-brand-700"
+                  data-testid="open-duplicate"
+                >
                   Open it
                 </Link>
               )}
@@ -99,14 +114,17 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
         return focusField("isbn");
       case "TOTAL_BELOW_LOANED": {
         const n = Number(ctx.onLoan ?? 0);
-        setServerErrors({ totalCopies: `You can't go below ${n} ${n === 1 ? "copy" : "copies"} — ${n} ${n === 1 ? "is" : "are"} on loan right now.` });
+        setServerErrors({
+          totalCopies: `You can't go below ${n} ${n === 1 ? "copy" : "copies"} — ${n} ${n === 1 ? "is" : "are"} on loan right now.`,
+        });
         return focusField("totalCopies");
       }
       case "STALE_VERSION":
         return setStale(true);
       default:
         // 401/403 are redirected globally; everything else is a generic failure.
-        if (err.status !== 401 && err.status !== 403) setGeneral("Couldn't save the book. Nothing was saved. Try again.");
+        if (err.status !== 401 && err.status !== 403)
+          setGeneral("Couldn't save the book. Nothing was saved. Try again.");
     }
   };
 
@@ -120,14 +138,18 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
       if (!res.found) return setLookup("failed");
       const b = res.book;
       const found: Partial<BookFormValues> = {
-        title: b.title ?? "", author: b.author ?? "", publisher: b.publisher ?? "",
+        title: b.title ?? "",
+        author: b.author ?? "",
+        publisher: b.publisher ?? "",
         publicationYear: b.publicationYear === null ? "" : String(b.publicationYear),
-        description: b.description ?? "", coverImageUrl: b.coverImageUrl ?? "",
+        description: b.description ?? "",
+        coverImageUrl: b.coverImageUrl ?? "",
       };
       // Only empty fields: typed text is never overwritten.
       setValues((v) => {
         const next = { ...v };
-        for (const [k, val] of Object.entries(found) as [BookField, string][]) if (val && v[k].trim() === "") next[k] = val;
+        for (const [k, val] of Object.entries(found) as [BookField, string][])
+          if (val && v[k].trim() === "") next[k] = val;
         return next;
       });
       setLookup("filled");
@@ -157,29 +179,49 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
   };
 
   const total = values.totalCopies.trim() === "" ? NaN : Number(values.totalCopies);
-  const availableAfter = Number.isInteger(total) && total >= 1 ? (book ? Math.max(0, total - book.activeLoans) : total) : null;
+  const availableAfter =
+    Number.isInteger(total) && total >= 1 ? (book ? Math.max(0, total - book.activeLoans) : total) : null;
   const descLen = values.description.length;
   const coverOk = isHttpsUrl(values.coverImageUrl);
 
   return (
-    <form onSubmit={submit} noValidate className="flex max-w-180 flex-col gap-5" data-testid="book-form" aria-label={book ? "Edit book" : "Add book"}>
+    <form
+      onSubmit={submit}
+      noValidate
+      className="flex max-w-180 flex-col gap-5"
+      data-testid="book-form"
+      aria-label={book ? "Edit book" : "Add book"}
+    >
       <Input label="Title" autoComplete="off" {...props("title")} />
       <Input label="Author" autoComplete="off" {...props("author")} />
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <Input label="ISBN" optional autoComplete="off" hint="ISBN-10 or ISBN-13; hyphens are fine." {...props("isbn")} />
+              <Input
+                label="ISBN"
+                optional
+                autoComplete="off"
+                hint="ISBN-10 or ISBN-13; hyphens are fine."
+                {...props("isbn")}
+              />
             </div>
             <div className="pt-8">
-              <Button onClick={runLookup} loading={lookup === "loading"} disabled={!isbnValid} data-testid="isbn-lookup">
+              <Button
+                onClick={runLookup}
+                loading={lookup === "loading"}
+                disabled={!isbnValid}
+                data-testid="isbn-lookup"
+              >
                 Look up
               </Button>
             </div>
           </div>
           {(lookup === "filled" || lookup === "failed") && (
             <p className="mt-1.5 text-sm text-neutral-600" role="status" data-testid="isbn-lookup-hint">
-              {lookup === "filled" ? "Filled from Open Library — check before saving." : "No details found for this ISBN. Fill the fields in by hand."}
+              {lookup === "filled"
+                ? "Filled from Open Library — check before saving."
+                : "No details found for this ISBN. Fill the fields in by hand."}
             </p>
           )}
         </div>
@@ -198,7 +240,14 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
       </div>
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <Input label="Cover image URL" optional type="url" autoComplete="off" placeholder="https://" {...props("coverImageUrl")} />
+          <Input
+            label="Cover image URL"
+            optional
+            type="url"
+            autoComplete="off"
+            placeholder="https://"
+            {...props("coverImageUrl")}
+          />
         </div>
         {coverOk && (
           <div className="pt-6" data-testid="cover-preview">
@@ -211,14 +260,23 @@ export function BookForm({ book, categories, onSubmit, onCancel, onDirtyChange, 
         optional
         rows={5}
         labelAside={
-          <span className={descLen > DESCRIPTION_MAX ? "text-sm text-danger-700" : "text-sm text-neutral-600"} data-testid="description-counter">
+          <span
+            className={descLen > DESCRIPTION_MAX ? "text-sm text-danger-700" : "text-sm text-neutral-600"}
+            data-testid="description-counter"
+          >
             {descLen.toLocaleString("en-US")} / {DESCRIPTION_MAX.toLocaleString("en-US")}
           </span>
         }
         {...props("description")}
       />
       <div>
-        <Input label="Total copies" inputMode="numeric" autoComplete="off" className="max-w-40" {...props("totalCopies")} />
+        <Input
+          label="Total copies"
+          inputMode="numeric"
+          autoComplete="off"
+          className="max-w-40"
+          {...props("totalCopies")}
+        />
         <p className="mt-1.5 text-sm text-neutral-600" data-testid="available-after">
           Available after saving: <span className="font-semibold tabular-nums">{availableAfter ?? "—"}</span>
         </p>

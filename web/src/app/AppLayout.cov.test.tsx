@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { ROLE_PERMISSIONS, type Role } from "@slm/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,10 +17,17 @@ import { ToastProvider } from "../components/ui";
 import { meQueryKey } from "../features/auth/session";
 import { AppLayout } from "./AppLayout";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const problem = (status: number, code: string) => ({ type: "about:blank", title: code, status, code });
 const meBody = (role: Role, extra: Record<string, unknown> = {}) => ({
-  id: "u1", email: "ada@library.test", fullName: "Ada Lovelace Byron", role, permissions: ROLE_PERMISSIONS[role], isDemo: false, ...extra,
+  id: "u1",
+  email: "ada@library.test",
+  fullName: "Ada Lovelace Byron",
+  role,
+  permissions: ROLE_PERMISSIONS[role],
+  isDemo: false,
+  ...extra,
 });
 
 type Handler = (url: string, init?: RequestInit) => Response | Promise<Response>;
@@ -28,11 +42,18 @@ async function renderShell(path = "/dashboard", seed?: unknown) {
   const rootRoute = createRootRoute({ component: Outlet });
   const app = createRoute({ getParentRoute: () => rootRoute, id: "app", component: AppLayout });
   const page = (p: string) => createRoute({ getParentRoute: () => app, path: p, component: () => <p>page {p}</p> });
-  const signIn = createRoute({ getParentRoute: () => rootRoute, path: "/signin", validateSearch: z.object({ next: z.string().optional() }), component: () => <p>sign-in screen</p> });
+  const signIn = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/signin",
+    validateSearch: z.object({ next: z.string().optional() }),
+    component: () => <p>sign-in screen</p>,
+  });
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       signIn,
-      app.addChildren(["/dashboard", "/books", "/members", "/circulation", "/loans", "/discover", "/admin/users"].map(page)),
+      app.addChildren(
+        ["/dashboard", "/books", "/members", "/circulation", "/loans", "/discover", "/admin/users"].map(page),
+      ),
     ]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -110,13 +131,24 @@ describe("AppLayout: loading and account errors", () => {
 });
 
 describe("AppLayout: sidebar by role (U10)", () => {
-  const labels = () => within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link").map((a) => a.getAttribute("title"));
+  const labels = () =>
+    within(screen.getByRole("navigation", { name: "Main" }))
+      .getAllByRole("link")
+      .map((a) => a.getAttribute("title"));
 
   it("Admin sees every item, with Staff users after a divider", async () => {
     stubFetch(() => json(meBody("ADMIN")));
     await renderShell();
     await screen.findByRole("navigation", { name: "Main" });
-    expect(labels()).toEqual(["Dashboard", "Books", "Members", "Circulation", "Loan history", "Book discovery", "Staff users"]);
+    expect(labels()).toEqual([
+      "Dashboard",
+      "Books",
+      "Members",
+      "Circulation",
+      "Loan history",
+      "Book discovery",
+      "Staff users",
+    ]);
     expect(screen.getByRole("separator")).toBeInTheDocument();
     expect(screen.getByTestId("nav-admin-users")).toHaveAttribute("href", "/admin/users");
   });
@@ -239,7 +271,9 @@ describe("AppLayout: user card", () => {
 
 describe("AppLayout: signing out", () => {
   it("posts the logout, clears every cached query, goes to /signin and confirms with a toast", async () => {
-    const fetchMock = stubFetch((url) => (url === "/api/auth/logout" ? new Response(null, { status: 204 }) : json(meBody("LIBRARIAN"))));
+    const fetchMock = stubFetch((url) =>
+      url === "/api/auth/logout" ? new Response(null, { status: 204 }) : json(meBody("LIBRARIAN")),
+    );
     const { router, queryClient } = await renderShell("/books");
     queryClient.setQueryData(["books", "list"], [{ id: "b1" }]);
     await userEvent.click(await screen.findByTestId("user-menu"));

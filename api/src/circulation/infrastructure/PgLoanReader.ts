@@ -68,19 +68,26 @@ export class PgLoanReader implements LoanReader {
     if (p.q) {
       const like = likeEscape(p.q);
       const isbn = p.q.replace(/[-\s]/g, "").toUpperCase();
-      where.push(sql`(m.full_name ILIKE ${like} OR m.member_number ILIKE ${like} OR b.title ILIKE ${like} OR b.isbn = ${isbn})`);
+      where.push(
+        sql`(m.full_name ILIKE ${like} OR m.member_number ILIKE ${like} OR b.title ILIKE ${like} OR b.isbn = ${isbn})`,
+      );
     }
 
-    const order: SQL[] = p.sort.map((s) => sql`${SORT_SQL[s.key]} ${s.desc ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`}`);
+    const order: SQL[] = p.sort.map(
+      (s) => sql`${SORT_SQL[s.key]} ${s.desc ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`}`,
+    );
     if (!p.sort.length) {
-      if (p.status === "ACTIVE" || p.status === "OVERDUE") order.push(sql`${isOverdueSql(now)} DESC`, sql`l.due_at ASC`);
+      if (p.status === "ACTIVE" || p.status === "OVERDUE")
+        order.push(sql`${isOverdueSql(now)} DESC`, sql`l.due_at ASC`);
       else order.push(sql`l.borrowed_at DESC`);
     }
     order.push(sql`l.id ASC`); // stable paging
 
     const whereSql = where.length ? sql`WHERE ${sql.join(where, sql` AND `)}` : sql``;
     const [{ rows }, count] = await Promise.all([
-      this.db.execute(sql`${select(now)} ${whereSql} ORDER BY ${sql.join(order, sql`, `)} LIMIT ${p.size} OFFSET ${(p.page - 1) * p.size}`),
+      this.db.execute(
+        sql`${select(now)} ${whereSql} ORDER BY ${sql.join(order, sql`, `)} LIMIT ${p.size} OFFSET ${(p.page - 1) * p.size}`,
+      ),
       this.db.execute(sql`SELECT count(*)::int AS n ${FROM} ${whereSql}`),
     ]);
     return { items: rows.map(toView), total: Number(count.rows[0]?.n ?? 0) };

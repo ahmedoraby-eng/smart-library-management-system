@@ -12,14 +12,25 @@ const MEMBER_ID = "1c7a8d9e-2e3b-4c4d-8e5f-6a7b8c9d0e1f";
 const DAY = 86_400_000;
 
 const loan = (id: string, patch: Partial<LoanDto> = {}): LoanDto => ({
-  id, status: "ACTIVE",
+  id,
+  status: "ACTIVE",
   book: { id: BOOK_ID, title: "Clean Code", author: "Robert C. Martin" },
   member: { id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad" },
-  processedBy: { id: "s1", name: "Layla Librarian" }, returnedBy: null,
-  borrowedAt: "2026-11-01T10:00:00.000Z", dueAt: new Date(Date.now() + 5 * DAY).toISOString(), returnedAt: null, ...patch,
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: "2026-11-01T10:00:00.000Z",
+  dueAt: new Date(Date.now() + 5 * DAY).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
-const problem = (status: number, code: string) => ({ status, body: { type: "about:blank", title: code, status, code } });
-const loansOnly = (items: LoanDto[]) => ({ url }: { url: URL }) => (url.pathname === "/api/loans" ? { body: page(items) } : undefined);
+const problem = (status: number, code: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code },
+});
+const loansOnly =
+  (items: LoanDto[]) =>
+  ({ url }: { url: URL }) =>
+    url.pathname === "/api/loans" ? { body: page(items) } : undefined;
 
 describe("LoanHistoryPage states", () => {
   it("no loans and no filters: 'No loans yet'", async () => {
@@ -51,8 +62,12 @@ describe("LoanHistoryPage states", () => {
   });
 
   it("a 400 from the API says the filters aren't valid", async () => {
-    await renderApp("/loans", ({ url }) => (url.pathname === "/api/loans" ? problem(400, "VALIDATION_FAILED") : undefined));
-    expect(await screen.findByTestId("loans-error")).toHaveTextContent("These filters aren't valid. Clear them and try again.");
+    await renderApp("/loans", ({ url }) =>
+      url.pathname === "/api/loans" ? problem(400, "VALIDATION_FAILED") : undefined,
+    );
+    expect(await screen.findByTestId("loans-error")).toHaveTextContent(
+      "These filters aren't valid. Clear them and try again.",
+    );
   });
 
   it("an unknown status in the URL is dropped instead of failing the page", async () => {
@@ -63,10 +78,17 @@ describe("LoanHistoryPage states", () => {
   });
 
   it("returned loans show the returned date; active ones show a dash", async () => {
-    await renderApp("/loans", loansOnly([
-      loan("l1", { status: "RETURNED", returnedAt: "2026-11-20T10:00:00.000Z", returnedBy: { id: "s1", name: "Layla Librarian" } }),
-      loan("l2"),
-    ]));
+    await renderApp(
+      "/loans",
+      loansOnly([
+        loan("l1", {
+          status: "RETURNED",
+          returnedAt: "2026-11-20T10:00:00.000Z",
+          returnedBy: { id: "s1", name: "Layla Librarian" },
+        }),
+        loan("l2"),
+      ]),
+    );
     const rows = await screen.findAllByTestId("history-row");
     expect(rows[0]).toHaveTextContent("20 Nov 2026");
     expect(within(rows[1]!).getAllByText("—")).toHaveLength(1);
@@ -130,7 +152,11 @@ describe("LoanHistoryPage filters", () => {
     const { router } = await renderApp("/loans", loansOnly([loan("l1")]));
     await screen.findByTestId("history-row");
     const select = screen.getByTestId("filter-status");
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["All statuses", "Active (on loan)", "Overdue", "Returned"]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["All statuses", "Active (on loan)", "Overdue", "Returned"]);
     await user.selectOptions(select, "ACTIVE");
     await waitFor(() => expect(router.state.location.search).toMatchObject({ status: "ACTIVE" }));
     await user.selectOptions(screen.getByTestId("filter-status"), "");

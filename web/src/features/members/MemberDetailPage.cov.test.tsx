@@ -9,18 +9,49 @@ afterEach(() => vi.unstubAllGlobals());
 
 const DAY = 86_400_000;
 const member = (patch: Partial<MemberDto> = {}): MemberDto => ({
-  id: "m1", memberNumber: "M-000001", fullName: "Sara Haddad", email: "sara@example.org", phone: null, status: "ACTIVE",
-  registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 1, overdueLoans: 0, version: 4, ...patch,
+  id: "m1",
+  memberNumber: "M-000001",
+  fullName: "Sara Haddad",
+  email: "sara@example.org",
+  phone: null,
+  status: "ACTIVE",
+  registeredAt: "2026-01-01T00:00:00.000Z",
+  activeLoans: 1,
+  overdueLoans: 0,
+  version: 4,
+  ...patch,
 });
 const loan = (id: string, patch: Partial<LoanDto> = {}): LoanDto => ({
-  id, status: "ACTIVE", book: { id: `b-${id}`, title: `Book ${id}`, author: "An Author" },
-  member: { id: "m1", memberNumber: "M-000001", fullName: "Sara Haddad" }, processedBy: { id: "s1", name: "Layla Librarian" }, returnedBy: null,
-  borrowedAt: new Date(Date.now() - 10 * DAY).toISOString(), dueAt: new Date(Date.now() + 10 * DAY).toISOString(), returnedAt: null, ...patch,
+  id,
+  status: "ACTIVE",
+  book: { id: `b-${id}`, title: `Book ${id}`, author: "An Author" },
+  member: { id: "m1", memberNumber: "M-000001", fullName: "Sara Haddad" },
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: new Date(Date.now() - 10 * DAY).toISOString(),
+  dueAt: new Date(Date.now() + 10 * DAY).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
-const returned = (id: string) => loan(id, { status: "RETURNED", returnedAt: "2026-11-10T10:00:00.000Z", returnedBy: { id: "s1", name: "Layla Librarian" } });
-const problem = (status: number, code: string, detail?: string) => ({ status, body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}) } });
+const returned = (id: string) =>
+  loan(id, {
+    status: "RETURNED",
+    returnedAt: "2026-11-10T10:00:00.000Z",
+    returnedBy: { id: "s1", name: "Layla Librarian" },
+  });
+const problem = (status: number, code: string, detail?: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}) },
+});
 
-const me = (permissions: Me["permissions"]): Me => ({ id: "s1", email: "s@x.org", fullName: "Staff", role: "LIBRARIAN", permissions, isDemo: false });
+const me = (permissions: Me["permissions"]): Me => ({
+  id: "s1",
+  email: "s@x.org",
+  fullName: "Staff",
+  role: "LIBRARIAN",
+  permissions,
+  isDemo: false,
+});
 const READ_ONLY_NO_LOANS = me(["BOOK_READ", "MEMBER_READ"]);
 
 interface Setup {
@@ -35,12 +66,14 @@ function api(opts: Setup = {}) {
   const puts: unknown[] = [];
   const handler = ({ method, url, body }: { method: string; url: URL; body: unknown }) => {
     const p = url.pathname;
-    if (p === "/api/members/m1" && method === "GET") return opts.memberStatus ? problem(opts.memberStatus, "X") : { body: opts.member ?? member() };
+    if (p === "/api/members/m1" && method === "GET")
+      return opts.memberStatus ? problem(opts.memberStatus, "X") : { body: opts.member ?? member() };
     if (p === "/api/members/m1" && method === "PUT") {
       puts.push(body);
       return opts.put?.(body) ?? { body: { ...(opts.member ?? member()), ...(body as object) } };
     }
-    if (p === "/api/members/m1/loans") return opts.loansStatus ? problem(opts.loansStatus, "X") : { body: opts.loans ?? [] };
+    if (p === "/api/members/m1/loans")
+      return opts.loansStatus ? problem(opts.loansStatus, "X") : { body: opts.loans ?? [] };
     if (p.endsWith("/return") && method === "POST") return opts.ret?.() ?? { body: returned("1") };
     return undefined;
   };
@@ -62,7 +95,8 @@ describe("MemberDetailPage loading and errors", () => {
     const user = userEvent.setup();
     let calls = 0;
     await renderApp("/members/m1", ({ method, url }) => {
-      if (url.pathname === "/api/members/m1" && method === "GET") return ++calls === 1 ? problem(500, "INTERNAL") : { body: member() };
+      if (url.pathname === "/api/members/m1" && method === "GET")
+        return ++calls === 1 ? problem(500, "INTERNAL") : { body: member() };
       if (url.pathname === "/api/members/m1/loans") return { body: [] };
       return undefined;
     });
@@ -87,7 +121,8 @@ describe("MemberDetailPage loading and errors", () => {
     let calls = 0;
     await renderApp("/members/m1", ({ method, url }) => {
       if (url.pathname === "/api/members/m1" && method === "GET") return { body: member() };
-      if (url.pathname === "/api/members/m1/loans") return ++calls === 1 ? problem(500, "INTERNAL") : { body: [loan("1")] };
+      if (url.pathname === "/api/members/m1/loans")
+        return ++calls === 1 ? problem(500, "INTERNAL") : { body: [loan("1")] };
       return undefined;
     });
     const alert = await screen.findByTestId("loans-error");
@@ -121,7 +156,9 @@ describe("MemberDetailPage loans tabs", () => {
 
   it("History lists returned loans with their returned date and no Return buttons; overdue open loans are tinted", async () => {
     const user = userEvent.setup();
-    const a = api({ loans: [loan("1", { status: "OVERDUE", dueAt: new Date(Date.now() - 3 * DAY).toISOString() }), returned("2")] });
+    const a = api({
+      loans: [loan("1", { status: "OVERDUE", dueAt: new Date(Date.now() - 3 * DAY).toISOString() }), returned("2")],
+    });
     await renderApp("/members/m1", a.handler);
     const open = await screen.findAllByTestId("loan-row");
     expect(open).toHaveLength(1);
@@ -192,7 +229,16 @@ describe("MemberDetailPage returning from the profile", () => {
     const user = userEvent.setup();
     const a = api({
       loans: [loan("1")],
-      ret: () => ({ status: 409, body: { type: "about:blank", title: "x", status: 409, code: "LOAN_ALREADY_RETURNED", context: { returnedAt: "2026-11-24T10:42:00.000Z", returnedBy: "Omar Nasser" } } }),
+      ret: () => ({
+        status: 409,
+        body: {
+          type: "about:blank",
+          title: "x",
+          status: 409,
+          code: "LOAN_ALREADY_RETURNED",
+          context: { returnedAt: "2026-11-24T10:42:00.000Z", returnedBy: "Omar Nasser" },
+        },
+      }),
     });
     await renderApp("/members/m1", a.handler);
     const dialog = await openReturn(user);
@@ -209,7 +255,9 @@ describe("MemberDetailPage returning from the profile", () => {
     const dialog = await openReturn(user);
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     await waitFor(() => expect(screen.queryByTestId("return-dialog")).not.toBeInTheDocument());
-    expect(fetchMock.mock.calls.some(([u, init]) => String(u).endsWith("/return") && init?.method === "POST")).toBe(true);
+    expect(fetchMock.mock.calls.some(([u, init]) => String(u).endsWith("/return") && init?.method === "POST")).toBe(
+      true,
+    );
     expect(screen.queryByTestId("toast")).not.toBeInTheDocument();
   });
 
@@ -234,7 +282,13 @@ describe("MemberDetailPage actions", () => {
     await user.type(within(modal).getByTestId("field-fullName"), "Sara H.");
     await user.click(within(modal).getByTestId("save-member"));
     await waitFor(() => expect(a.puts).toHaveLength(1));
-    expect(a.puts[0]).toEqual({ fullName: "Sara H.", email: "sara@example.org", phone: null, status: "ACTIVE", version: 4 });
+    expect(a.puts[0]).toEqual({
+      fullName: "Sara H.",
+      email: "sara@example.org",
+      phone: null,
+      status: "ACTIVE",
+      version: 4,
+    });
     await waitFor(() => expect(screen.queryByTestId("member-modal")).not.toBeInTheDocument());
   });
 
@@ -254,7 +308,13 @@ describe("MemberDetailPage actions", () => {
     dialog = await screen.findByTestId("deactivate-dialog");
     await user.click(within(dialog).getByTestId("dialog-confirm"));
     expect(await screen.findByText("Sara Haddad deactivated.")).toBeInTheDocument();
-    expect(a.puts[0]).toEqual({ fullName: "Sara Haddad", email: "sara@example.org", phone: null, status: "INACTIVE", version: 4 });
+    expect(a.puts[0]).toEqual({
+      fullName: "Sara Haddad",
+      email: "sara@example.org",
+      phone: null,
+      status: "INACTIVE",
+      version: 4,
+    });
     expect(screen.queryByTestId("deactivate-dialog")).not.toBeInTheDocument();
   });
 
@@ -262,7 +322,9 @@ describe("MemberDetailPage actions", () => {
     const user = userEvent.setup();
     const a = api({ member: member({ status: "INACTIVE" }), loans: [] });
     await renderApp("/members/m1", a.handler);
-    expect(await screen.findByTestId("inactive-notice")).toHaveTextContent("This member is inactive and can't borrow until reactivated.");
+    expect(await screen.findByTestId("inactive-notice")).toHaveTextContent(
+      "This member is inactive and can't borrow until reactivated.",
+    );
     await user.click(screen.getByTestId("detail-actions"));
     await user.click(await screen.findByTestId("menu-reactivate"));
     expect(await screen.findByText("Sara Haddad reactivated.")).toBeInTheDocument();
@@ -290,7 +352,9 @@ describe("MemberDetailPage actions", () => {
     await user.click(await screen.findByTestId("detail-actions"));
     await user.click(await screen.findByTestId("menu-deactivate"));
     await user.click(within(await screen.findByTestId("deactivate-dialog")).getByTestId("dialog-confirm"));
-    expect(await screen.findByTestId("toast")).toHaveTextContent("Couldn't change the status. Nothing was changed. Try again.");
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Couldn't change the status. Nothing was changed. Try again.",
+    );
   });
 
   it("another 4xx closes the dialog silently", async () => {

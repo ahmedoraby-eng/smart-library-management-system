@@ -18,9 +18,16 @@ async function book(title: string, opts: { available?: number; archived?: boolea
   return r.rows[0].id as string;
 }
 const chunk = (index: number, embedding: number[], content = `c${index}`) => ({ index, content, embedding });
-const chunkRows = async () => (await pool.query("SELECT book_id, chunk_index, source_hash, model, embedding FROM book_chunks ORDER BY book_id, chunk_index")).rows;
+const chunkRows = async () =>
+  (
+    await pool.query(
+      "SELECT book_id, chunk_index, source_hash, model, embedding FROM book_chunks ORDER BY book_id, chunk_index",
+    )
+  ).rows;
 
-beforeEach(async () => { await resetDb(); });
+beforeEach(async () => {
+  await resetDb();
+});
 
 describe("PgChunkStore on plain Postgres (brute-force path)", () => {
   it("usesPgvector is false without the embedding_v column (once asked, the answer is reused)", async () => {
@@ -59,7 +66,12 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
     const rows = await chunkRows();
     expect(rows).toHaveLength(3);
     expect(rows.every((r) => r.model === MODEL && Array.isArray(r.embedding) && r.embedding.length === 3)).toBe(true);
-    expect([...(await store().indexedHashes(MODEL))].sort()).toEqual([[a, "h-a"], [b, "h-b"]].sort());
+    expect([...(await store().indexedHashes(MODEL))].sort()).toEqual(
+      [
+        [a, "h-a"],
+        [b, "h-b"],
+      ].sort(),
+    );
     expect((await store().indexedHashes("other-model")).size).toBe(0);
     expect(await store().knownHashes([], MODEL)).toEqual(new Set());
     expect(await store().knownHashes(["h-a", "h-zzz"], MODEL)).toEqual(new Set(["h-a"]));
@@ -69,8 +81,20 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
   it("apply: re-embedding replaces a book's chunks; an embedded book with no rows just has its chunks removed", async () => {
     const a = await book("A");
     const b = await book("B");
-    await store().apply(MODEL, { embedded: [{ bookId: a, hash: "h1", rows: [chunk(0, [1, 0, 0]), chunk(1, [0, 1, 0])] }, { bookId: b, hash: "h2", rows: [chunk(0, [0, 0, 1])] }], copied: [] });
-    await store().apply(MODEL, { embedded: [{ bookId: a, hash: "h1b", rows: [chunk(0, [1, 1, 0])] }, { bookId: b, hash: "h2", rows: [] }], copied: [] });
+    await store().apply(MODEL, {
+      embedded: [
+        { bookId: a, hash: "h1", rows: [chunk(0, [1, 0, 0]), chunk(1, [0, 1, 0])] },
+        { bookId: b, hash: "h2", rows: [chunk(0, [0, 0, 1])] },
+      ],
+      copied: [],
+    });
+    await store().apply(MODEL, {
+      embedded: [
+        { bookId: a, hash: "h1b", rows: [chunk(0, [1, 1, 0])] },
+        { bookId: b, hash: "h2", rows: [] },
+      ],
+      copied: [],
+    });
     const rows = await chunkRows();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ book_id: a, source_hash: "h1b", chunk_index: 0 });
@@ -80,11 +104,31 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
     const donor = await book("Donor");
     const twin = await book("Twin");
     const lonely = await book("Lonely");
-    await store().apply(MODEL, { embedded: [{ bookId: donor, hash: "same", rows: [chunk(0, [1, 0, 0], "x"), chunk(1, [0, 1, 0], "y")] }], copied: [] });
-    await pool.query("INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1, 0, 'stale', 'old', $2, '{0,0,1}')", [twin, MODEL]);
-    await store().apply(MODEL, { embedded: [], copied: [{ bookId: twin, hash: "same" }, { bookId: lonely, hash: "no-such-hash" }] });
-    const twinRows = (await pool.query("SELECT chunk_index, content, source_hash, embedding FROM book_chunks WHERE book_id = $1 ORDER BY chunk_index", [twin])).rows;
-    expect(twinRows.map((r) => [r.chunk_index, r.content, r.source_hash])).toEqual([[0, "x", "same"], [1, "y", "same"]]);
+    await store().apply(MODEL, {
+      embedded: [{ bookId: donor, hash: "same", rows: [chunk(0, [1, 0, 0], "x"), chunk(1, [0, 1, 0], "y")] }],
+      copied: [],
+    });
+    await pool.query(
+      "INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1, 0, 'stale', 'old', $2, '{0,0,1}')",
+      [twin, MODEL],
+    );
+    await store().apply(MODEL, {
+      embedded: [],
+      copied: [
+        { bookId: twin, hash: "same" },
+        { bookId: lonely, hash: "no-such-hash" },
+      ],
+    });
+    const twinRows = (
+      await pool.query(
+        "SELECT chunk_index, content, source_hash, embedding FROM book_chunks WHERE book_id = $1 ORDER BY chunk_index",
+        [twin],
+      )
+    ).rows;
+    expect(twinRows.map((r) => [r.chunk_index, r.content, r.source_hash])).toEqual([
+      [0, "x", "same"],
+      [1, "y", "same"],
+    ]);
     expect(twinRows[1]!.embedding).toEqual([0, 1, 0]);
     expect((await pool.query("SELECT 1 FROM book_chunks WHERE book_id = $1", [lonely])).rowCount).toBe(0);
   });
@@ -92,9 +136,14 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
   it("apply: drops orphan chunks (other models, archived or missing books) and returns how many", async () => {
     const live = await book("Live");
     const old = await book("Old", { archived: true });
-    await pool.query("INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1,0,'o','h','other-model','{1,0,0}'), ($2,0,'o','h',$3,'{1,0,0}'), ($4,0,'o','h',$3,'{1,0,0}')",
-      [live, old, MODEL, "11111111-1111-4111-8111-111111111111"]);
-    const removed = await store().apply(MODEL, { embedded: [{ bookId: live, hash: "h", rows: [chunk(0, [1, 0, 0])] }], copied: [] });
+    await pool.query(
+      "INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1,0,'o','h','other-model','{1,0,0}'), ($2,0,'o','h',$3,'{1,0,0}'), ($4,0,'o','h',$3,'{1,0,0}')",
+      [live, old, MODEL, "11111111-1111-4111-8111-111111111111"],
+    );
+    const removed = await store().apply(MODEL, {
+      embedded: [{ bookId: live, hash: "h", rows: [chunk(0, [1, 0, 0])] }],
+      copied: [],
+    });
     expect(removed).toBe(2); // the archived book's and the missing book's (the other-model row of `live` went with live's replacement)
     expect((await chunkRows()).map((r) => r.book_id)).toEqual([live]);
   });
@@ -102,10 +151,22 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
   it("apply is one transaction: a failing insert leaves earlier changes undone", async () => {
     const a = await book("A");
     await store().apply(MODEL, { embedded: [{ bookId: a, hash: "h", rows: [chunk(0, [1, 0, 0])] }], copied: [] });
-    await expect(store().apply(MODEL, {
-      embedded: [{ bookId: a, hash: "h2", rows: [chunk(0, [0, 1, 0])] }, { bookId: a, hash: "h3", rows: [{ index: 0, content: "bad", embedding: [Number.NaN, 1, 1] as number[] }, chunk(1, ["x" as unknown as number, 1, 1])] }],
-      copied: [],
-    })).rejects.toThrow();
+    await expect(
+      store().apply(MODEL, {
+        embedded: [
+          { bookId: a, hash: "h2", rows: [chunk(0, [0, 1, 0])] },
+          {
+            bookId: a,
+            hash: "h3",
+            rows: [
+              { index: 0, content: "bad", embedding: [Number.NaN, 1, 1] as number[] },
+              chunk(1, ["x" as unknown as number, 1, 1]),
+            ],
+          },
+        ],
+        copied: [],
+      }),
+    ).rejects.toThrow();
     const rows = await chunkRows();
     expect(rows).toHaveLength(1);
     expect(rows[0]!.source_hash).toBe("h"); // the first replacement was rolled back too
@@ -129,13 +190,21 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
         copied: [],
       });
       // a null embedding and another model are never searched
-      await pool.query("INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1, 5, 'null', 'x', $2, NULL), ($1, 6, 'x', 'x', 'other', '{1,0,0}')", [far, MODEL]);
+      await pool.query(
+        "INSERT INTO book_chunks (book_id, chunk_index, content, source_hash, model, embedding) VALUES ($1, 5, 'null', 'x', $2, NULL), ($1, 6, 'x', 'x', 'other', '{1,0,0}')",
+        [far, MODEL],
+      );
       return { near, mid, far, out, gone };
     }
 
     it("ranks each live book by its best chunk, skips archived books, other models and null embeddings", async () => {
       const { near, mid, out } = await seed();
-      const hits = await store().nearest([1, 0, 0], { model: MODEL, limit: 10, minSimilarity: 0.5, availableOnly: false });
+      const hits = await store().nearest([1, 0, 0], {
+        model: MODEL,
+        limit: 10,
+        minSimilarity: 0.5,
+        availableOnly: false,
+      });
       expect(hits.map((h) => h.bookId).sort()).toEqual([near, out, mid].sort());
       const sims = Object.fromEntries(hits.map((h) => [h.bookId, h.similarity]));
       expect(sims[near]).toBeCloseTo(1, 10);
@@ -149,23 +218,46 @@ describe("PgChunkStore on plain Postgres (brute-force path)", () => {
       const { near, out } = await seed();
       const third = await book("Third Tie");
       const fourth = await book("Fourth Tie");
-      await store().apply(MODEL, { embedded: [
-        { bookId: near, hash: "n", rows: [chunk(0, [1, 0, 0])] }, { bookId: out, hash: "o", rows: [chunk(0, [1, 0, 0])] },
-        { bookId: third, hash: "t", rows: [chunk(0, [2, 0, 0])] }, { bookId: fourth, hash: "f", rows: [chunk(0, [5, 0, 0])] },
-      ], copied: [] });
-      const hits = await store().nearest([1, 0, 0], { model: MODEL, limit: 10, minSimilarity: 0.99, availableOnly: false });
+      await store().apply(MODEL, {
+        embedded: [
+          { bookId: near, hash: "n", rows: [chunk(0, [1, 0, 0])] },
+          { bookId: out, hash: "o", rows: [chunk(0, [1, 0, 0])] },
+          { bookId: third, hash: "t", rows: [chunk(0, [2, 0, 0])] },
+          { bookId: fourth, hash: "f", rows: [chunk(0, [5, 0, 0])] },
+        ],
+        copied: [],
+      });
+      const hits = await store().nearest([1, 0, 0], {
+        model: MODEL,
+        limit: 10,
+        minSimilarity: 0.99,
+        availableOnly: false,
+      });
       expect(hits.map((h) => h.bookId)).toEqual([near, out, third, fourth].sort());
-      expect(await store().nearest([1, 0, 0], { model: MODEL, limit: 2, minSimilarity: 0.99, availableOnly: false })).toHaveLength(2);
+      expect(
+        await store().nearest([1, 0, 0], { model: MODEL, limit: 2, minSimilarity: 0.99, availableOnly: false }),
+      ).toHaveLength(2);
     });
 
     it("availableOnly drops books with no copies on the shelf; limit caps the list; the threshold filters", async () => {
       const { near, mid, out } = await seed();
-      const avail = await store().nearest([1, 0, 0], { model: MODEL, limit: 10, minSimilarity: 0.5, availableOnly: true });
+      const avail = await store().nearest([1, 0, 0], {
+        model: MODEL,
+        limit: 10,
+        minSimilarity: 0.5,
+        availableOnly: true,
+      });
       expect(avail.map((h) => h.bookId)).toEqual([near, mid]);
       expect(avail.map((h) => h.bookId)).not.toContain(out);
-      expect(await store().nearest([1, 0, 0], { model: MODEL, limit: 1, minSimilarity: 0, availableOnly: false })).toHaveLength(1);
-      expect(await store().nearest([1, 0, 0], { model: MODEL, limit: 10, minSimilarity: 1.01, availableOnly: false })).toEqual([]);
-      expect(await store().nearest([1, 0, 0], { model: "unknown-model", limit: 10, minSimilarity: 0, availableOnly: false })).toEqual([]);
+      expect(
+        await store().nearest([1, 0, 0], { model: MODEL, limit: 1, minSimilarity: 0, availableOnly: false }),
+      ).toHaveLength(1);
+      expect(
+        await store().nearest([1, 0, 0], { model: MODEL, limit: 10, minSimilarity: 1.01, availableOnly: false }),
+      ).toEqual([]);
+      expect(
+        await store().nearest([1, 0, 0], { model: "unknown-model", limit: 10, minSimilarity: 0, availableOnly: false }),
+      ).toEqual([]);
     });
   });
 });
@@ -189,7 +281,8 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
     const db = { execute: run, transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx) } as unknown as Db;
     return { calls, make: (dims?: number) => new mod.PgChunkStore(db, dims), ...extra };
   }
-  const hasColumn = (call: Call) => (call.sql.includes("information_schema") ? { rows: [{ "?column?": 1 }] } : undefined);
+  const hasColumn = (call: Call) =>
+    call.sql.includes("information_schema") ? { rows: [{ "?column?": 1 }] } : undefined;
 
   it("detects the column once, logs the path once, and uses it only for 768-dimension models", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -206,7 +299,10 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     let first = true;
     const f = await fresh((call) => {
-      if (first) { first = false; throw new Error("db unreachable"); }
+      if (first) {
+        first = false;
+        throw new Error("db unreachable");
+      }
       return hasColumn(call);
     });
     await expect(f.make().usesPgvector()).rejects.toThrow("db unreachable");
@@ -217,9 +313,21 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
 
   it("nearest queries the HNSW column with a vector literal, the pool factor, threshold, and optional availability filter", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const f = await fresh((call) => (call.sql.includes("information_schema") ? hasColumn(call) : { rows: [{ book_id: "b1", similarity: "0.91" }, { book_id: "b2", similarity: 0.8 }] }));
+    const f = await fresh((call) =>
+      call.sql.includes("information_schema")
+        ? hasColumn(call)
+        : {
+            rows: [
+              { book_id: "b1", similarity: "0.91" },
+              { book_id: "b2", similarity: 0.8 },
+            ],
+          },
+    );
     const hits = await f.make().nearest([0.5, 0.25], { model: "m", limit: 4, minSimilarity: 0.7, availableOnly: true });
-    expect(hits).toEqual([{ bookId: "b1", similarity: 0.91 }, { bookId: "b2", similarity: 0.8 }]);
+    expect(hits).toEqual([
+      { bookId: "b1", similarity: 0.91 },
+      { bookId: "b2", similarity: 0.8 },
+    ]);
     const q = f.calls.at(-1)!;
     expect(q.sql).toContain("<=>");
     expect(q.sql).toContain("b.available_copies > 0");
@@ -230,9 +338,22 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
 
   it("apply writes the vector column only (no array copy) and copies both columns from the donor", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const f = await fresh((call) => (call.sql.includes("information_schema") ? hasColumn(call) : { rows: [], rowCount: call.sql.startsWith("delete from book_chunks c") || call.sql.includes("DELETE FROM book_chunks c") ? 7 : 0 }));
+    const f = await fresh((call) =>
+      call.sql.includes("information_schema")
+        ? hasColumn(call)
+        : {
+            rows: [],
+            rowCount:
+              call.sql.startsWith("delete from book_chunks c") || call.sql.includes("DELETE FROM book_chunks c")
+                ? 7
+                : 0,
+          },
+    );
     const removed = await f.make().apply("m", {
-      embedded: [{ bookId: "e1", hash: "he", rows: [chunk(0, [1, 2]), chunk(1, [3, 4])] }, { bookId: "e2", hash: "h2", rows: [] }],
+      embedded: [
+        { bookId: "e1", hash: "he", rows: [chunk(0, [1, 2]), chunk(1, [3, 4])] },
+        { bookId: "e2", hash: "h2", rows: [] },
+      ],
       copied: [{ bookId: "c1", hash: "hc" }],
     });
     expect(removed).toBe(7);
@@ -244,14 +365,18 @@ describe("PgChunkStore with pgvector (SQL shape checked against a recording data
     expect(insert.sql).toContain("::vector");
     expect(insert.params).toEqual(expect.arrayContaining(["[1,2]", "[3,4]"]));
     // copies run before embeds; the empty book only has its chunks deleted
-    const kinds = writes.map((c) => (/^\s*delete/i.test(c.sql) ? "delete" : c.sql.includes("VALUES") ? "insert" : "copy"));
+    const kinds = writes.map((c) =>
+      /^\s*delete/i.test(c.sql) ? "delete" : c.sql.includes("VALUES") ? "insert" : "copy",
+    );
     expect(kinds).toEqual(["delete", "copy", "delete", "insert", "delete", "delete"]);
   });
 
   it("liveBooks maps a missing description to null (defensive: the column is NOT NULL in the real schema)", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const f = await fresh(() => ({ rows: [{ id: "1", title: "T", author: "A", category: "C", description: null }] }));
-    expect(await f.make().liveBooks()).toEqual([{ id: "1", title: "T", author: "A", category: "C", description: null }]);
+    expect(await f.make().liveBooks()).toEqual([
+      { id: "1", title: "T", author: "A", category: "C", description: null },
+    ]);
   });
 
   it("without rows to write, apply only prunes orphans (rowCount missing counts as 0)", async () => {

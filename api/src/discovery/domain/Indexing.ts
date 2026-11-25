@@ -33,12 +33,18 @@ export interface ChunkStore {
    * chunks of another book with the same source hash, then drop orphan chunks (gone/archived books,
    * other models). Returns the number of orphan rows removed.
    */
-  apply(model: string, change: {
-    embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>;
-    copied: Array<{ bookId: string; hash: string }>;
-  }): Promise<number>;
+  apply(
+    model: string,
+    change: {
+      embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>;
+      copied: Array<{ bookId: string; hash: string }>;
+    },
+  ): Promise<number>;
   /** Books whose best chunk is closest to the query vector, best first. */
-  nearest(query: number[], opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean }): Promise<VectorHit[]>;
+  nearest(
+    query: number[],
+    opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean },
+  ): Promise<VectorHit[]>;
   /** True when the server has pgvector (the HNSW path). */
   usesPgvector(): Promise<boolean>;
 }

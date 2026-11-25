@@ -42,12 +42,25 @@ export function normalizeIsbn(raw: string): string | null {
 
 const currentYear = () => new Date().getUTCFullYear();
 const optionalText = (max: number, message: string) =>
-  z.string().trim().max(max, message).optional().transform((v) => v ?? "");
+  z
+    .string()
+    .trim()
+    .max(max, message)
+    .optional()
+    .transform((v) => v ?? "");
 
 /** Field rules and messages follow ux.md §3.4 (the form shows these messages next to each field). */
 export const BookInputSchema = z.object({
-  title: z.string({ error: "Enter a title." }).trim().min(1, "Enter a title.").max(200, "Keep the title under 200 characters."),
-  author: z.string({ error: "Enter an author." }).trim().min(1, "Enter an author.").max(200, "Keep the author under 200 characters."),
+  title: z
+    .string({ error: "Enter a title." })
+    .trim()
+    .min(1, "Enter a title.")
+    .max(200, "Keep the title under 200 characters."),
+  author: z
+    .string({ error: "Enter an author." })
+    .trim()
+    .min(1, "Enter an author.")
+    .max(200, "Keep the author under 200 characters."),
   isbn: z
     .string()
     .trim()
@@ -62,7 +75,11 @@ export const BookInputSchema = z.object({
       }
       return n;
     }),
-  category: z.string({ error: "Choose or type a category." }).trim().min(1, "Choose or type a category.").max(60, "Keep the category under 60 characters."),
+  category: z
+    .string({ error: "Choose or type a category." })
+    .trim()
+    .min(1, "Choose or type a category.")
+    .max(60, "Keep the category under 60 characters."),
   publisher: optionalText(120, "Keep the publisher under 120 characters."),
   publicationYear: z
     .number({ error: `Enter a year between 1450 and ${currentYear()}.` })
@@ -75,12 +92,18 @@ export const BookInputSchema = z.object({
     .string()
     .trim()
     .max(1000)
-    .refine((u) => u === "" || /^https:\/\/[^\s]+$/i.test(u), { message: "Enter a full image URL starting with https://." })
+    .refine((u) => u === "" || /^https:\/\/[^\s]+$/i.test(u), {
+      message: "Enter a full image URL starting with https://.",
+    })
     .nullable()
     .optional()
     .transform((v) => (v ? v : null)),
   description: optionalText(2000, "Keep the description under 2,000 characters."),
-  totalCopies: z.number({ error: "Enter at least 1 copy." }).int("Enter a whole number.").min(1, "Enter at least 1 copy.").max(10_000),
+  totalCopies: z
+    .number({ error: "Enter at least 1 copy." })
+    .int("Enter a whole number.")
+    .min(1, "Enter at least 1 copy.")
+    .max(10_000),
 });
 export type BookInput = z.infer<typeof BookInputSchema>;
 export type BookInputRaw = z.input<typeof BookInputSchema>;
@@ -108,7 +131,10 @@ export const CategoriesSchema = z.object({ items: z.array(z.string()) });
 
 /** GET /api/books/isbn-lookup (SLM-13): suggestions from Open Library to prefill the book form. Never saved by itself. */
 export const IsbnLookupQuerySchema = z.object({
-  isbn: z.string({ error: "Enter a valid ISBN-10 or ISBN-13." }).trim().refine((v) => normalizeIsbn(v) !== null, "Enter a valid ISBN-10 or ISBN-13."),
+  isbn: z
+    .string({ error: "Enter a valid ISBN-10 or ISBN-13." })
+    .trim()
+    .refine((v) => normalizeIsbn(v) !== null, "Enter a valid ISBN-10 or ISBN-13."),
 });
 export const IsbnLookupBookSchema = z.object({
   title: z.string().nullable(),

@@ -3,7 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertIcon, AvailabilityBadge, Badge, Button, buttonClasses, Card, CardBody, CheckCircleIcon, Combobox, InlineAlert, useToast,
+  AlertIcon,
+  AvailabilityBadge,
+  Badge,
+  Button,
+  buttonClasses,
+  Card,
+  CardBody,
+  CheckCircleIcon,
+  Combobox,
+  InlineAlert,
+  useToast,
 } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { api, ApiError } from "../../lib/apiClient";
@@ -34,7 +44,11 @@ function useDebounced(value: string, ms = SEARCH_DEBOUNCE_MS): string {
 const firstName = (m: Pick<MemberDto, "fullName">) => m.fullName.split(/\s+/)[0] ?? m.fullName;
 
 type Notice = { target: "member" | "book" | "form"; text: ReactNode; retry?: boolean };
-interface Success { loan: LoanDto; available: number; total: number }
+interface Success {
+  loan: LoanDto;
+  available: number;
+  total: number;
+}
 
 /**
  * Borrow (ux.md §4.1): one page, no wizard; the live summary card is the confirmation step.
@@ -92,17 +106,22 @@ export function BorrowPage() {
   const members = useMemberSearch(memberQ);
   const books = useBookSearch(bookQ);
   const memberLoans = useLoans({ memberId: member?.id, status: "ACTIVE", size: 20 }, { enabled: Boolean(member) });
-  const held = useMemo(() => new Map((member ? memberLoans.data?.items ?? [] : []).map((l) => [l.book.id, l])), [member, memberLoans.data]);
+  const held = useMemo(
+    () => new Map((member ? (memberLoans.data?.items ?? []) : []).map((l) => [l.book.id, l])),
+    [member, memberLoans.data],
+  );
 
   const memberReason = (m: MemberDto): string | null => {
     if (m.status !== "ACTIVE") return "Inactive — reactivate on the member page";
-    if (m.activeLoans >= MAX_ACTIVE_LOANS) return `${m.activeLoans} of ${MAX_ACTIVE_LOANS} books on loan — return one first`;
+    if (m.activeLoans >= MAX_ACTIVE_LOANS)
+      return `${m.activeLoans} of ${MAX_ACTIVE_LOANS} books on loan — return one first`;
     return null;
   };
   const bookReason = (b: BookDto): string | null => {
     const loan = held.get(b.id);
     if (loan && member) return `${firstName(member)} already has this book (due ${formatDay(loan.dueAt)})`;
-    if (b.availableCopies === 0) return `No copies available${b.nextDueAt ? ` · next due ${formatDay(b.nextDueAt)}` : ""}`;
+    if (b.availableCopies === 0)
+      return `No copies available${b.nextDueAt ? ` · next due ${formatDay(b.nextDueAt)}` : ""}`;
     return null;
   };
 
@@ -110,9 +129,11 @@ export function BorrowPage() {
   const dueDays = daysUntil(dueDay, today);
   const lastDay = addDays(today, 60);
   const dueLabel = Number.isNaN(dueDays) ? "Choose a date" : formatWeekdayDate(addDays(today, dueDays));
-  const dueError = dueServerError ?? (dueDays < 1 || dueDays > 60 || Number.isNaN(dueDays)
-    ? `Choose a due date between tomorrow and ${formatDate(lastDay)}.`
-    : null);
+  const dueError =
+    dueServerError ??
+    (dueDays < 1 || dueDays > 60 || Number.isNaN(dueDays)
+      ? `Choose a due date between tomorrow and ${formatDate(lastDay)}.`
+      : null);
   // The picked member's open loans, live (the MemberDto from the search goes stale after a borrow).
   const liveMember = member && memberLoans.data ? { ...member, activeLoans: memberLoans.data.total } : member;
   const memberBlock = liveMember ? memberReason(liveMember) : null;
@@ -178,7 +199,14 @@ export function BorrowPage() {
     switch (err.code) {
       case "BOOK_UNAVAILABLE":
         setBook(null);
-        setNotice({ target: "book", text: <>The last copy of <em>{picked.book.title}</em> was just borrowed. Choose another book.</> });
+        setNotice({
+          target: "book",
+          text: (
+            <>
+              The last copy of <em>{picked.book.title}</em> was just borrowed. Choose another book.
+            </>
+          ),
+        });
         setTimeout(() => bookInput.current?.focus(), 0);
         break;
       case "ALREADY_BORROWED":
@@ -233,41 +261,56 @@ export function BorrowPage() {
       <Card>
         <CardBody className="space-y-7">
           {success && (
-            <InlineAlert
-              variant="success"
-              testId="borrow-success"
-            >
+            <InlineAlert variant="success" testId="borrow-success">
               <SuccessText loan={success.loan} available={success.available} total={success.total} />
               <div className="mt-2.5 flex flex-wrap gap-2">
-                  {member && (
-                    <Button size="sm" onClick={borrowAnother} data-testid="borrow-another">
-                      Borrow another for {firstName(member)}
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={clearAll} data-testid="new-borrowing">
-                    New borrowing
+                {member && (
+                  <Button size="sm" onClick={borrowAnother} data-testid="borrow-another">
+                    Borrow another for {firstName(member)}
                   </Button>
-                  <Link
-                    to="/loans"
-                    search={{ memberId: success.loan.member.id, status: "ACTIVE", page: 1, size: 20 }}
-                    className={buttonClasses({ size: "sm", variant: "ghost" })}
-                    data-testid="view-loan"
-                  >
-                    View loan
-                  </Link>
+                )}
+                <Button size="sm" variant="ghost" onClick={clearAll} data-testid="new-borrowing">
+                  New borrowing
+                </Button>
+                <Link
+                  to="/loans"
+                  search={{ memberId: success.loan.member.id, status: "ACTIVE", page: 1, size: 20 }}
+                  className={buttonClasses({ size: "sm", variant: "ghost" })}
+                  data-testid="view-loan"
+                >
+                  View loan
+                </Link>
               </div>
             </InlineAlert>
           )}
           {notice?.target === "form" && (
-            <InlineAlert variant="danger" testId="borrow-error" action={notice.retry ? <Button size="sm" onClick={submit}>Try again</Button> : undefined}>
+            <InlineAlert
+              variant="danger"
+              testId="borrow-error"
+              action={
+                notice.retry ? (
+                  <Button size="sm" onClick={submit}>
+                    Try again
+                  </Button>
+                ) : undefined
+              }
+            >
               {notice.text}
             </InlineAlert>
           )}
 
           <Step n={1} title="Member" done={Boolean(member)}>
             {member ? (
-              <PickedRow testId="picked-member" onChange={() => { setMember(null); setTimeout(() => memberInput.current?.focus(), 0); }}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{initials(member.fullName)}</span>
+              <PickedRow
+                testId="picked-member"
+                onChange={() => {
+                  setMember(null);
+                  setTimeout(() => memberInput.current?.focus(), 0);
+                }}
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                  {initials(member.fullName)}
+                </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-semibold">
                     {member.fullName}
@@ -294,7 +337,9 @@ export function BorrowPage() {
                 emptyText="No members match. Check the spelling or the member number."
                 renderOption={(m, { disabledReason }) => (
                   <div className="flex items-center gap-3">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-700">{initials(m.fullName)}</span>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-700">
+                      {initials(m.fullName)}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 font-medium">
                         {m.fullName}
@@ -314,7 +359,13 @@ export function BorrowPage() {
 
           <Step n={2} title="Book" done={Boolean(book)}>
             {book ? (
-              <PickedRow testId="picked-book" onChange={() => { setBook(null); setTimeout(() => bookInput.current?.focus(), 0); }}>
+              <PickedRow
+                testId="picked-book"
+                onChange={() => {
+                  setBook(null);
+                  setTimeout(() => bookInput.current?.focus(), 0);
+                }}
+              >
                 <BookCover title={book.title} url={book.coverImageUrl} />
                 <div className="min-w-0 flex-1">
                   <div className="font-book text-md plain:text-base">{book.title}</div>
@@ -344,7 +395,9 @@ export function BorrowPage() {
                     <BookCover title={b.title} url={b.coverImageUrl} />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">{b.title}</div>
-                      <div className="truncate text-sm text-neutral-600">{disabledReason ? `${b.author} · ${disabledReason}` : b.author}</div>
+                      <div className="truncate text-sm text-neutral-600">
+                        {disabledReason ? `${b.author} · ${disabledReason}` : b.author}
+                      </div>
                     </div>
                     <AvailabilityBadge book={b} />
                   </div>
@@ -373,7 +426,18 @@ export function BorrowPage() {
                   )}
                 >
                   <span>{dueLabel}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-neutral-500">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="text-neutral-500"
+                  >
                     <rect x="3" y="4" width="18" height="18" rx="2" />
                     <path d="M16 2v4M8 2v4M3 10h18" />
                   </svg>
@@ -410,7 +474,9 @@ export function BorrowPage() {
                   data-testid={`due-chip-${d}`}
                   className={cn(
                     "h-9 rounded-full border px-3.5 text-sm font-medium",
-                    dueDays === d ? "border-brand-200 bg-brand-50 text-brand-700" : "border-border-strong bg-surface text-neutral-700 hover:bg-neutral-50",
+                    dueDays === d
+                      ? "border-brand-200 bg-brand-50 text-brand-700"
+                      : "border-border-strong bg-surface text-neutral-700 hover:bg-neutral-50",
                   )}
                 >
                   {d} days
@@ -418,7 +484,11 @@ export function BorrowPage() {
               ))}
             </div>
             {dueError ? (
-              <p id="due-help" className="mt-1.5 flex items-start gap-1.5 text-sm text-danger-700" data-testid="due-error">
+              <p
+                id="due-help"
+                className="mt-1.5 flex items-start gap-1.5 text-sm text-danger-700"
+                data-testid="due-error"
+              >
                 <AlertIcon size={16} className="mt-px shrink-0" />
                 {dueError}
               </p>
@@ -443,7 +513,16 @@ export function BorrowPage() {
             <SummaryRow label="Borrowed" value={`Today, ${formatDate(today)}`} />
             <SummaryRow
               label="Due"
-              value={dueError ? undefined : <>{formatDate(addDays(today, dueDays))} <span className="text-neutral-500">({dueDays} {dueDays === 1 ? "day" : "days"})</span></>}
+              value={
+                dueError ? undefined : (
+                  <>
+                    {formatDate(addDays(today, dueDays))}{" "}
+                    <span className="text-neutral-500">
+                      ({dueDays} {dueDays === 1 ? "day" : "days"})
+                    </span>
+                  </>
+                )
+              }
             />
             <SummaryRow label="Processed by" value={me?.fullName} />
           </dl>
@@ -469,12 +548,17 @@ export function BorrowPage() {
               <div className="flex items-center justify-between text-base">
                 <span className="text-neutral-700">Available copies</span>
                 <span className="font-semibold tabular-nums">
-                  {book.availableCopies} → <span className={book.availableCopies - 1 === 0 ? "text-danger-700" : undefined}>{Math.max(book.availableCopies - 1, 0)}</span>{" "}
+                  {book.availableCopies} →{" "}
+                  <span className={book.availableCopies - 1 === 0 ? "text-danger-700" : undefined}>
+                    {Math.max(book.availableCopies - 1, 0)}
+                  </span>{" "}
                   <span className="font-normal text-neutral-600">of {book.totalCopies}</span>
                 </span>
               </div>
               {book.availableCopies === 1 && (
-                <p className="mt-1 text-sm text-neutral-600">This is the last copy on the shelf. The book will show as Unavailable.</p>
+                <p className="mt-1 text-sm text-neutral-600">
+                  This is the last copy on the shelf. The book will show as Unavailable.
+                </p>
               )}
             </div>
           )}
@@ -504,7 +588,8 @@ export function BorrowPage() {
 function SuccessText({ loan, available, total }: { loan: LoanDto; available: number; total: number }) {
   return (
     <span data-testid="borrow-success-text">
-      Borrowed. <em>{loan.book.title}</em> → {loan.member.fullName}, due {formatDate(loan.dueAt)}. {available} of {total} {total === 1 ? "copy" : "copies"} now available.
+      Borrowed. <em>{loan.book.title}</em> → {loan.member.fullName}, due {formatDate(loan.dueAt)}. {available} of{" "}
+      {total} {total === 1 ? "copy" : "copies"} now available.
     </span>
   );
 }
@@ -512,7 +597,11 @@ function SuccessText({ loan, available, total }: { loan: LoanDto; available: num
 const booksOnLoan = (n: number) => `${n} ${n === 1 ? "book" : "books"} on loan`;
 
 function MemberStatusBadge({ member }: { member: Pick<MemberDto, "status"> }) {
-  return member.status === "ACTIVE" ? <Badge variant="success">Active</Badge> : <Badge variant="neutral">Inactive</Badge>;
+  return member.status === "ACTIVE" ? (
+    <Badge variant="success">Active</Badge>
+  ) : (
+    <Badge variant="neutral">Inactive</Badge>
+  );
 }
 
 function Step({ n, title, done, children }: { n: number; title: string; done: boolean; children: ReactNode }) {
@@ -559,7 +648,9 @@ function SummaryRow({ label, value }: { label: string; value: ReactNode | undefi
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-neutral-600">{label}</dt>
-      <dd className="text-right font-medium text-neutral-900">{value ?? <span className="text-neutral-500">—</span>}</dd>
+      <dd className="text-right font-medium text-neutral-900">
+        {value ?? <span className="text-neutral-500">—</span>}
+      </dd>
     </div>
   );
 }

@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,12 +16,17 @@ import { ToastProvider } from "../../components/ui";
 import { SignInPage } from "./SignInPage";
 
 function stubApi(providers: { google: boolean; demo: boolean }) {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-    if (url === "/api/auth/providers") return json(providers);
-    if (url === "/api/me") return json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401);
-    return json({}, 404);
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+      if (url === "/api/auth/providers") return json(providers);
+      if (url === "/api/me")
+        return json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401);
+      return json({}, 404);
+    }),
+  );
 }
 
 async function renderSignIn(path = "/signin") {
@@ -22,10 +34,17 @@ async function renderSignIn(path = "/signin") {
   const signIn = createRoute({
     getParentRoute: () => rootRoute,
     path: "/signin",
-    validateSearch: z.object({ next: z.string().optional(), error: z.string().optional(), expired: z.string().optional() }),
+    validateSearch: z.object({
+      next: z.string().optional(),
+      error: z.string().optional(),
+      expired: z.string().optional(),
+    }),
     component: SignInPage,
   });
-  const router = createRouter({ routeTree: rootRoute.addChildren([signIn]), history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([signIn]),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>

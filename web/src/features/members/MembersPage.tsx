@@ -2,8 +2,26 @@ import type { MemberDto, MemberListQuery } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActionMenu, type ActionMenuItem, Badge, Button, Card, EditIcon, EmptyState, InlineAlert, Input, Pagination, SearchIcon, Select,
-  Skeleton, SortableTh, Table, Td, Th, Thead, Tr, UsersIcon,
+  ActionMenu,
+  type ActionMenuItem,
+  Badge,
+  Button,
+  Card,
+  EditIcon,
+  EmptyState,
+  InlineAlert,
+  Input,
+  Pagination,
+  SearchIcon,
+  Select,
+  Skeleton,
+  SortableTh,
+  Table,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  UsersIcon,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { MemberNumber } from "../../components/MemberNumber";
@@ -103,7 +121,11 @@ export function MembersPage() {
             label="Status"
             hideLabel
             value={status}
-            onChange={(e) => setSearch({ status: e.target.value === DEFAULT_STATUS ? undefined : (e.target.value as MemberListQuery["status"]) })}
+            onChange={(e) =>
+              setSearch({
+                status: e.target.value === DEFAULT_STATUS ? undefined : (e.target.value as MemberListQuery["status"]),
+              })
+            }
             data-testid="filter-status"
           >
             <option value="ACTIVE">Active</option>
@@ -114,7 +136,14 @@ export function MembersPage() {
 
         {members.isError && !data ? (
           <div className="p-5" data-testid="members-error">
-            <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void members.refetch()}>Try again</Button>}>
+            <InlineAlert
+              variant="danger"
+              action={
+                <Button size="sm" onClick={() => void members.refetch()}>
+                  Try again
+                </Button>
+              }
+            >
               {members.error instanceof ApiError && members.error.status === 400
                 ? "These filters aren't valid. Clear them and try again."
                 : "Couldn't load members. Check your connection and try again."}
@@ -136,18 +165,43 @@ export function MembersPage() {
               testId="members-empty"
               icon={<UsersIcon size={40} />}
               title="No members yet"
-              text={can("MEMBER_WRITE") ? "Add your first member to start lending." : "Members added by the library team will show here."}
-              action={can("MEMBER_WRITE") ? <Button variant="primary" onClick={() => setModal({})}>Add member</Button> : undefined}
+              text={
+                can("MEMBER_WRITE")
+                  ? "Add your first member to start lending."
+                  : "Members added by the library team will show here."
+              }
+              action={
+                can("MEMBER_WRITE") ? (
+                  <Button variant="primary" onClick={() => setModal({})}>
+                    Add member
+                  </Button>
+                ) : undefined
+              }
             />
           )
         ) : (
           data && (
-            <div className={members.isPlaceholderData ? "opacity-60 transition-opacity" : undefined} aria-busy={members.isPlaceholderData}>
+            <div
+              className={members.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+              aria-busy={members.isPlaceholderData}
+            >
               <Table aria-label="Members" data-testid="members-table">
                 <Thead>
                   <tr>
-                    <SortableTh label="Member" sortKey="fullName" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
-                    <SortableTh label="Member no." sortKey="memberNumber" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
+                    <SortableTh
+                      label="Member"
+                      sortKey="fullName"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
+                    <SortableTh
+                      label="Member no."
+                      sortKey="memberNumber"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
                     <Th className="max-lg:hidden">Phone</Th>
                     <Th>Status</Th>
                     <Th>Books on loan</Th>
@@ -170,7 +224,12 @@ export function MembersPage() {
                   ))}
                 </tbody>
               </Table>
-              <Pagination page={data.page} size={data.size} total={data.total} onPage={(page) => setSearch({ page }, { resetPage: false })} />
+              <Pagination
+                page={data.page}
+                size={data.size}
+                total={data.total}
+                onPage={(page) => setSearch({ page }, { resetPage: false })}
+              />
             </div>
           )
         )}
@@ -207,19 +266,30 @@ function MemberRow({ member, onEdit }: { member: MemberDto; onEdit: (m: MemberDt
       }}
     >
       <Td>
-        <Link to="/members/$memberId" params={{ memberId: member.id }} className="block font-semibold text-neutral-900 no-underline hover:underline" data-testid="member-name">
+        <Link
+          to="/members/$memberId"
+          params={{ memberId: member.id }}
+          className="block font-semibold text-neutral-900 no-underline hover:underline"
+          data-testid="member-name"
+        >
           {member.fullName}
         </Link>
         <div className="truncate text-sm text-neutral-600">{member.email}</div>
       </Td>
-      <Td kind="nowrap" className="text-neutral-700" data-testid="member-number-cell"><MemberNumber value={member.memberNumber} /></Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{member.phone ?? "—"}</Td>
+      <Td kind="nowrap" className="text-neutral-700" data-testid="member-number-cell">
+        <MemberNumber value={member.memberNumber} />
+      </Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">
+        {member.phone ?? "—"}
+      </Td>
       <Td kind="nowrap">
         <MemberStatusBadge status={member.status} />
       </Td>
       <Td kind="nowrap">
         <div className="flex items-center gap-2">
-          <span className="tabular-nums" data-testid="active-loans">{member.activeLoans}</span>
+          <span className="tabular-nums" data-testid="active-loans">
+            {member.activeLoans}
+          </span>
           {member.overdueLoans > 0 && (
             <Badge variant="danger" data-testid="overdue-badge">
               {member.overdueLoans} overdue
@@ -227,7 +297,9 @@ function MemberRow({ member, onEdit }: { member: MemberDto; onEdit: (m: MemberDt
           )}
         </div>
       </Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(member.registeredAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">
+        {formatDate(member.registeredAt)}
+      </Td>
       <Td align="right" kind="actions">
         <div className="flex items-center justify-end gap-2">
           {/* SLM-4: Borrow action (secondary button, only for ACTIVE members, role with LOAN_PROCESS). */}

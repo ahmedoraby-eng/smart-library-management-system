@@ -33,7 +33,11 @@ export type DeletionOutcome = "archive" | "delete";
  * Delete rule (scope D3): open loans block it; past loans mean archive (history stays readable);
  * a book never borrowed is deleted.
  */
-export function deletionOutcome(state: { title: string; activeLoans: number; hasLoanHistory: boolean }): DeletionOutcome {
+export function deletionOutcome(state: {
+  title: string;
+  activeLoans: number;
+  hasLoanHistory: boolean;
+}): DeletionOutcome {
   if (state.activeLoans > 0) {
     const n = state.activeLoans;
     throw new ConflictError(
@@ -74,8 +78,7 @@ export type UpdateResult =
   | { kind: "duplicate_isbn"; other: { id: string; title: string } };
 
 export type CreateResult =
-  | { kind: "ok"; book: BookView }
-  | { kind: "duplicate_isbn"; other: { id: string; title: string } };
+  { kind: "ok"; book: BookView } | { kind: "duplicate_isbn"; other: { id: string; title: string } };
 
 export interface BookRepository {
   findView(id: string): Promise<BookView | null>;
@@ -88,5 +91,8 @@ export interface BookRepository {
    * Locks the book row, reads its loan facts, asks `decide` (the domain rule), applies the outcome,
    * all in one transaction. Returns null when the book doesn't exist (or is already archived).
    */
-  removeWith(id: string, decide: (state: { title: string; activeLoans: number; hasLoanHistory: boolean }) => DeletionOutcome): Promise<DeletionOutcome | null>;
+  removeWith(
+    id: string,
+    decide: (state: { title: string; activeLoans: number; hasLoanHistory: boolean }) => DeletionOutcome,
+  ): Promise<DeletionOutcome | null>;
 }

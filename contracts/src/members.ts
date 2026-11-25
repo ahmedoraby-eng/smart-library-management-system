@@ -21,7 +21,11 @@ export type MemberDto = z.infer<typeof MemberDtoSchema>;
 
 /** Field rules and messages follow ux.md §3.5 (the modal shows these next to each field). */
 export const MemberInputSchema = z.object({
-  fullName: z.string({ error: "Enter the member's full name." }).trim().min(1, "Enter the member's full name.").max(200, "Keep the name under 200 characters."),
+  fullName: z
+    .string({ error: "Enter the member's full name." })
+    .trim()
+    .min(1, "Enter the member's full name.")
+    .max(200, "Keep the name under 200 characters."),
   email: z
     .string({ error: "Enter the member's email address." })
     .trim()

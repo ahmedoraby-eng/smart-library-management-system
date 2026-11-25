@@ -3,9 +3,17 @@ import { as, pool, resetDb, seedStaff, testApp } from "./support";
 
 afterAll(() => pool.end());
 let staff: Awaited<ReturnType<typeof seedStaff>>;
-beforeEach(async () => { await resetDb(); staff = await seedStaff(); });
+beforeEach(async () => {
+  await resetDb();
+  staff = await seedStaff();
+});
 
-const valid = { title: "Clean Architecture", author: "Robert C. Martin", category: "Software Architecture", totalCopies: 3 };
+const valid = {
+  title: "Clean Architecture",
+  author: "Robert C. Martin",
+  category: "Software Architecture",
+  totalCopies: 3,
+};
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test convenience
 
 async function create(app = testApp(), body: Json = valid) {
@@ -16,7 +24,11 @@ async function create(app = testApp(), body: Json = valid) {
 /** Opens `open` loans and `returned` past loans on a book (raw SQL: circulation lands in SLM-4). */
 async function loans(bookId: string, open: number, returned = 0) {
   for (let i = 0; i < open + returned; i++) {
-    const m = (await pool.query("INSERT INTO members (full_name, email) VALUES ('M', $1) RETURNING id", [`m${Math.random()}@x.io`])).rows[0].id;
+    const m = (
+      await pool.query("INSERT INTO members (full_name, email) VALUES ('M', $1) RETURNING id", [
+        `m${Math.random()}@x.io`,
+      ])
+    ).rows[0].id;
     const isReturned = i >= open;
     await pool.query(
       `INSERT INTO loans (book_id, member_id, processed_by, returned_by, borrowed_at, due_at, returned_at)
@@ -32,18 +44,40 @@ describe("SLM-1 book catalog management", () => {
     const { res, json } = await create();
     expect(res.status).toBe(201);
     expect(res.headers.get("location")).toBe(`/api/books/${json.id}`);
-    expect(json).toMatchObject({ title: "Clean Architecture", totalCopies: 3, availableCopies: 3, activeLoans: 0, hasLoanHistory: false, archived: false, version: 0, isbn: null, nextDueAt: null });
+    expect(json).toMatchObject({
+      title: "Clean Architecture",
+      totalCopies: 3,
+      availableCopies: 3,
+      activeLoans: 0,
+      hasLoanHistory: false,
+      archived: false,
+      version: 0,
+      isbn: null,
+      nextDueAt: null,
+    });
     expect(Date.parse(json.createdAt)).not.toBeNaN();
     expect(json.updatedAt).toBe(json.createdAt);
   });
 
   it("SLM-1 AC2 invalid fields → 400 VALIDATION_FAILED, one message per field, nothing saved", async () => {
-    const { res, json } = await create(testApp(), { title: " ", author: "", category: "C", totalCopies: 0, publicationYear: 99999, isbn: "978-0-13-235088-5" });
+    const { res, json } = await create(testApp(), {
+      title: " ",
+      author: "",
+      category: "C",
+      totalCopies: 0,
+      publicationYear: 99999,
+      isbn: "978-0-13-235088-5",
+    });
     expect(res.status).toBe(400);
     expect(json.code).toBe("VALIDATION_FAILED");
-    const fields = Object.fromEntries((json.errors as { field: string; message: string }[]).map((e) => [e.field, e.message]));
+    const fields = Object.fromEntries(
+      (json.errors as { field: string; message: string }[]).map((e) => [e.field, e.message]),
+    );
     expect(fields).toMatchObject({
-      title: "Enter a title.", author: "Enter an author.", totalCopies: "Enter at least 1 copy.", isbn: "Enter a valid ISBN-10 or ISBN-13.",
+      title: "Enter a title.",
+      author: "Enter an author.",
+      totalCopies: "Enter at least 1 copy.",
+      isbn: "Enter a valid ISBN-10 or ISBN-13.",
     });
     expect(fields.publicationYear).toMatch(/^Enter a year between 1450 and \d{4}\.$/);
     expect((await pool.query("SELECT count(*)::int n FROM books")).rows[0].n).toBe(0);
@@ -76,7 +110,10 @@ describe("SLM-1 book catalog management", () => {
     const book = (await create(app, { ...valid, totalCopies: 5 })).json;
     await loans(book.id, 3);
     const put = async (totalCopies: number, version: number) =>
-      app.request(`/api/books/${book.id}`, await as(staff.librarian, { method: "PUT", body: { ...valid, totalCopies, version } }));
+      app.request(
+        `/api/books/${book.id}`,
+        await as(staff.librarian, { method: "PUT", body: { ...valid, totalCopies, version } }),
+      );
     const below = await put(2, 0);
     expect(below.status).toBe(409);
     expect(await below.json()).toMatchObject({ code: "TOTAL_BELOW_LOANED", context: { onLoan: 3 } });
@@ -91,7 +128,10 @@ describe("SLM-1 book catalog management", () => {
     const app = testApp();
     const book = (await create(app)).json;
     const edit = async (title: string) =>
-      app.request(`/api/books/${book.id}`, await as(staff.librarian, { method: "PUT", body: { ...valid, title, version: 0 } }));
+      app.request(
+        `/api/books/${book.id}`,
+        await as(staff.librarian, { method: "PUT", body: { ...valid, title, version: 0 } }),
+      );
     expect((await edit("First edit")).status).toBe(200);
     const second = await edit("Second edit");
     expect(second.status).toBe(409);
@@ -127,14 +167,28 @@ describe("SLM-1 book catalog management", () => {
     expect((await app.request(`/api/books/${fresh.id}`, await as(staff.librarian))).status).toBe(404);
     // archived books can't be edited or deleted again
     expect((await app.request(`/api/books/${old.id}`, await as(staff.admin, { method: "DELETE" }))).status).toBe(404);
-    expect((await app.request(`/api/books/${old.id}`, await as(staff.librarian, { method: "PUT", body: { ...valid, version: 1 } }))).status).toBe(404);
+    expect(
+      (
+        await app.request(
+          `/api/books/${old.id}`,
+          await as(staff.librarian, { method: "PUT", body: { ...valid, version: 1 } }),
+        )
+      ).status,
+    ).toBe(404);
   });
 
   it("SLM-1 AC8 unknown or malformed id → 404 NOT_FOUND on GET/PUT/DELETE", async () => {
     const app = testApp();
     for (const id of ["00000000-0000-0000-0000-000000000000", "not-a-uuid"]) {
       expect((await app.request(`/api/books/${id}`, await as(staff.admin))).status).toBe(404);
-      expect((await app.request(`/api/books/${id}`, await as(staff.admin, { method: "PUT", body: { ...valid, version: 0 } }))).status).toBe(404);
+      expect(
+        (
+          await app.request(
+            `/api/books/${id}`,
+            await as(staff.admin, { method: "PUT", body: { ...valid, version: 0 } }),
+          )
+        ).status,
+      ).toBe(404);
       const del = await app.request(`/api/books/${id}`, await as(staff.admin, { method: "DELETE" }));
       expect(del.status).toBe(404);
       expect(await del.json()).toMatchObject({ code: "NOT_FOUND" });
@@ -147,7 +201,9 @@ describe("SLM-1 book catalog management", () => {
     await loans(book.id, 2, 1);
     const b = (await (await app.request(`/api/books/${book.id}`, await as(staff.supervisor))).json()) as Json;
     expect(b).toMatchObject({ activeLoans: 2, availableCopies: 2, hasLoanHistory: true });
-    const due = (await pool.query("SELECT min(due_at) d FROM loans WHERE book_id = $1 AND returned_at IS NULL", [book.id])).rows[0].d as Date;
+    const due = (
+      await pool.query("SELECT min(due_at) d FROM loans WHERE book_id = $1 AND returned_at IS NULL", [book.id])
+    ).rows[0].d as Date;
     expect(b.nextDueAt).toBe(due.toISOString());
   });
 });
@@ -157,17 +213,35 @@ describe("SLM-1 permissions (rbac-matrix)", () => {
     const app = testApp();
     const book = (await create(app)).json;
     expect((await app.request(`/api/books/${book.id}`, await as(staff.supervisor))).status).toBe(200);
-    expect((await app.request("/api/books", await as(staff.supervisor, { method: "POST", body: valid }))).status).toBe(403);
-    expect((await app.request(`/api/books/${book.id}`, await as(staff.supervisor, { method: "PUT", body: { ...valid, title: "X", version: 0 } }))).status).toBe(403);
-    expect((await app.request(`/api/books/${book.id}`, await as(staff.supervisor, { method: "DELETE" }))).status).toBe(403);
-    expect((await app.request(`/api/books/${book.id}`, await as(staff.librarian, { method: "DELETE" }))).status).toBe(403);
+    expect((await app.request("/api/books", await as(staff.supervisor, { method: "POST", body: valid }))).status).toBe(
+      403,
+    );
+    expect(
+      (
+        await app.request(
+          `/api/books/${book.id}`,
+          await as(staff.supervisor, { method: "PUT", body: { ...valid, title: "X", version: 0 } }),
+        )
+      ).status,
+    ).toBe(403);
+    expect((await app.request(`/api/books/${book.id}`, await as(staff.supervisor, { method: "DELETE" }))).status).toBe(
+      403,
+    );
+    expect((await app.request(`/api/books/${book.id}`, await as(staff.librarian, { method: "DELETE" }))).status).toBe(
+      403,
+    );
     const row = (await pool.query("SELECT count(*)::int n, min(title) t FROM books")).rows[0];
     expect(row).toEqual({ n: 1, t: "Clean Architecture" });
   });
 
   it("no session → 401 on every book route", async () => {
     const app = testApp();
-    for (const [method, path] of [["GET", "/api/books"], ["GET", "/api/books/categories"], ["POST", "/api/books"], ["DELETE", "/api/books/x"]] as const) {
+    for (const [method, path] of [
+      ["GET", "/api/books"],
+      ["GET", "/api/books/categories"],
+      ["POST", "/api/books"],
+      ["DELETE", "/api/books/x"],
+    ] as const) {
       const res = await app.request(path, { method, headers: { origin: "http://localhost" } });
       expect(res.status).toBe(401);
     }
@@ -182,9 +256,11 @@ describe("book list (basis for SLM-2)", () => {
       ["Clean Architecture", "Robert C. Martin", "Software Architecture", 1],
       ["Domain-Driven Design", "Eric Evans", "Software Architecture", 1],
       ["The Hobbit", "J.R.R. Tolkien", "Fiction", 3],
-    ] as const) await create(app, { title, author, category, totalCopies });
+    ] as const)
+      await create(app, { title, author, category, totalCopies });
   });
-  const list = async (qs: string) => (await (await testApp().request(`/api/books${qs}`, await as(staff.librarian))).json()) as Json;
+  const list = async (qs: string) =>
+    (await (await testApp().request(`/api/books${qs}`, await as(staff.librarian))).json()) as Json;
 
   it("pages with total and sorts by title by default", async () => {
     const p = await list("?size=2&page=2");
@@ -203,7 +279,10 @@ describe("book list (basis for SLM-2)", () => {
   });
 
   it("searches title/author by prefix and tolerates a typo", async () => {
-    expect((await list("?q=clea")).items.map((b: Json) => b.title).sort()).toEqual(["Clean Architecture", "Clean Code"]);
+    expect((await list("?q=clea")).items.map((b: Json) => b.title).sort()).toEqual([
+      "Clean Architecture",
+      "Clean Code",
+    ]);
     expect((await list("?q=evans")).items[0].title).toBe("Domain-Driven Design");
     expect((await list("?q=Tolkein")).items[0].title).toBe("The Hobbit");
     expect((await list("?q=zzzz")).total).toBe(0);

@@ -54,7 +54,9 @@ describe("theme (Reading Room default, plain behind a toggle)", () => {
   });
 
   it("index.html applies a stored choice before React starts, with the same key", () => {
-    const file = [resolve(process.cwd(), "index.html"), resolve(process.cwd(), "web/index.html")].find((f) => existsSync(f))!;
+    const file = [resolve(process.cwd(), "index.html"), resolve(process.cwd(), "web/index.html")].find((f) =>
+      existsSync(f),
+    )!;
     const page = readFileSync(file, "utf8");
     expect(page).toContain('<html lang="en" data-theme="reading-room">');
     const inline = /<script>([\s\S]*?)<\/script>/.exec(page)?.[1];

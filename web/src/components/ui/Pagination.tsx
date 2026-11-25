@@ -1,7 +1,17 @@
 import { Button } from "./Button";
 
 /** "Showing 1–20 of 128" + Prev/Next. Hidden when there is nothing to page. */
-export function Pagination({ page, size, total, onPage }: { page: number; size: number; total: number; onPage: (page: number) => void }) {
+export function Pagination({
+  page,
+  size,
+  total,
+  onPage,
+}: {
+  page: number;
+  size: number;
+  total: number;
+  onPage: (page: number) => void;
+}) {
   if (total === 0) return null;
   const from = (page - 1) * size + 1;
   const to = Math.min(page * size, total);
@@ -12,14 +22,16 @@ export function Pagination({ page, size, total, onPage }: { page: number; size: 
         Showing {from}–{to} of {total}
       </p>
       {/* One page: the summary stays, Previous/Next are hidden (Haya pass 4). */}
-      {lastPage > 1 && <div className="flex gap-2">
-        <Button size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} data-testid="page-prev">
-          Previous
-        </Button>
-        <Button size="sm" disabled={page >= lastPage} onClick={() => onPage(page + 1)} data-testid="page-next">
-          Next
-        </Button>
-      </div>}
+      {lastPage > 1 && (
+        <div className="flex gap-2">
+          <Button size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} data-testid="page-prev">
+            Previous
+          </Button>
+          <Button size="sm" disabled={page >= lastPage} onClick={() => onPage(page + 1)} data-testid="page-next">
+            Next
+          </Button>
+        </div>
+      )}
     </nav>
   );
 }

@@ -37,7 +37,9 @@ async function setup(props: Partial<React.ComponentProps<typeof BookForm>> = {})
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   const onCancel = vi.fn();
   const user = userEvent.setup();
-  await renderWithProviders(<BookForm categories={["Fiction", "Software"]} onSubmit={onSubmit} onCancel={onCancel} {...props} />);
+  await renderWithProviders(
+    <BookForm categories={["Fiction", "Software"]} onSubmit={onSubmit} onCancel={onCancel} {...props} />,
+  );
   await screen.findByTestId("book-form");
   return { user, onSubmit, onCancel };
 }
@@ -174,7 +176,9 @@ describe("BookForm server errors", () => {
   });
 
   it("maps 409 DUPLICATE_ISBN to the ISBN field with an Open it link", async () => {
-    const onSubmit = vi.fn().mockRejectedValue(problem(409, "DUPLICATE_ISBN", { context: { bookId: "b9", title: "Clean Code" } }));
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValue(problem(409, "DUPLICATE_ISBN", { context: { bookId: "b9", title: "Clean Code" } }));
     const { user } = await setup({ onSubmit });
     await fillValid(user);
     await user.click(screen.getByTestId("save-book"));
@@ -186,7 +190,9 @@ describe("BookForm server errors", () => {
 
   it("maps 400 VALIDATION_FAILED errors to their fields", async () => {
     const onSubmit = vi.fn().mockRejectedValue(
-      problem(400, "VALIDATION_FAILED", { errors: [{ field: "title", message: "Keep the title under 200 characters." }] }),
+      problem(400, "VALIDATION_FAILED", {
+        errors: [{ field: "title", message: "Keep the title under 200 characters." }],
+      }),
     );
     const { user } = await setup({ onSubmit });
     await fillValid(user);
@@ -212,7 +218,9 @@ describe("BookForm server errors", () => {
     const { user } = await setup({ onSubmit });
     await fillValid(user);
     await user.click(screen.getByTestId("save-book"));
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't save the book. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't save the book. Nothing was saved. Try again.",
+    );
     expect(field("title")).toHaveValue("Dune");
   });
 });

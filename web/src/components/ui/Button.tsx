@@ -18,7 +18,11 @@ const sizes: Record<ButtonSize, string> = {
 };
 
 /** Class string so links (`<Link>`) can look like buttons. */
-export function buttonClasses({ variant = "secondary", size = "md", block = false }: { variant?: ButtonVariant; size?: ButtonSize; block?: boolean } = {}) {
+export function buttonClasses({
+  variant = "secondary",
+  size = "md",
+  block = false,
+}: { variant?: ButtonVariant; size?: ButtonSize; block?: boolean } = {}) {
   return cn(
     "inline-flex items-center justify-center gap-2 rounded-md border font-semibold whitespace-nowrap select-none no-underline",
     "disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-500 disabled:shadow-none",
@@ -38,7 +42,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** Loading keeps the label, shows a spinner, sets aria-busy and disables the button (ux.md §2). */
-export function Button({ variant, size, loading, block, icon, children, className, disabled, type = "button", ...rest }: ButtonProps) {
+export function Button({
+  variant,
+  size,
+  loading,
+  block,
+  icon,
+  children,
+  className,
+  disabled,
+  type = "button",
+  ...rest
+}: ButtonProps) {
   return (
     <button
       type={type}

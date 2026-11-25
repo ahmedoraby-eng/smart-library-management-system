@@ -1,4 +1,10 @@
-import { MemberInputSchema, MemberListQuerySchema, MemberUpdateSchema, type LoanDto, type MemberDto } from "@slm/contracts";
+import {
+  MemberInputSchema,
+  MemberListQuerySchema,
+  MemberUpdateSchema,
+  type LoanDto,
+  type MemberDto,
+} from "@slm/contracts";
 import { Hono } from "hono";
 import type { AppEnv } from "../../platform/appEnv";
 import { parseOr400 } from "../../platform/http";
@@ -7,15 +13,30 @@ import type { MemberLoanView, MemberView } from "../domain/Member";
 
 export function toMemberDto(m: MemberView): MemberDto {
   return {
-    id: m.id, memberNumber: m.memberNumber, fullName: m.fullName, email: m.email, phone: m.phone, status: m.status,
-    registeredAt: m.registeredAt.toISOString(), activeLoans: m.activeLoans, overdueLoans: m.overdueLoans, version: m.version,
+    id: m.id,
+    memberNumber: m.memberNumber,
+    fullName: m.fullName,
+    email: m.email,
+    phone: m.phone,
+    status: m.status,
+    registeredAt: m.registeredAt.toISOString(),
+    activeLoans: m.activeLoans,
+    overdueLoans: m.overdueLoans,
+    version: m.version,
   };
 }
 
 export function toMemberLoanDto(l: MemberLoanView): LoanDto {
   return {
-    id: l.id, status: l.status, book: l.book, member: l.member, processedBy: l.processedBy, returnedBy: l.returnedBy,
-    borrowedAt: l.borrowedAt.toISOString(), dueAt: l.dueAt.toISOString(), returnedAt: l.returnedAt?.toISOString() ?? null,
+    id: l.id,
+    status: l.status,
+    book: l.book,
+    member: l.member,
+    processedBy: l.processedBy,
+    returnedBy: l.returnedBy,
+    borrowedAt: l.borrowedAt.toISOString(),
+    dueAt: l.dueAt.toISOString(),
+    returnedAt: l.returnedAt?.toISOString() ?? null,
   };
 }
 
@@ -32,10 +53,12 @@ export function memberRoutes() {
   });
 
   r.get("/:id", requirePermission("MEMBER_READ"), async (c) =>
-    c.json(toMemberDto(await c.var.container.members.get(c.req.param("id")))));
+    c.json(toMemberDto(await c.var.container.members.get(c.req.param("id")))),
+  );
 
   r.get("/:id/loans", requirePermission("LOAN_READ"), async (c) =>
-    c.json((await c.var.container.members.loans(c.req.param("id"))).map(toMemberLoanDto)));
+    c.json((await c.var.container.members.loans(c.req.param("id"))).map(toMemberLoanDto)),
+  );
 
   r.post("/", requirePermission("MEMBER_WRITE"), async (c) => {
     const input = parseOr400(MemberInputSchema, await body(c));

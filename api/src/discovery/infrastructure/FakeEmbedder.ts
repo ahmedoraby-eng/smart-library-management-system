@@ -8,14 +8,67 @@ import { normalise } from "./WorkersAiEmbedder";
  * end to end; real meaning comes from the Workers AI model in production.
  */
 const CONCEPTS: Record<string, string[]> = {
-  grief: ["grief", "grieving", "grieve", "mourning", "mourn", "bereavement", "bereaved", "loss", "losing", "lost", "death", "dies", "died", "dying", "passing"],
+  grief: [
+    "grief",
+    "grieving",
+    "grieve",
+    "mourning",
+    "mourn",
+    "bereavement",
+    "bereaved",
+    "loss",
+    "losing",
+    "lost",
+    "death",
+    "dies",
+    "died",
+    "dying",
+    "passing",
+  ],
   parent: ["parent", "parents", "mother", "father", "mum", "mom", "dad", "mothers", "fathers"],
-  beginner: ["beginner", "beginners", "novice", "newcomer", "introductory", "introduction", "first", "starting", "junior"],
+  beginner: [
+    "beginner",
+    "beginners",
+    "novice",
+    "newcomer",
+    "introductory",
+    "introduction",
+    "first",
+    "starting",
+    "junior",
+  ],
   calm: ["calm", "stress", "anxiety", "anxious", "mindfulness", "peace", "relax", "relaxing"],
   space: ["space", "cosmos", "universe", "astronomy", "stars", "galaxies", "planets", "astrophysics"],
 };
 const CONCEPT_OF = new Map(Object.entries(CONCEPTS).flatMap(([c, ws]) => ws.map((w) => [w, c] as const)));
-const STOP = new Set(["the", "and", "for", "with", "who", "that", "this", "about", "book", "books", "a", "an", "of", "to", "in", "on", "her", "his", "their", "after", "is", "it", "by", "from", "someone", "something"]);
+const STOP = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "who",
+  "that",
+  "this",
+  "about",
+  "book",
+  "books",
+  "a",
+  "an",
+  "of",
+  "to",
+  "in",
+  "on",
+  "her",
+  "his",
+  "their",
+  "after",
+  "is",
+  "it",
+  "by",
+  "from",
+  "someone",
+  "something",
+]);
 const DIMS = 768;
 
 function bucket(token: string): number {

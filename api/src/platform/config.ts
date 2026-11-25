@@ -1,5 +1,10 @@
 /** Typed configuration from Worker vars/secrets or process env. Fails fast on unsafe combinations. */
-export interface DemoAccount { email: string; password: string; role: "LIBRARIAN" | "ADMIN"; fullName: string }
+export interface DemoAccount {
+  email: string;
+  password: string;
+  role: "LIBRARIAN" | "ADMIN";
+  fullName: string;
+}
 
 export interface Config {
   environment: "local" | "test" | "production";
@@ -59,7 +64,8 @@ export function loadConfig(env: RawEnv): Config {
   if (!["local", "test", "production"].includes(environment)) throw new Error("Config ENVIRONMENT is invalid");
 
   const sessionSecret = str(env, "SESSION_SECRET");
-  if (!sessionSecret || sessionSecret.length < 32) throw new Error("Config SESSION_SECRET must be at least 32 characters");
+  if (!sessionSecret || sessionSecret.length < 32)
+    throw new Error("Config SESSION_SECRET must be at least 32 characters");
 
   const aiFake = bool(env, "AI_FAKE");
   // Test-only switches are refused in production (the deploy job checks this too).
@@ -69,24 +75,31 @@ export function loadConfig(env: RawEnv): Config {
   const embeddingModel = str(env, "EMBEDDING_MODEL");
   const knownSize = embeddingModel ? EMBEDDING_DIMENSIONS[embeddingModel] : undefined;
   if (knownSize !== undefined && knownSize !== 768) {
-    throw new Error(`EMBEDDING_MODEL ${embeddingModel} has ${knownSize} dimensions; the index (migration 0004) is vector(768). Add a migration first.`);
+    throw new Error(
+      `EMBEDDING_MODEL ${embeddingModel} has ${knownSize} dimensions; the index (migration 0004) is vector(768). Add a migration first.`,
+    );
   }
 
   const clientId = str(env, "GOOGLE_CLIENT_ID");
   const clientSecret = str(env, "GOOGLE_CLIENT_SECRET");
   // Both or neither: with neither, Google sign-in is off and the button hides.
-  if ((clientId === null) !== (clientSecret === null)) throw new Error("Config GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together");
+  if ((clientId === null) !== (clientSecret === null))
+    throw new Error("Config GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together");
 
   const demoAccountsEnabled = bool(env, "DEMO_ACCOUNTS_ENABLED");
   const demoAccounts: DemoAccount[] = [];
   if (demoAccountsEnabled) {
-    for (const [prefix, role, fullName] of [["DEMO_LIBRARIAN", "LIBRARIAN", "Demo Librarian"], ["DEMO_ADMIN", "ADMIN", "Demo Admin"]] as const) {
+    for (const [prefix, role, fullName] of [
+      ["DEMO_LIBRARIAN", "LIBRARIAN", "Demo Librarian"],
+      ["DEMO_ADMIN", "ADMIN", "Demo Admin"],
+    ] as const) {
       const email = str(env, `${prefix}_EMAIL`)?.toLowerCase();
       const password = str(env, `${prefix}_PASSWORD`);
       if (!email || !password) throw new Error(`DEMO_ACCOUNTS_ENABLED needs ${prefix}_EMAIL and ${prefix}_PASSWORD`);
       if (password.length < 12) throw new Error(`${prefix}_PASSWORD must be at least 12 characters`);
       // A demo email must be on a reserved domain (RFC 2606), never a real inbox (Yousef, SLM-8 review).
-      if (!/@[^@\s]+\.(test|invalid|example)$/.test(email)) throw new Error(`${prefix}_EMAIL must end in .test, .invalid or .example`);
+      if (!/@[^@\s]+\.(test|invalid|example)$/.test(email))
+        throw new Error(`${prefix}_EMAIL must end in .test, .invalid or .example`);
       demoAccounts.push({ email, password, role, fullName });
     }
   }
@@ -97,13 +110,18 @@ export function loadConfig(env: RawEnv): Config {
     sessionHours: int(env, "SESSION_HOURS", 8, 1, 24),
     google: clientId && clientSecret ? { clientId, clientSecret } : null,
     bootstrapAdminEmails: (str(env, "BOOTSTRAP_ADMIN_EMAILS") ?? "")
-      .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
     demoAccountsEnabled,
     demoAccounts,
     loanDays: int(env, "LOAN_DAYS", 14, 1, 60),
     maxActiveLoans: int(env, "MAX_ACTIVE_LOANS", 5, 1, 50),
     aiModel: str(env, "AI_MODEL"),
-    embeddingModel: str(env, "EMBEDDING_MODEL")?.toLowerCase() === "off" ? null : (str(env, "EMBEDDING_MODEL") ?? "@cf/baai/bge-base-en-v1.5"),
+    embeddingModel:
+      str(env, "EMBEDDING_MODEL")?.toLowerCase() === "off"
+        ? null
+        : (str(env, "EMBEDDING_MODEL") ?? "@cf/baai/bge-base-en-v1.5"),
     aiFake,
     embeddingMinSimilarity: num(env, "EMBEDDING_MIN_SIMILARITY", 0.72, 0, 1),
     indexBatchBooks: int(env, "INDEX_BATCH_BOOKS", 8, 1, 500),

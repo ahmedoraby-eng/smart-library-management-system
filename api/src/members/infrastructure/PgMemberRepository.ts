@@ -1,7 +1,14 @@
 import type { MemberInput, MemberSortKey, MemberStatus } from "@slm/contracts";
 import { sql, type SQL } from "drizzle-orm";
 import { PgCode, pgError, type Db } from "../../platform/db";
-import type { MemberListParams, MemberLoanView, MemberRepository, MemberView, SaveResult, UpdateResult } from "../domain/Member";
+import type {
+  MemberListParams,
+  MemberLoanView,
+  MemberRepository,
+  MemberView,
+  SaveResult,
+  UpdateResult,
+} from "../domain/Member";
 import { members } from "./schema";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,9 +77,15 @@ export class PgMemberRepository implements MemberRepository {
     }
     const whereSql = where.length ? sql`WHERE ${sql.join(where, sql` AND `)}` : sql``;
     // Ties break on name then id, so paging is stable.
-    const order = [...p.sort.map((s) => sql`${SORT_SQL[s.key]} ${s.desc ? sql`DESC` : sql`ASC`}`), sql`lower(m.full_name) ASC`, sql`m.id ASC`];
+    const order = [
+      ...p.sort.map((s) => sql`${SORT_SQL[s.key]} ${s.desc ? sql`DESC` : sql`ASC`}`),
+      sql`lower(m.full_name) ASC`,
+      sql`m.id ASC`,
+    ];
     const [{ rows }, count] = await Promise.all([
-      this.db.execute(sql`${SELECT_VIEW} ${whereSql} ORDER BY ${sql.join(order, sql`, `)} LIMIT ${p.size} OFFSET ${(p.page - 1) * p.size}`),
+      this.db.execute(
+        sql`${SELECT_VIEW} ${whereSql} ORDER BY ${sql.join(order, sql`, `)} LIMIT ${p.size} OFFSET ${(p.page - 1) * p.size}`,
+      ),
       this.db.execute(sql`SELECT count(*)::int AS n FROM members m ${whereSql}`),
     ]);
     return { items: rows.map(toView), total: Number(count.rows[0]?.n ?? 0) };
@@ -81,7 +94,10 @@ export class PgMemberRepository implements MemberRepository {
   async create(input: MemberInput): Promise<SaveResult> {
     try {
       // member_number and registered_at come from the database defaults.
-      const [row] = await this.db.insert(members).values({ fullName: input.fullName, email: input.email, phone: input.phone }).returning({ id: members.id });
+      const [row] = await this.db
+        .insert(members)
+        .values({ fullName: input.fullName, email: input.email, phone: input.phone })
+        .returning({ id: members.id });
       return { kind: "ok", member: (await this.findView(row!.id))! };
     } catch (e) {
       if (this.isDuplicateEmail(e)) return { kind: "duplicate_email" };

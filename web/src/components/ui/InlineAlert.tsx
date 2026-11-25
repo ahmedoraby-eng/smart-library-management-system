@@ -12,7 +12,13 @@ const styles: Record<AlertVariant, string> = {
 };
 
 /** Page-level message bar. Danger and warning announce themselves (role=alert); the rest use role=status. */
-export function InlineAlert({ variant = "info", children, action, className, testId }: {
+export function InlineAlert({
+  variant = "info",
+  children,
+  action,
+  className,
+  testId,
+}: {
   variant?: AlertVariant;
   children: ReactNode;
   action?: ReactNode;

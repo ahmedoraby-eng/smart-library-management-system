@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { ROLE_PERMISSIONS } from "@slm/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +20,14 @@ import { meQueryKey } from "./session";
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
 const problem = (status: number, code: string) => ({ type: "about:blank", title: code, status, code });
-const me = { id: "u1", email: "ada@library.test", fullName: "Ada L", role: "LIBRARIAN", permissions: ROLE_PERMISSIONS.LIBRARIAN, isDemo: true };
+const me = {
+  id: "u1",
+  email: "ada@library.test",
+  fullName: "Ada L",
+  role: "LIBRARIAN",
+  permissions: ROLE_PERMISSIONS.LIBRARIAN,
+  isDemo: true,
+};
 
 interface Stub {
   providers?: { google: boolean; demo: boolean } | "error";
@@ -22,7 +36,8 @@ interface Stub {
 }
 function stubApi({ providers = { google: false, demo: true }, signedIn = false, login }: Stub = {}) {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === "/api/auth/providers") return providers === "error" ? json(problem(500, "INTERNAL"), 500) : json(providers);
+    if (url === "/api/auth/providers")
+      return providers === "error" ? json(problem(500, "INTERNAL"), 500) : json(providers);
     if (url === "/api/me") return signedIn ? json(me) : json(problem(401, "UNAUTHENTICATED"), 401);
     if (url === "/api/auth/demo-login") return login ? login(JSON.parse(String(init?.body))) : json(me);
     return json({}, 404);
@@ -37,12 +52,23 @@ async function renderSignIn(path = "/signin") {
   const signIn = createRoute({
     getParentRoute: () => rootRoute,
     path: "/signin",
-    validateSearch: z.object({ next: z.string().optional(), error: z.string().optional(), expired: z.string().optional() }),
+    validateSearch: z.object({
+      next: z.string().optional(),
+      error: z.string().optional(),
+      expired: z.string().optional(),
+    }),
     component: SignInPage,
   });
-  const dash = createRoute({ getParentRoute: () => rootRoute, path: "/dashboard", component: () => <p>dashboard page</p> });
+  const dash = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/dashboard",
+    component: () => <p>dashboard page</p>,
+  });
   const books = createRoute({ getParentRoute: () => rootRoute, path: "/books", component: () => <p>books page</p> });
-  const router = createRouter({ routeTree: rootRoute.addChildren([signIn, dash, books]), history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([signIn, dash, books]),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
@@ -117,7 +143,10 @@ describe("demo sign-in", () => {
     await fill("  Ada@Library.TEST ", "secret-pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
     await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
-    expect(JSON.parse(String(loginCalls(fn)[0]![1]!.body))).toEqual({ email: "ada@library.test", password: "secret-pw" });
+    expect(JSON.parse(String(loginCalls(fn)[0]![1]!.body))).toEqual({
+      email: "ada@library.test",
+      password: "secret-pw",
+    });
     expect(loginCalls(fn)[0]![1]).toMatchObject({ method: "POST" });
     expect(queryClient.getQueryData(meQueryKey)).toMatchObject({ email: "ada@library.test" });
   });
@@ -154,7 +183,9 @@ describe("demo sign-in", () => {
     await renderSignIn();
     await fill("ada@library.test", "pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
-    expect(await screen.findByTestId("signin-error")).toHaveTextContent("This account is disabled. Ask a library Admin to reactivate it.");
+    expect(await screen.findByTestId("signin-error")).toHaveTextContent(
+      "This account is disabled. Ask a library Admin to reactivate it.",
+    );
   });
 
   it("a server or network failure shows the connection message", async () => {
@@ -162,11 +193,17 @@ describe("demo sign-in", () => {
     await renderSignIn();
     await fill("ada@library.test", "pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
-    expect(await screen.findByTestId("signin-error")).toHaveTextContent("Couldn't sign in. Check your connection and try again.");
+    expect(await screen.findByTestId("signin-error")).toHaveTextContent(
+      "Couldn't sign in. Check your connection and try again.",
+    );
   });
 
   it("a lost connection shows the same message", async () => {
-    stubApi({ login: () => { throw new TypeError("Failed to fetch"); } });
+    stubApi({
+      login: () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
     await renderSignIn();
     await fill("ada@library.test", "pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
@@ -221,7 +258,12 @@ describe("demo sign-in", () => {
   it("disables the button and shows it busy while the request runs", async () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
-    const fn = stubApi({ login: async () => { await gate; return json(me); } });
+    const fn = stubApi({
+      login: async () => {
+        await gate;
+        return json(me);
+      },
+    });
     const { router } = await renderSignIn();
     await fill("ada@library.test", "pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
@@ -264,7 +306,13 @@ describe("provider-driven layout", () => {
   it("while a demo sign-in runs, the Google button is disabled", async () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
-    stubApi({ providers: { google: true, demo: true }, login: async () => { await gate; return json(me); } });
+    stubApi({
+      providers: { google: true, demo: true },
+      login: async () => {
+        await gate;
+        return json(me);
+      },
+    });
     await renderSignIn();
     await fill("ada@library.test", "pw");
     await userEvent.click(screen.getByTestId("signin-submit"));
@@ -275,7 +323,9 @@ describe("provider-driven layout", () => {
   it("demo off and Google on: points to Google and shows no form", async () => {
     stubApi({ providers: { google: true, demo: false } });
     await renderSignIn();
-    expect(await screen.findByTestId("demo-off")).toHaveTextContent("Demo accounts are turned off. Sign in with Google.");
+    expect(await screen.findByTestId("demo-off")).toHaveTextContent(
+      "Demo accounts are turned off. Sign in with Google.",
+    );
     expect(screen.getByTestId("google-signin")).toBeInTheDocument();
     expect(screen.queryByTestId("signin-email")).not.toBeInTheDocument();
     expect(screen.queryByTestId("signin-divider")).not.toBeInTheDocument();
@@ -302,7 +352,9 @@ describe("notices from the URL", () => {
   it("expired explains why the visitor is back", async () => {
     stubApi();
     await renderSignIn("/signin?expired=yes");
-    expect(await screen.findByTestId("signin-expired")).toHaveTextContent("Your session ended. Sign in again to continue.");
+    expect(await screen.findByTestId("signin-expired")).toHaveTextContent(
+      "Your session ended. Sign in again to continue.",
+    );
     expect(screen.queryByTestId("signin-google-error")).not.toBeInTheDocument();
   });
 

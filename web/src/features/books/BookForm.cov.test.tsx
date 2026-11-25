@@ -10,13 +10,29 @@ import { BookForm } from "./BookForm";
 afterEach(() => vi.unstubAllGlobals());
 
 const existing: BookDto = {
-  id: "b1", title: "Clean Code", author: "Robert C. Martin", isbn: null, description: "", category: "Software", publisher: "",
-  publicationYear: null, coverImageUrl: null, totalCopies: 3, availableCopies: 1, activeLoans: 2, nextDueAt: null,
-  hasLoanHistory: true, archived: false, version: 4, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+  id: "b1",
+  title: "Clean Code",
+  author: "Robert C. Martin",
+  isbn: null,
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: null,
+  coverImageUrl: null,
+  totalCopies: 3,
+  availableCopies: 1,
+  activeLoans: 2,
+  nextDueAt: null,
+  hasLoanHistory: true,
+  archived: false,
+  version: 4,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
 };
 const problem = (status: number, code: string, extra: Record<string, unknown> = {}) =>
   new ApiError({ type: "about:blank", title: code, status, code, ...extra });
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 async function setup(props: Partial<React.ComponentProps<typeof BookForm>> = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -39,7 +55,9 @@ describe("BookForm server error mapping, edge cases", () => {
     const { user } = await setup({ onSubmit: vi.fn().mockRejectedValue(new TypeError("Failed to fetch")) });
     await fillValid(user);
     await save(user);
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't save the book. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't save the book. Nothing was saved. Try again.",
+    );
     expect(field("title")).toHaveValue("Dune");
     expect(screen.getByTestId("save-book")).toBeEnabled();
   });
@@ -62,7 +80,11 @@ describe("BookForm server error mapping, edge cases", () => {
   });
 
   it("VALIDATION_FAILED for a field the form doesn't have goes to the general message", async () => {
-    const onSubmit = vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", { errors: [{ field: "shelf", message: "Unknown shelf." }] }));
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValue(
+        problem(400, "VALIDATION_FAILED", { errors: [{ field: "shelf", message: "Unknown shelf." }] }),
+      );
     const { user } = await setup({ onSubmit });
     await fillValid(user);
     await save(user);
@@ -70,13 +92,15 @@ describe("BookForm server error mapping, edge cases", () => {
   });
 
   it("VALIDATION_FAILED with a field error and an unmapped one shows both; the first error per field wins", async () => {
-    const onSubmit = vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", {
-      errors: [
-        { field: "author", message: "First author problem." },
-        { field: "author", message: "Second author problem." },
-        { field: "shelf", message: "Unknown shelf." },
-      ],
-    }));
+    const onSubmit = vi.fn().mockRejectedValue(
+      problem(400, "VALIDATION_FAILED", {
+        errors: [
+          { field: "author", message: "First author problem." },
+          { field: "author", message: "Second author problem." },
+          { field: "shelf", message: "Unknown shelf." },
+        ],
+      }),
+    );
     const { user } = await setup({ onSubmit });
     await fillValid(user);
     await save(user);
@@ -87,14 +111,18 @@ describe("BookForm server error mapping, edge cases", () => {
   });
 
   it("VALIDATION_FAILED with no field errors uses the problem's detail, or a default line", async () => {
-    const detailed = await setup({ onSubmit: vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", { detail: "The request was malformed." })) });
+    const detailed = await setup({
+      onSubmit: vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", { detail: "The request was malformed." })),
+    });
     await fillValid(detailed.user);
     await save(detailed.user);
     expect(await screen.findByTestId("form-error")).toHaveTextContent("The request was malformed.");
   });
 
   it("VALIDATION_FAILED with nothing to say falls back to 'Check the highlighted fields'", async () => {
-    const { user } = await setup({ onSubmit: vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", { errors: [] })) });
+    const { user } = await setup({
+      onSubmit: vi.fn().mockRejectedValue(problem(400, "VALIDATION_FAILED", { errors: [] })),
+    });
     await fillValid(user);
     await save(user);
     expect(await screen.findByTestId("form-error")).toHaveTextContent("Check the highlighted fields and try again.");
@@ -135,7 +163,12 @@ describe("BookForm server error mapping, edge cases", () => {
 
   it("a second submit while the first is still saving is ignored", async () => {
     let finish!: () => void;
-    const onSubmit = vi.fn().mockImplementation(() => new Promise<void>((res) => { finish = res; }));
+    const onSubmit = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          finish = res;
+        }),
+    );
     const { user } = await setup({ onSubmit });
     await fillValid(user);
     await user.type(field("title"), "{Enter}");
@@ -211,16 +244,24 @@ describe("BookForm ISBN look up, remaining outcomes", () => {
   const typeIsbn = async (user: ReturnType<typeof userEvent.setup>) => user.type(field("isbn"), "978-0-13-235088-4");
 
   it("'not found' tells the user to fill the fields in by hand and changes nothing", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ found: false })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ found: false })),
+    );
     const { user } = await setup();
     await typeIsbn(user);
     await user.click(screen.getByTestId("isbn-lookup"));
-    expect(await screen.findByTestId("isbn-lookup-hint")).toHaveTextContent("No details found for this ISBN. Fill the fields in by hand.");
+    expect(await screen.findByTestId("isbn-lookup-hint")).toHaveTextContent(
+      "No details found for this ISBN. Fill the fields in by hand.",
+    );
     expect(field("title")).toHaveValue("");
   });
 
   it("a failed request shows the same hint", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ type: "about:blank", title: "x", status: 502, code: "UPSTREAM" }, 502)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ type: "about:blank", title: "x", status: 502, code: "UPSTREAM" }, 502)),
+    );
     const { user } = await setup();
     await typeIsbn(user);
     await user.click(screen.getByTestId("isbn-lookup"));
@@ -229,7 +270,18 @@ describe("BookForm ISBN look up, remaining outcomes", () => {
 
   it("fills every empty field from the result, including year, description and cover; null parts stay empty", async () => {
     const f = vi.fn(async () =>
-      json({ found: true, book: { title: "Clean Code", author: null, publisher: "Prentice Hall", publicationYear: 2008, description: "A handbook.", coverImageUrl: "https://img.test/c.jpg" } }));
+      json({
+        found: true,
+        book: {
+          title: "Clean Code",
+          author: null,
+          publisher: "Prentice Hall",
+          publicationYear: 2008,
+          description: "A handbook.",
+          coverImageUrl: "https://img.test/c.jpg",
+        },
+      }),
+    );
     vi.stubGlobal("fetch", f);
     const { user } = await setup();
     await typeIsbn(user);
@@ -245,7 +297,22 @@ describe("BookForm ISBN look up, remaining outcomes", () => {
   });
 
   it("a null publication year leaves the field empty", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ found: true, book: { title: "T", author: "A", publisher: null, publicationYear: null, description: null, coverImageUrl: null } })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          found: true,
+          book: {
+            title: "T",
+            author: "A",
+            publisher: null,
+            publicationYear: null,
+            description: null,
+            coverImageUrl: null,
+          },
+        }),
+      ),
+    );
     const { user } = await setup();
     await typeIsbn(user);
     await user.click(screen.getByTestId("isbn-lookup"));
@@ -256,7 +323,12 @@ describe("BookForm ISBN look up, remaining outcomes", () => {
 
   it("a second click while the first request is running does not send another", async () => {
     let finish!: (r: Response) => void;
-    const f = vi.fn(() => new Promise<Response>((res) => { finish = res; }));
+    const f = vi.fn(
+      () =>
+        new Promise<Response>((res) => {
+          finish = res;
+        }),
+    );
     vi.stubGlobal("fetch", f);
     const { user } = await setup();
     await typeIsbn(user);

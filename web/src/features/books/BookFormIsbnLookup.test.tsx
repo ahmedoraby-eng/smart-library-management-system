@@ -7,9 +7,21 @@ import { BookForm } from "./BookForm";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const found = { found: true, book: { title: "Clean Code", author: "Robert C. Martin", publisher: "Prentice Hall", publicationYear: 2008, description: null, coverImageUrl: null } };
+const found = {
+  found: true,
+  book: {
+    title: "Clean Code",
+    author: "Robert C. Martin",
+    publisher: "Prentice Hall",
+    publicationYear: 2008,
+    description: null,
+    coverImageUrl: null,
+  },
+};
 const stubFetch = (body: unknown, status = 200) => {
-  const f = vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
+  const f = vi.fn(
+    async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+  );
   vi.stubGlobal("fetch", f);
   return f;
 };
@@ -55,14 +67,21 @@ describe("BookForm ISBN look up (SLM-13)", () => {
     const user = await setup();
     await user.type(field("isbn"), "9780132350884");
     await user.click(screen.getByTestId("isbn-lookup"));
-    expect(await screen.findByTestId("isbn-lookup-hint")).toHaveTextContent("No details found for this ISBN. Fill the fields in by hand.");
+    expect(await screen.findByTestId("isbn-lookup-hint")).toHaveTextContent(
+      "No details found for this ISBN. Fill the fields in by hand.",
+    );
     await user.type(field("title"), "Typed");
     expect(field("title").value).toBe("Typed");
     expect(screen.getByTestId("save-book")).toBeEnabled();
   });
 
   it("shows the hint on a network failure", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("offline"); }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("offline");
+      }),
+    );
     const user = await setup();
     await user.type(field("isbn"), "9780132350884");
     await user.click(screen.getByTestId("isbn-lookup"));

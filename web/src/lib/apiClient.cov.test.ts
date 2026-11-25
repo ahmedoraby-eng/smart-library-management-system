@@ -15,7 +15,12 @@ describe("api() request shape", () => {
   it("sends a GET with the session cookie and no body or content-type", async () => {
     const fn = stubFetch(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     await expect(api("/me")).resolves.toEqual({ ok: true });
-    expect(fn).toHaveBeenCalledWith("/api/me", { method: "GET", credentials: "same-origin", headers: {}, body: undefined });
+    expect(fn).toHaveBeenCalledWith("/api/me", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: {},
+      body: undefined,
+    });
   });
 
   it("sends a JSON body with the given method and a content-type header", async () => {
@@ -68,19 +73,34 @@ describe("api() failures become ApiError", () => {
   });
 
   it("reads Retry-After on a 429 as seconds", async () => {
-    stubFetch(new Response(JSON.stringify({ ...problem, status: 429, code: "RATE_LIMITED" }), { status: 429, headers: { "retry-after": "42" } }));
+    stubFetch(
+      new Response(JSON.stringify({ ...problem, status: 429, code: "RATE_LIMITED" }), {
+        status: 429,
+        headers: { "retry-after": "42" },
+      }),
+    );
     const e = (await api("/auth/demo-login", { method: "POST", body: {} }).catch((err: unknown) => err)) as ApiError;
     expect(e.retryAfter).toBe(42);
   });
 
   it.each(["0", "-5", "soon"])("ignores an unusable Retry-After of %s", async (value) => {
-    stubFetch(new Response(JSON.stringify({ ...problem, status: 429, code: "RATE_LIMITED" }), { status: 429, headers: { "retry-after": value } }));
+    stubFetch(
+      new Response(JSON.stringify({ ...problem, status: 429, code: "RATE_LIMITED" }), {
+        status: 429,
+        headers: { "retry-after": value },
+      }),
+    );
     const e = (await api("/x").catch((err: unknown) => err)) as ApiError;
     expect(e.retryAfter).toBeUndefined();
   });
 
   it("lets a network failure through unchanged (not an ApiError)", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
     const err = await api("/me").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(TypeError);
     expect(err).not.toBeInstanceOf(ApiError);
@@ -89,7 +109,9 @@ describe("api() failures become ApiError", () => {
 
 describe("toQuery", () => {
   it("drops undefined, null and empty values and keeps zero and false", () => {
-    expect(toQuery({ q: "clean code", page: 2, a: undefined, b: null, c: "", zero: 0, flag: false })).toBe("?q=clean+code&page=2&zero=0&flag=false");
+    expect(toQuery({ q: "clean code", page: 2, a: undefined, b: null, c: "", zero: 0, flag: false })).toBe(
+      "?q=clean+code&page=2&zero=0&flag=false",
+    );
   });
   it("returns an empty string when nothing is left", () => {
     expect(toQuery({})).toBe("");

@@ -9,14 +9,31 @@ import { DEMO_PROTECTED, OWN_ROLE, OWN_STATUS } from "./StaffUsersPage";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const ADMIN: Me = { id: "s-admin", email: "amira@x.org", fullName: "Amira Admin", role: "ADMIN", isDemo: false, permissions: [...ROLE_PERMISSIONS.ADMIN] };
+const ADMIN: Me = {
+  id: "s-admin",
+  email: "amira@x.org",
+  fullName: "Amira Admin",
+  role: "ADMIN",
+  isDemo: false,
+  permissions: [...ROLE_PERMISSIONS.ADMIN],
+};
 const staff = (patch: Partial<StaffUserDto>): StaffUserDto => ({
-  id: "s1", email: "nadia@x.org", fullName: "Nadia Karim", role: "SUPERVISOR", status: "ACTIVE", isDemo: false, createdAt: "2026-11-08T10:00:00.000Z", ...patch,
+  id: "s1",
+  email: "nadia@x.org",
+  fullName: "Nadia Karim",
+  role: "SUPERVISOR",
+  status: "ACTIVE",
+  isDemo: false,
+  createdAt: "2026-11-08T10:00:00.000Z",
+  ...patch,
 });
 const NADIA = staff({});
 const OMAR = staff({ id: "s2", fullName: "Omar Nasser", email: "omar@x.org", role: "LIBRARIAN" });
 const ZAKI = staff({ id: "s3", fullName: "Zaki Disabled", email: "zaki@x.org", role: "LIBRARIAN", status: "DISABLED" });
-const problem = (status: number, code: string, detail?: string) => ({ status, body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}) } });
+const problem = (status: number, code: string, detail?: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}) },
+});
 
 interface Setup {
   users?: StaffUserDto[];
@@ -29,8 +46,12 @@ function api(opts: Setup = {}) {
   const puts: { id: string; body: unknown }[] = [];
   const handler = ({ method, url, body }: { method: string; url: URL; body: unknown }) => {
     const p = url.pathname;
-    if (p === "/api/auth/providers") return opts.providers === "fail" ? problem(404, "NOT_FOUND") : { body: opts.providers ?? { google: true, demo: false } };
-    if (p === "/api/staff-users" && method === "GET") return opts.listStatus?.() ?? { body: page(opts.users ?? [NADIA, OMAR]) };
+    if (p === "/api/auth/providers")
+      return opts.providers === "fail"
+        ? problem(404, "NOT_FOUND")
+        : { body: opts.providers ?? { google: true, demo: false } };
+    if (p === "/api/staff-users" && method === "GET")
+      return opts.listStatus?.() ?? { body: page(opts.users ?? [NADIA, OMAR]) };
     if (p.startsWith("/api/staff-users/") && method === "PUT") {
       const id = p.split("/").pop()!;
       puts.push({ id, body });
@@ -44,7 +65,8 @@ function api(opts: Setup = {}) {
   };
   return { handler, puts };
 }
-const rowOf = async (name: string) => (await screen.findAllByTestId("staff-row")).find((r) => within(r).queryByText(name))!;
+const rowOf = async (name: string) =>
+  (await screen.findAllByTestId("staff-row")).find((r) => within(r).queryByText(name))!;
 
 describe("StaffUsersPage list states", () => {
   it("a failed load shows the error; Try again reloads", async () => {
@@ -68,12 +90,16 @@ describe("StaffUsersPage list states", () => {
 
   it("paging: Next and Previous move the URL page and show the range", async () => {
     const user = userEvent.setup();
-    const { router } = await renderApp("/admin/users", ({ url }) => {
-      if (url.pathname === "/api/auth/providers") return { body: { google: true, demo: false } };
-      if (url.pathname !== "/api/staff-users") return undefined;
-      const p = Number(url.searchParams.get("page") ?? 1);
-      return { body: { items: [staff({ id: `p${p}`, fullName: `Person ${p}` })], page: p, size: 20, total: 45 } };
-    }, ADMIN);
+    const { router } = await renderApp(
+      "/admin/users",
+      ({ url }) => {
+        if (url.pathname === "/api/auth/providers") return { body: { google: true, demo: false } };
+        if (url.pathname !== "/api/staff-users") return undefined;
+        const p = Number(url.searchParams.get("page") ?? 1);
+        return { body: { items: [staff({ id: `p${p}`, fullName: `Person ${p}` })], page: p, size: 20, total: 45 } };
+      },
+      ADMIN,
+    );
     await screen.findByTestId("staff-table");
     expect(screen.getByTestId("pagination-summary")).toHaveTextContent("Showing 1–20 of 45");
     await user.click(screen.getByTestId("page-next"));
@@ -94,22 +120,32 @@ describe("StaffUsersPage list states", () => {
   });
 
   it("own row shows '(you)' and explains why Disable is off", async () => {
-    const a = api({ users: [staff({ id: "s-admin", fullName: "Amira Admin", email: "amira@x.org", role: "ADMIN" }), NADIA] });
+    const a = api({
+      users: [staff({ id: "s-admin", fullName: "Amira Admin", email: "amira@x.org", role: "ADMIN" }), NADIA],
+    });
     await renderApp("/admin/users", a.handler, ADMIN);
     const own = await rowOf("Amira Admin");
     expect(own).toHaveTextContent("(you)");
     expect(within(own).getByTestId("disable-user")).toBeDisabled();
-    const tips = within(own).getAllByTestId("control-tip").map((t) => t.getAttribute("title"));
+    const tips = within(own)
+      .getAllByTestId("control-tip")
+      .map((t) => t.getAttribute("title"));
     expect(tips).toEqual([OWN_ROLE, OWN_STATUS]);
     expect(within(await rowOf("Nadia Karim")).queryByText("(you)")).not.toBeInTheDocument();
   });
 
   it("a disabled demo account: Enable is off with the demo explanation", async () => {
-    const a = api({ users: [staff({ id: "d1", fullName: "Demo Person", email: "d@demo.test", isDemo: true, status: "DISABLED" })] });
+    const a = api({
+      users: [staff({ id: "d1", fullName: "Demo Person", email: "d@demo.test", isDemo: true, status: "DISABLED" })],
+    });
     await renderApp("/admin/users", a.handler, ADMIN);
     const row = await rowOf("Demo Person");
     expect(within(row).getByTestId("enable-user")).toBeDisabled();
-    expect(within(row).getAllByTestId("control-tip").every((t) => t.getAttribute("title") === DEMO_PROTECTED)).toBe(true);
+    expect(
+      within(row)
+        .getAllByTestId("control-tip")
+        .every((t) => t.getAttribute("title") === DEMO_PROTECTED),
+    ).toBe(true);
   });
 });
 
@@ -126,7 +162,9 @@ describe("StaffUsersPage role and status changes", () => {
   it("while the role change is saving the select shows the new role at once", async () => {
     const user = userEvent.setup();
     let release: () => void = () => undefined;
-    const gate = new Promise<void>((r) => { release = r; });
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
     const a = api();
     const { fetchMock } = await renderApp("/admin/users", a.handler, ADMIN);
     const original = fetchMock.getMockImplementation()!;

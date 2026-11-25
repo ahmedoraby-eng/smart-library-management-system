@@ -9,12 +9,34 @@ import { page, renderApp } from "../circulation/testApp";
 afterEach(() => vi.unstubAllGlobals());
 
 const member = (id: string, patch: Partial<MemberDto> = {}): MemberDto => ({
-  id, memberNumber: `M-${id.padStart(6, "0")}`, fullName: `Member ${id}`, email: `m${id}@example.org`, phone: null, status: "ACTIVE",
-  registeredAt: "2026-01-05T00:00:00.000Z", activeLoans: 0, overdueLoans: 0, version: 0, ...patch,
+  id,
+  memberNumber: `M-${id.padStart(6, "0")}`,
+  fullName: `Member ${id}`,
+  email: `m${id}@example.org`,
+  phone: null,
+  status: "ACTIVE",
+  registeredAt: "2026-01-05T00:00:00.000Z",
+  activeLoans: 0,
+  overdueLoans: 0,
+  version: 0,
+  ...patch,
 });
-const supervisor = { id: "s3", email: "sam@library.test", fullName: "Samir Supervisor", role: "SUPERVISOR" as const, permissions: [...ROLE_PERMISSIONS.SUPERVISOR], isDemo: false };
-const problem = (status: number, code: string) => ({ status, body: { type: "about:blank", title: code, status, code } });
-const list = (items: MemberDto[]) => ({ url }: { url: URL }) => (url.pathname === "/api/members" ? { body: page(items) } : undefined);
+const supervisor = {
+  id: "s3",
+  email: "sam@library.test",
+  fullName: "Samir Supervisor",
+  role: "SUPERVISOR" as const,
+  permissions: [...ROLE_PERMISSIONS.SUPERVISOR],
+  isDemo: false,
+};
+const problem = (status: number, code: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code },
+});
+const list =
+  (items: MemberDto[]) =>
+  ({ url }: { url: URL }) =>
+    url.pathname === "/api/members" ? { body: page(items) } : undefined;
 
 describe("MembersPage list states", () => {
   it("no members at all: the empty state invites a Librarian to add the first one, and the button opens the modal", async () => {
@@ -50,15 +72,19 @@ describe("MembersPage list states", () => {
   });
 
   it("a 400 from the API says the filters aren't valid", async () => {
-    await renderApp("/members", ({ url }) => (url.pathname === "/api/members" ? problem(400, "VALIDATION_FAILED") : undefined));
-    expect(await screen.findByTestId("members-error")).toHaveTextContent("These filters aren't valid. Clear them and try again.");
+    await renderApp("/members", ({ url }) =>
+      url.pathname === "/api/members" ? problem(400, "VALIDATION_FAILED") : undefined,
+    );
+    expect(await screen.findByTestId("members-error")).toHaveTextContent(
+      "These filters aren't valid. Clear them and try again.",
+    );
   });
 
   it("rows show phone or a dash, loans count, overdue badge only when overdue, and the registered date", async () => {
-    await renderApp("/members", list([
-      member("1", { phone: "+20 100 123 4567", activeLoans: 3, overdueLoans: 2 }),
-      member("2"),
-    ]));
+    await renderApp(
+      "/members",
+      list([member("1", { phone: "+20 100 123 4567", activeLoans: 3, overdueLoans: 2 }), member("2")]),
+    );
     const rows = await screen.findAllByTestId("member-row");
     expect(rows[0]).toHaveTextContent("+20 100 123 4567");
     expect(within(rows[0]!).getByTestId("active-loans")).toHaveTextContent("3");
@@ -141,7 +167,11 @@ describe("MembersPage filters", () => {
 
   it("a search with no match: the empty state names the text and Clear filters brings the list back", async () => {
     const user = userEvent.setup();
-    await renderApp("/members?q=zzz", ({ url }) => (url.pathname === "/api/members" ? { body: page(url.searchParams.get("q") === "zzz" ? [] : [member("1")]) } : undefined));
+    await renderApp("/members?q=zzz", ({ url }) =>
+      url.pathname === "/api/members"
+        ? { body: page(url.searchParams.get("q") === "zzz" ? [] : [member("1")]) }
+        : undefined,
+    );
     const empty = await screen.findByTestId("members-empty-filtered");
     expect(empty).toHaveTextContent("No members match “zzz”");
     expect(empty).toHaveTextContent("Check the spelling or clear the filters.");
@@ -228,7 +258,8 @@ describe("MembersPage sorting, paging and rows", () => {
         added = true;
         return { status: 201, body: member("9", { fullName: "New Person" }) };
       }
-      if (url.pathname === "/api/members") return { body: page(added ? [member("1"), member("9", { fullName: "New Person" })] : [member("1")]) };
+      if (url.pathname === "/api/members")
+        return { body: page(added ? [member("1"), member("9", { fullName: "New Person" })] : [member("1")]) };
       return undefined;
     });
     await screen.findByTestId("members-table");

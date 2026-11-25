@@ -6,18 +6,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../test/render";
 import { DashboardPage } from "./DashboardPage";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const problem = (status: number, code: string) => ({ type: "about:blank", title: code, status, code });
 const summary: DashboardSummary = {
-  kpis: { totalTitles: 7, totalCopies: 9, availableCopies: 9, borrowedCopies: 0, activeMembers: 1, inactiveMembers: 0, activeLoans: 0, overdueLoans: 0 },
-  recentBorrowings: [], popularBooks: [], recentlyAdded: [],
+  kpis: {
+    totalTitles: 7,
+    totalCopies: 9,
+    availableCopies: 9,
+    borrowedCopies: 0,
+    activeMembers: 1,
+    inactiveMembers: 0,
+    activeLoans: 0,
+    overdueLoans: 0,
+  },
+  recentBorrowings: [],
+  popularBooks: [],
+  recentlyAdded: [],
 };
 
 function stubApi(opts: { dashboard: () => Response; reindex?: () => Response }) {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === "/api/me") return json({ id: "u1", email: "a@b.test", fullName: "Admin", role: "ADMIN", permissions: ROLE_PERMISSIONS.ADMIN, isDemo: false });
+    if (url === "/api/me")
+      return json({
+        id: "u1",
+        email: "a@b.test",
+        fullName: "Admin",
+        role: "ADMIN",
+        permissions: ROLE_PERMISSIONS.ADMIN,
+        isDemo: false,
+      });
     if (url === "/api/dashboard/summary") return opts.dashboard();
-    if (url === "/api/admin/discovery/usage") return json({ day: "2026-11-25", searches: 1, neurons: 10, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
+    if (url === "/api/admin/discovery/usage")
+      return json({ day: "2026-11-25", searches: 1, neurons: 10, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
     if (url === "/api/admin/discovery/reindex" && init?.method === "POST") return opts.reindex!();
     return json({}, 404);
   });
@@ -44,7 +65,8 @@ describe("dashboard: Rebuild search index edge cases (Admin)", () => {
   it("says so when search by meaning is not set up, and lets the Admin try later", async () => {
     stubApi({
       dashboard: () => json(summary),
-      reindex: () => json({ result: "disabled", embeddedBooks: 0, reusedBooks: 0, upToDate: 0, remaining: 0, total: 0 }),
+      reindex: () =>
+        json({ result: "disabled", embeddedBooks: 0, reusedBooks: 0, upToDate: 0, remaining: 0, total: 0 }),
     });
     await renderWithProviders(<DashboardPage />);
     await userEvent.click(await screen.findByTestId("rebuild-index"));

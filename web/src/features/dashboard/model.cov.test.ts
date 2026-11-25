@@ -4,13 +4,25 @@ import { availabilitySegments, daysOverdue, dismissNotice, isNoticeDismissed } f
 
 describe("availabilitySegments", () => {
   it("splits borrowed copies into on-loan and overdue", () => {
-    expect(availabilitySegments({ totalCopies: 412, availableCopies: 341, borrowedCopies: 71, overdueLoans: 6 })).toEqual({ available: 341, onLoan: 65, overdue: 6, total: 412 });
+    expect(
+      availabilitySegments({ totalCopies: 412, availableCopies: 341, borrowedCopies: 71, overdueLoans: 6 }),
+    ).toEqual({ available: 341, onLoan: 65, overdue: 6, total: 412 });
   });
   it("never counts more overdue loans than borrowed copies", () => {
-    expect(availabilitySegments({ totalCopies: 10, availableCopies: 8, borrowedCopies: 2, overdueLoans: 5 })).toEqual({ available: 8, onLoan: 0, overdue: 2, total: 10 });
+    expect(availabilitySegments({ totalCopies: 10, availableCopies: 8, borrowedCopies: 2, overdueLoans: 5 })).toEqual({
+      available: 8,
+      onLoan: 0,
+      overdue: 2,
+      total: 10,
+    });
   });
   it("an empty library is all zeros", () => {
-    expect(availabilitySegments({ totalCopies: 0, availableCopies: 0, borrowedCopies: 0, overdueLoans: 0 })).toEqual({ available: 0, onLoan: 0, overdue: 0, total: 0 });
+    expect(availabilitySegments({ totalCopies: 0, availableCopies: 0, borrowedCopies: 0, overdueLoans: 0 })).toEqual({
+      available: 0,
+      onLoan: 0,
+      overdue: 0,
+      total: 0,
+    });
   });
 });
 
@@ -46,8 +58,12 @@ describe("supervisor notice storage", () => {
     expect(isNoticeDismissed()).toBe(false);
   });
   it("storage that throws means 'not dismissed' and never crashes", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("denied"); });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("denied"); });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
     expect(isNoticeDismissed()).toBe(false);
     expect(() => dismissNotice()).not.toThrow();
   });

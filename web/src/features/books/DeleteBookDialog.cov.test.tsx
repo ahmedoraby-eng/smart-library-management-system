@@ -9,11 +9,28 @@ import { DeleteBookDialog } from "./DeleteBookDialog";
 afterEach(() => vi.unstubAllGlobals());
 
 const book = (patch: Partial<BookDto> = {}): BookDto => ({
-  id: "b1", title: "Clean Code", author: "R. Martin", isbn: null, description: "", category: "Software", publisher: "",
-  publicationYear: null, coverImageUrl: null, totalCopies: 5, availableCopies: 5, activeLoans: 0, nextDueAt: null,
-  hasLoanHistory: false, archived: false, version: 1, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", ...patch,
+  id: "b1",
+  title: "Clean Code",
+  author: "R. Martin",
+  isbn: null,
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: null,
+  coverImageUrl: null,
+  totalCopies: 5,
+  availableCopies: 5,
+  activeLoans: 0,
+  nextDueAt: null,
+  hasLoanHistory: false,
+  archived: false,
+  version: 1,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  ...patch,
 });
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const apiProblem = (status: number, code: string) => json({ type: "about:blank", title: code, status, code }, status);
 
 /** DELETE answered by `onDelete`; the past-loan count query answered with `total`. */
@@ -63,7 +80,12 @@ describe("DeleteBookDialog outcomes", () => {
 
   it("the confirm button shows loading and Cancel is disabled while the delete is in flight", async () => {
     let release!: () => void;
-    stub(() => new Promise<Response>((res) => { release = () => res(json({ result: "deleted" })); }));
+    stub(
+      () =>
+        new Promise<Response>((res) => {
+          release = () => res(json({ result: "deleted" }));
+        }),
+    );
     await renderWithProviders(<DeleteBookDialog book={book()} onClose={vi.fn()} />);
     await userEvent.click(await screen.findByTestId("dialog-confirm"));
     await waitFor(() => expect(screen.getByTestId("dialog-cancel")).toBeDisabled());
@@ -78,7 +100,9 @@ describe("DeleteBookDialog failures", () => {
     const onClose = vi.fn();
     await renderWithProviders(<DeleteBookDialog book={book()} onClose={onClose} />);
     await userEvent.click(await screen.findByTestId("dialog-confirm"));
-    expect(await screen.findByTestId("toast")).toHaveTextContent("Can't remove Clean Code: copies are on loan. Record their returns first.");
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Can't remove Clean Code: copies are on loan. Record their returns first.",
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -87,7 +111,9 @@ describe("DeleteBookDialog failures", () => {
     const onClose = vi.fn();
     await renderWithProviders(<DeleteBookDialog book={book()} onClose={onClose} />);
     await userEvent.click(await screen.findByTestId("dialog-confirm"));
-    expect(await screen.findByTestId("toast")).toHaveTextContent("Couldn't remove the book. Nothing was changed. Try again.");
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Couldn't remove the book. Nothing was changed. Try again.",
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -96,7 +122,9 @@ describe("DeleteBookDialog failures", () => {
     const onClose = vi.fn();
     await renderWithProviders(<DeleteBookDialog book={book()} onClose={onClose} />);
     await userEvent.click(await screen.findByTestId("dialog-confirm"));
-    expect(await screen.findByTestId("toast")).toHaveTextContent("Couldn't remove the book. Nothing was changed. Try again.");
+    expect(await screen.findByTestId("toast")).toHaveTextContent(
+      "Couldn't remove the book. Nothing was changed. Try again.",
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -113,20 +141,28 @@ describe("DeleteBookDialog failures", () => {
 describe("DeleteBookDialog blocked by open loans", () => {
   it("uses the plural wording and Close dismisses it", async () => {
     const onClose = vi.fn();
-    await renderWithProviders(<DeleteBookDialog book={book({ activeLoans: 3, availableCopies: 2 })} onClose={onClose} />);
-    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent("3 copies are on loan. Record their returns first.");
+    await renderWithProviders(
+      <DeleteBookDialog book={book({ activeLoans: 3, availableCopies: 2 })} onClose={onClose} />,
+    );
+    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent(
+      "3 copies are on loan. Record their returns first.",
+    );
     await userEvent.click(screen.getByTestId("dialog-cancel"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("singular wording for one copy", async () => {
     await renderWithProviders(<DeleteBookDialog book={book({ activeLoans: 1 })} onClose={vi.fn()} />);
-    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent("1 copy is on loan. Record its return first.");
+    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent(
+      "1 copy is on loan. Record its return first.",
+    );
   });
 
   it("View active loans closes the dialog and opens Loan history filtered to this book", async () => {
     const onClose = vi.fn();
-    const { router } = await renderWithProviders(<DeleteBookDialog book={book({ activeLoans: 2 })} onClose={onClose} />);
+    const { router } = await renderWithProviders(
+      <DeleteBookDialog book={book({ activeLoans: 2 })} onClose={onClose} />,
+    );
     await userEvent.click(await screen.findByTestId("dialog-view-loans"));
     expect(onClose).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(router.state.location.pathname).toBe("/loans"));

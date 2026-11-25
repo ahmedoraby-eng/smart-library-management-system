@@ -10,21 +10,32 @@ afterEach(() => vi.unstubAllGlobals());
 
 const DAY = 86_400_000;
 const loan = (patch: Partial<LoanDto> = {}): LoanDto => ({
-  id: "L1", status: "ACTIVE", book: { id: "b1", title: "Refactoring", author: "Martin Fowler" },
-  member: { id: "m1", memberNumber: "M-000007", fullName: "Nadia Said" }, processedBy: { id: "s1", name: "Layla Librarian" },
-  returnedBy: null, borrowedAt: "2026-11-01T10:00:00.000Z", dueAt: new Date(Date.now() + 9 * DAY).toISOString(), returnedAt: null, ...patch,
+  id: "L1",
+  status: "ACTIVE",
+  book: { id: "b1", title: "Refactoring", author: "Martin Fowler" },
+  member: { id: "m1", memberNumber: "M-000007", fullName: "Nadia Said" },
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: "2026-11-01T10:00:00.000Z",
+  dueAt: new Date(Date.now() + 9 * DAY).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
-const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 
 /** Answers /api/loans from `byStatus` (key = status query param or "all") and records the URLs. */
 function stubLoans(byStatus: Record<string, LoanDto[]>) {
   const urls: URL[] = [];
-  vi.stubGlobal("fetch", vi.fn(async (input: string) => {
-    const url = new URL(String(input), "http://localhost");
-    urls.push(url);
-    const items = byStatus[url.searchParams.get("status") ?? "all"] ?? [];
-    return json({ items, page: 1, size: 10, total: items.length });
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string) => {
+      const url = new URL(String(input), "http://localhost");
+      urls.push(url);
+      const items = byStatus[url.searchParams.get("status") ?? "all"] ?? [];
+      return json({ items, page: 1, size: 10, total: items.length });
+    }),
+  );
   return urls;
 }
 
@@ -49,7 +60,12 @@ describe("BookLoans (book detail, ux.md §3.3)", () => {
   it("opens on History when nothing is on loan; History has a Returned column and a dash for open loans", async () => {
     const urls = stubLoans({
       all: [
-        loan({ id: "L2", status: "RETURNED", returnedAt: "2026-11-10T09:00:00.000Z", returnedBy: { id: "s1", name: "Layla Librarian" } }),
+        loan({
+          id: "L2",
+          status: "RETURNED",
+          returnedAt: "2026-11-10T09:00:00.000Z",
+          returnedBy: { id: "s1", name: "Layla Librarian" },
+        }),
         loan({ id: "L3" }),
       ],
     });
@@ -65,7 +81,10 @@ describe("BookLoans (book detail, ux.md §3.3)", () => {
   });
 
   it("switching tabs refetches with the other filter", async () => {
-    const urls = stubLoans({ ACTIVE: [loan()], all: [loan({ id: "L9", status: "RETURNED", returnedAt: "2026-11-05T10:00:00.000Z" })] });
+    const urls = stubLoans({
+      ACTIVE: [loan()],
+      all: [loan({ id: "L9", status: "RETURNED", returnedAt: "2026-11-05T10:00:00.000Z" })],
+    });
     const user = userEvent.setup();
     await renderWithProviders(<BookLoans bookId="b1" activeCount={1} />);
     await screen.findAllByTestId("book-loan-row");
@@ -109,7 +128,10 @@ describe("BookLoans (book detail, ux.md §3.3)", () => {
   });
 
   it("shows a skeleton while the loans load", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
     await renderWithProviders(<BookLoans bookId="b1" activeCount={1} />);
     expect(await screen.findByTestId("book-loans")).toBeInTheDocument();
     expect(screen.queryByTestId("book-loan-row")).not.toBeInTheDocument();
@@ -117,7 +139,16 @@ describe("BookLoans (book detail, ux.md §3.3)", () => {
   });
 
   it("treats a failed request as an empty list rather than crashing", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }), { status: 500, headers: { "content-type": "application/json" } })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
     await renderWithProviders(<BookLoans bookId="b1" activeCount={0} />);
     expect(await screen.findByText("This book hasn't been borrowed yet.")).toBeInTheDocument();
   });

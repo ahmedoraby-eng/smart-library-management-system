@@ -2,8 +2,24 @@ import type { LoanDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Badge, Button, Card, CloseIcon, EmptyState, HistoryIcon, InlineAlert, Input, Pagination, SearchIcon, Select, Skeleton, SortableTh,
-  Table, Td, Th, Thead, Tr,
+  Badge,
+  Button,
+  Card,
+  CloseIcon,
+  EmptyState,
+  HistoryIcon,
+  InlineAlert,
+  Input,
+  Pagination,
+  SearchIcon,
+  Select,
+  Skeleton,
+  SortableTh,
+  Table,
+  Td,
+  Th,
+  Thead,
+  Tr,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { MemberNumber } from "../../components/MemberNumber";
@@ -107,8 +123,20 @@ export function LoanHistoryPage() {
               </option>
             ))}
           </Select>
-          <DateFilter label="Borrowed from" inline="From" value={search.from} onChange={(from) => setSearch({ from })} testId="filter-from" />
-          <DateFilter label="Borrowed to" inline="To" value={search.to} onChange={(to) => setSearch({ to })} testId="filter-to" />
+          <DateFilter
+            label="Borrowed from"
+            inline="From"
+            value={search.from}
+            onChange={(from) => setSearch({ from })}
+            testId="filter-from"
+          />
+          <DateFilter
+            label="Borrowed to"
+            inline="To"
+            value={search.to}
+            onChange={(to) => setSearch({ to })}
+            testId="filter-to"
+          />
         </div>
 
         {(search.memberId || search.bookId) && (
@@ -132,7 +160,14 @@ export function LoanHistoryPage() {
 
         {loans.isError && !data ? (
           <div className="p-5" data-testid="loans-error">
-            <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void loans.refetch()}>Try again</Button>}>
+            <InlineAlert
+              variant="danger"
+              action={
+                <Button size="sm" onClick={() => void loans.refetch()}>
+                  Try again
+                </Button>
+              }
+            >
               {loans.error instanceof ApiError && loans.error.status === 400
                 ? "These filters aren't valid. Clear them and try again."
                 : "Couldn't load loans. Check your connection and try again."}
@@ -149,18 +184,38 @@ export function LoanHistoryPage() {
               action={<Button onClick={clearFilters}>Clear filters</Button>}
             />
           ) : (
-            <EmptyState testId="loans-empty" icon={<HistoryIcon size={40} />} title="No loans yet" text="Borrowings you record will show here." />
+            <EmptyState
+              testId="loans-empty"
+              icon={<HistoryIcon size={40} />}
+              title="No loans yet"
+              text="Borrowings you record will show here."
+            />
           )
         ) : (
           data && (
-            <div className={loans.isPlaceholderData ? "opacity-60 transition-opacity" : undefined} aria-busy={loans.isPlaceholderData}>
+            <div
+              className={loans.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+              aria-busy={loans.isPlaceholderData}
+            >
               <Table aria-label="Loans" data-testid="loans-table">
                 <Thead>
                   <tr>
                     <Th>Book</Th>
                     <Th>Member</Th>
-                    <SortableTh label="Borrowed" sortKey="borrowedAt" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
-                    <SortableTh label="Due" sortKey="dueAt" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
+                    <SortableTh
+                      label="Borrowed"
+                      sortKey="borrowedAt"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
+                    <SortableTh
+                      label="Due"
+                      sortKey="dueAt"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
                     <SortableTh
                       label="Returned"
                       sortKey="returnedAt"
@@ -179,7 +234,12 @@ export function LoanHistoryPage() {
                   ))}
                 </tbody>
               </Table>
-              <Pagination page={data.page} size={data.size} total={data.total} onPage={(page) => setSearch({ page }, { resetPage: false })} />
+              <Pagination
+                page={data.page}
+                size={data.size}
+                total={data.total}
+                onPage={(page) => setSearch({ page }, { resetPage: false })}
+              />
             </div>
           )
         )}
@@ -193,7 +253,11 @@ function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: strin
   return (
     <Tr data-testid="history-row" data-status={loan.status} className={cn(overdue && "bg-overdue")}>
       <Td>
-        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">
+        <Link
+          to="/books/$bookId"
+          params={{ bookId: loan.book.id }}
+          className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+        >
           {loan.book.title}
         </Link>
         <div className="text-sm text-neutral-600">{loan.book.author}</div>
@@ -208,24 +272,48 @@ function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: strin
         >
           {loan.member.fullName}
         </button>
-        <div className="whitespace-nowrap text-sm text-neutral-600"><MemberNumber value={loan.member.memberNumber} /></div>
+        <div className="whitespace-nowrap text-sm text-neutral-600">
+          <MemberNumber value={loan.member.memberNumber} />
+        </div>
       </Td>
-      <Td kind="num" className="text-neutral-700">{formatDate(loan.borrowedAt)}</Td>
-      <Td kind="num" className={cn(overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDate(loan.dueAt)}</Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDate(loan.returnedAt) : "—"}</Td>
+      <Td kind="num" className="text-neutral-700">
+        {formatDate(loan.borrowedAt)}
+      </Td>
+      <Td kind="num" className={cn(overdue ? "font-semibold text-danger-700" : "text-neutral-700")}>
+        {formatDate(loan.dueAt)}
+      </Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">
+        {loan.returnedAt ? formatDate(loan.returnedAt) : "—"}
+      </Td>
       <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>
-      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>{loan.processedBy.name}</Td>
+      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>
+        {loan.processedBy.name}
+      </Td>
     </Tr>
   );
 }
 
-function DateFilter({ label, inline, value, onChange, testId }: { label: string; inline: string; value: string | undefined; onChange: (v: string | undefined) => void; testId: string }) {
+function DateFilter({
+  label,
+  inline,
+  value,
+  onChange,
+  testId,
+}: {
+  label: string;
+  inline: string;
+  value: string | undefined;
+  onChange: (v: string | undefined) => void;
+  testId: string;
+}) {
   // The URL holds a day (YYYY-MM-DD); a full date-time from an old link shows as its day.
   return (
     <div className="flex items-center gap-2">
-      <span aria-hidden="true" className="text-sm font-medium text-neutral-600">{inline}</span>
+      <span aria-hidden="true" className="text-sm font-medium text-neutral-600">
+        {inline}
+      </span>
       <Input
         label={label}
         hideLabel
@@ -244,7 +332,12 @@ function ScopeChip({ label, onClear, testId }: { label: string; onClear: () => v
   return (
     <Badge variant="brand" dot={false} className="gap-1 pr-1" data-testid={testId}>
       {label}
-      <button type="button" onClick={onClear} aria-label={`Remove filter ${label}`} className="rounded-full p-0.5 hover:bg-brand-100">
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`Remove filter ${label}`}
+        className="rounded-full p-0.5 hover:bg-brand-100"
+      >
         <CloseIcon size={12} />
       </button>
     </Badge>

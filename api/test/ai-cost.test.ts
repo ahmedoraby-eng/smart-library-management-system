@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { BookDiscoveryService, quotaKeywordNote, quotaNote, type DiscoveryLog } from "../src/discovery/application/BookDiscoveryService";
+import {
+  BookDiscoveryService,
+  quotaKeywordNote,
+  quotaNote,
+  type DiscoveryLog,
+} from "../src/discovery/application/BookDiscoveryService";
 import { BookIndexSync } from "../src/discovery/application/BookIndexSync";
 import { HybridCatalogRetrieval, type RetrievalLog } from "../src/discovery/application/HybridCatalogRetrieval";
 import { neuronsFor, normaliseQuery, WORST_CASE_RANK_NEURONS } from "../src/discovery/domain/Cost";
@@ -25,7 +30,10 @@ const ids: Record<string, string> = {};
 let staff: Awaited<ReturnType<typeof seedStaff>>;
 
 async function addBook(key: string, title: string, category: string, description: string) {
-  const r = await pool.query(`INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ($1,'An Author',$2,$3,2,2) RETURNING id`, [title, category, description]);
+  const r = await pool.query(
+    `INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ($1,'An Author',$2,$3,2,2) RETURNING id`,
+    [title, category, description],
+  );
   ids[key] = r.rows[0].id;
 }
 
@@ -35,20 +43,40 @@ beforeEach(async () => {
   staff = await seedStaff();
   await addBook("clean", "Clean Code", "Programming", "Readable code, naming and small functions.");
   await addBook("refactor", "Refactoring", "Programming", "Improving the design of existing code in small steps.");
-  await addBook("pragmatic", "The Pragmatic Programmer", "Programming", "Practical advice on the craft of writing code.");
-  await addBook("hawk", "H Is for Hawk", "Memoir", "After her father's sudden death, a naturalist works through her grief.");
+  await addBook(
+    "pragmatic",
+    "The Pragmatic Programmer",
+    "Programming",
+    "Practical advice on the craft of writing code.",
+  );
+  await addBook(
+    "hawk",
+    "H Is for Hawk",
+    "Memoir",
+    "After her father's sudden death, a naturalist works through her grief.",
+  );
 });
 
 /** A provider that counts its calls and reports usage like the real one. */
 function countingProvider() {
   const fake = new FakeAiProvider();
-  const p: AiProvider & { calls: number } = { name: "fake", calls: 0, rank: async (r) => { p.calls++; return fake.rank(r); } };
+  const p: AiProvider & { calls: number } = {
+    name: "fake",
+    calls: 0,
+    rank: async (r) => {
+      p.calls++;
+      return fake.rank(r);
+    },
+  };
   return p;
 }
 function countingEmbedder() {
   const fake = new FakeEmbedder();
   const e = Object.assign(Object.create(fake) as Embedder, { calls: 0 });
-  e.embed = async (texts: string[]) => { (e as { calls: number }).calls++; return fake.embed(texts); };
+  e.embed = async (texts: string[]) => {
+    (e as { calls: number }).calls++;
+    return fake.embed(texts);
+  };
   return e as Embedder & { calls: number };
 }
 
@@ -58,18 +86,34 @@ function setup(opts: { cap?: number; quota?: number; embedder?: Embedder; provid
   const retrievalLogs: Parameters<RetrievalLog>[0][] = [];
   const logs: Parameters<DiscoveryLog>[0][] = [];
   const embedder = opts.embedder ?? new FakeEmbedder();
-  const retrieval = new HybridCatalogRetrieval(new PgCatalogRetrieval(db()), new PgChunkStore(db()), embedder, (e) => retrievalLogs.push(e), undefined, { cache, budget });
+  const retrieval = new HybridCatalogRetrieval(
+    new PgCatalogRetrieval(db()),
+    new PgChunkStore(db()),
+    embedder,
+    (e) => retrievalLogs.push(e),
+    undefined,
+    { cache, budget },
+  );
   const provider = (opts.provider ?? countingProvider()) as AiProvider & { calls: number };
-  const service = new BookDiscoveryService(retrieval, provider, (e) => logs.push(e), 8000, { cache, budget, userQuota: opts.quota ?? 50 });
+  const service = new BookDiscoveryService(retrieval, provider, (e) => logs.push(e), 8000, {
+    cache,
+    budget,
+    userQuota: opts.quota ?? 50,
+  });
   return { service, budget, cache, logs, retrievalLogs, provider, embedder };
 }
 const index = () => new BookIndexSync(new PgChunkStore(db()), new FakeEmbedder()).syncAll(10_000);
-const usageRow = async (scope: string) => (await pool.query("SELECT searches, neurons::float AS neurons FROM ai_usage WHERE scope = $1", [scope])).rows[0];
+const usageRow = async (scope: string) =>
+  (await pool.query("SELECT searches, neurons::float AS neurons FROM ai_usage WHERE scope = $1", [scope])).rows[0];
 
 describe("SLM-16 cost: price estimate", () => {
   it("prices calls in Neurons from Cloudflare's published rates", () => {
-    expect(neuronsFor({ model: "@cf/meta/llama-3.2-3b-instruct", inputTokens: 1700, outputTokens: 600, estimated: true })).toBeCloseTo(26.15, 1);
-    expect(neuronsFor({ model: "@cf/baai/bge-base-en-v1.5", inputTokens: 20, outputTokens: 0, estimated: true })).toBeCloseTo(0.12, 2);
+    expect(
+      neuronsFor({ model: "@cf/meta/llama-3.2-3b-instruct", inputTokens: 1700, outputTokens: 600, estimated: true }),
+    ).toBeCloseTo(26.15, 1);
+    expect(
+      neuronsFor({ model: "@cf/baai/bge-base-en-v1.5", inputTokens: 20, outputTokens: 0, estimated: true }),
+    ).toBeCloseTo(0.12, 2);
     expect(WORST_CASE_RANK_NEURONS).toBe(26);
   });
   it("normalises queries for cache keys (case, spacing, edge punctuation)", () => {
@@ -97,13 +141,18 @@ describe("SLM-16 cost: result cache", () => {
     now = new Date(now.getTime() + 16 * 60_000);
     await service.discover({ query: "readable code" }, { userId: staff.librarian });
     expect(provider.calls).toBe(2);
-    await pool.query("UPDATE books SET description = 'Changed', updated_at = now() + interval '1 second' WHERE id = $1", [ids.clean]);
+    await pool.query(
+      "UPDATE books SET description = 'Changed', updated_at = now() + interval '1 second' WHERE id = $1",
+      [ids.clean],
+    );
     await service.discover({ query: "readable code" }, { userId: staff.librarian });
     expect(provider.calls).toBe(3);
   });
 
   it("is never used for a member-specific request (the prompt holds that member's reading)", async () => {
-    const m = await pool.query("INSERT INTO members (full_name, email) VALUES ('Mona Test', 'mona@example.com') RETURNING id");
+    const m = await pool.query(
+      "INSERT INTO members (full_name, email) VALUES ('Mona Test', 'mona@example.com') RETURNING id",
+    );
     const { service, provider } = setup();
     await service.discover({ query: "readable code", memberId: m.rows[0].id }, { userId: staff.librarian });
     await service.discover({ query: "readable code", memberId: m.rows[0].id }, { userId: staff.librarian });
@@ -134,7 +183,8 @@ describe("SLM-16 cost: skip the model when it adds nothing", () => {
 describe("SLM-16 cost: per-user daily quota", () => {
   it("past the quota the user gets the search ranking with a clear note (not an error); others are unaffected", async () => {
     const { service, provider } = setup({ quota: 2 });
-    for (const q of ["readable code", "existing code design", "craft of code"]) await service.discover({ query: q }, { userId: staff.librarian });
+    for (const q of ["readable code", "existing code design", "craft of code"])
+      await service.discover({ query: q }, { userId: staff.librarian });
     const over = await service.discover({ query: "small functions code" }, { userId: staff.librarian });
     expect(over).toMatchObject({ mode: "FALLBACK", fallbackReason: "QUOTA_EXCEEDED", note: quotaNote(2) });
     expect(over.items.length).toBeGreaterThan(0);
@@ -145,7 +195,9 @@ describe("SLM-16 cost: per-user daily quota", () => {
   it("the quota resets on the next UTC day", async () => {
     const { service } = setup({ quota: 1 });
     await service.discover({ query: "readable code" }, { userId: staff.librarian });
-    expect((await service.discover({ query: "existing code" }, { userId: staff.librarian })).fallbackReason).toBe("QUOTA_EXCEEDED");
+    expect((await service.discover({ query: "existing code" }, { userId: staff.librarian })).fallbackReason).toBe(
+      "QUOTA_EXCEEDED",
+    );
     now = new Date("2026-11-26T00:00:01Z");
     expect((await service.discover({ query: "existing code" }, { userId: staff.librarian })).mode).toBe("AI");
   });
@@ -174,8 +226,13 @@ describe("SLM-16 cost: global daily Neuron cap", () => {
   it("a timed-out call is charged at the worst case", async () => {
     const slow: AiProvider = { name: "slow", rank: () => new Promise(() => undefined) };
     const budget = new PgAiBudget(db(), clock, 8000, 50);
-    const service = new BookDiscoveryService(new PgCatalogRetrieval(db()), slow, () => undefined, 20, { budget, userQuota: 50 });
-    expect((await service.discover({ query: "readable code" }, { userId: staff.librarian })).fallbackReason).toBe("TIMEOUT");
+    const service = new BookDiscoveryService(new PgCatalogRetrieval(db()), slow, () => undefined, 20, {
+      budget,
+      userQuota: 50,
+    });
+    expect((await service.discover({ query: "readable code" }, { userId: staff.librarian })).fallbackReason).toBe(
+      "TIMEOUT",
+    );
     expect((await budget.today()).neurons).toBe(WORST_CASE_RANK_NEURONS);
   });
 });
@@ -200,7 +257,12 @@ describe("SLM-16 cost: indexing", () => {
     await pool.query(await readFile(fileURLToPath(new URL("../../seed/demo.sql", import.meta.url).href), "utf8"));
     await index();
     const logs: Parameters<RetrievalLog>[0][] = [];
-    const r = new HybridCatalogRetrieval(new PgCatalogRetrieval(db()), new PgChunkStore(db()), new FakeEmbedder(), (e) => logs.push(e));
+    const r = new HybridCatalogRetrieval(
+      new PgCatalogRetrieval(db()),
+      new PgChunkStore(db()),
+      new FakeEmbedder(),
+      (e) => logs.push(e),
+    );
     const grief = await r.candidates("a book for someone losing a parent", { limit: 20, availableOnly: false });
     const memoirs = grief.filter((c) => c.category === "Memoir");
     expect(memoirs.length).toBeGreaterThanOrEqual(2);
@@ -213,14 +275,18 @@ describe("SLM-16 cost: indexing", () => {
 describe("SLM-16 cost: API", () => {
   it("Admin reads today's usage; the reindex endpoint is limited to 2 a minute", async () => {
     const app = testApp({ env: { AI_FAKE: "true" } });
-    await app.request("/api/ai/book-discovery", await as(staff.librarian, { method: "POST", body: { query: "readable code" } }));
+    await app.request(
+      "/api/ai/book-discovery",
+      await as(staff.librarian, { method: "POST", body: { query: "readable code" } }),
+    );
     const u = await app.request("/api/admin/discovery/usage", await as(staff.admin));
     expect(u.status).toBe(200);
     const body = (await u.json()) as Record<string, unknown>;
     expect(body).toMatchObject({ searches: 1, neuronCap: 8000, userQuota: 50, vectorPath: "brute-force" });
     expect(body.neurons as number).toBeGreaterThan(0);
 
-    const reindex = async () => (await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))).status;
+    const reindex = async () =>
+      (await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))).status;
     expect([await reindex(), await reindex(), await reindex()]).toEqual([200, 200, 429]);
   });
 
@@ -231,7 +297,14 @@ describe("SLM-16 cost: API", () => {
 });
 
 describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
-  beforeEach(() => addBook("hmart", "Crying in H Mart", "Memoir", "A musician remembers her Korean mother through food, illness and mourning."));
+  beforeEach(() =>
+    addBook(
+      "hmart",
+      "Crying in H Mart",
+      "Memoir",
+      "A musician remembers her Korean mother through food, illness and mourning.",
+    ),
+  );
 
   it("tier 1: hybrid retrieval + AI ranking with reasons; the response says how many AI searches are left", async () => {
     await index();
@@ -244,7 +317,13 @@ describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
     await index();
     const { service, provider, logs } = setup({ quota: 0 });
     const r = await service.discover({ query: "a book for someone losing a parent" }, { userId: staff.librarian });
-    expect(r).toMatchObject({ mode: "FALLBACK", tier: 2, retrieval: "hybrid", fallbackReason: "QUOTA_EXCEEDED", aiSearches: { left: 0, limit: 0 } });
+    expect(r).toMatchObject({
+      mode: "FALLBACK",
+      tier: 2,
+      retrieval: "hybrid",
+      fallbackReason: "QUOTA_EXCEEDED",
+      aiSearches: { left: 0, limit: 0 },
+    });
     expect(r.items.some((i) => i.book.id === ids.hawk && i.foundBy === "semantic")).toBe(true); // still found by meaning
     expect(provider.calls).toBe(0);
     expect(logs[0]!.neurons).toBeLessThan(1);
@@ -252,10 +331,23 @@ describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
 
   it("quota used up while embeddings are down: the note says keywords, not meaning (it follows the tier served)", async () => {
     await index();
-    const broken: Embedder = { model: "fake-embedding-v1", dimensions: 768, queryPrefix: "", minSimilarity: 0.2, embed: async () => { throw new Error("AI down"); } };
+    const broken: Embedder = {
+      model: "fake-embedding-v1",
+      dimensions: 768,
+      queryPrefix: "",
+      minSimilarity: 0.2,
+      embed: async () => {
+        throw new Error("AI down");
+      },
+    };
     const { service } = setup({ quota: 0, embedder: broken });
     const r = await service.discover({ query: "readable code" }, { userId: staff.librarian });
-    expect(r).toMatchObject({ tier: 3, retrieval: "lexical", fallbackReason: "QUOTA_EXCEEDED", note: quotaKeywordNote(0) });
+    expect(r).toMatchObject({
+      tier: 3,
+      retrieval: "lexical",
+      fallbackReason: "QUOTA_EXCEEDED",
+      note: quotaKeywordNote(0),
+    });
   });
 
   it("tier 3: past the library's daily budget → keyword retrieval, deterministic ranking, no AI call at all", async () => {
@@ -271,9 +363,16 @@ describe("SLM-16 cost tiers (Ahmed, 25/11)", () => {
 
   it("GET /api/ai/quota gives the counter its starting value; each AI search uses one", async () => {
     const app = testApp({ env: { AI_FAKE: "true", AI_USER_DAILY_SEARCHES: "3" } });
-    const quota = async () => (await (await app.request("/api/ai/quota", await as(staff.supervisor))).json()) as { left: number; limit: number };
+    const quota = async () =>
+      (await (await app.request("/api/ai/quota", await as(staff.supervisor))).json()) as {
+        left: number;
+        limit: number;
+      };
     expect(await quota()).toEqual({ left: 3, limit: 3 });
-    const res = await app.request("/api/ai/book-discovery", await as(staff.supervisor, { method: "POST", body: { query: "readable code" } }));
+    const res = await app.request(
+      "/api/ai/book-discovery",
+      await as(staff.supervisor, { method: "POST", body: { query: "readable code" } }),
+    );
     expect(((await res.json()) as { aiSearches: unknown }).aiSearches).toEqual({ left: 2, limit: 3 });
     expect(await quota()).toEqual({ left: 2, limit: 3 });
   });
@@ -289,9 +388,13 @@ describe("SLM-16 indexing within Workers Free CPU (10 ms per call)", () => {
 
   it("the endpoint takes ?limit and says partial/done", async () => {
     const app = testApp({ env: { AI_FAKE: "true" } });
-    const r1 = await (await app.request("/api/admin/discovery/reindex?limit=2", await as(staff.admin, { method: "POST", body: {} }))).json();
+    const r1 = await (
+      await app.request("/api/admin/discovery/reindex?limit=2", await as(staff.admin, { method: "POST", body: {} }))
+    ).json();
     expect(r1).toMatchObject({ result: "partial", embeddedBooks: 2, remaining: 2, total: 4 });
-    const r2 = await (await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))).json();
+    const r2 = await (
+      await app.request("/api/admin/discovery/reindex", await as(staff.admin, { method: "POST", body: {} }))
+    ).json();
     expect(r2).toMatchObject({ result: "done", embeddedBooks: 2, remaining: 0, total: 4 });
   });
 });
@@ -300,7 +403,9 @@ describe("SLM-16 config", () => {
   it("the semantic threshold comes from EMBEDDING_MIN_SIMILARITY (default 0.72)", () => {
     const binding = { run: async () => ({}) };
     expect(selectEmbedder(loadConfig(testEnv), binding)!.minSimilarity).toBe(0.72);
-    expect(selectEmbedder(loadConfig({ ...testEnv, EMBEDDING_MIN_SIMILARITY: "0.75" }), binding)!.minSimilarity).toBe(0.75);
+    expect(selectEmbedder(loadConfig({ ...testEnv, EMBEDDING_MIN_SIMILARITY: "0.75" }), binding)!.minSimilarity).toBe(
+      0.75,
+    );
     expect(() => loadConfig({ ...testEnv, EMBEDDING_MIN_SIMILARITY: "1.5" })).toThrow(/EMBEDDING_MIN_SIMILARITY/);
   });
 
@@ -310,7 +415,12 @@ describe("SLM-16 config", () => {
   });
 
   it("the cost numbers come from config", () => {
-    const c = loadConfig({ ...testEnv, AI_DAILY_NEURON_CAP: "1234", AI_USER_DAILY_SEARCHES: "7", INDEX_BATCH_BOOKS: "9" });
+    const c = loadConfig({
+      ...testEnv,
+      AI_DAILY_NEURON_CAP: "1234",
+      AI_USER_DAILY_SEARCHES: "7",
+      INDEX_BATCH_BOOKS: "9",
+    });
     expect(c).toMatchObject({ aiDailyNeuronCap: 1234, aiUserDailySearches: 7, indexBatchBooks: 9 });
     expect(loadConfig(testEnv)).toMatchObject({ aiDailyNeuronCap: 8000, aiUserDailySearches: 50, indexBatchBooks: 8 });
   });
@@ -345,4 +455,3 @@ describe("SLM-16 demo queries for the assessors (full seed; foundBy as documente
     expect((await foundBy("a memoir about grief and mourning")).get("A Grief Observed")).toBe("both");
   });
 });
-

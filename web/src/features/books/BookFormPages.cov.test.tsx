@@ -9,13 +9,39 @@ import { page, renderApp } from "../circulation/testApp";
 afterEach(() => vi.unstubAllGlobals());
 
 const ID = "0b6f7c8e-1d2a-4b3c-9d4e-5f6a7b8c9d0e";
-const supervisor: Me = { id: "u2", email: "s@library.test", fullName: "Sam Supervisor", role: "SUPERVISOR", permissions: [...ROLE_PERMISSIONS.SUPERVISOR], isDemo: false };
+const supervisor: Me = {
+  id: "u2",
+  email: "s@library.test",
+  fullName: "Sam Supervisor",
+  role: "SUPERVISOR",
+  permissions: [...ROLE_PERMISSIONS.SUPERVISOR],
+  isDemo: false,
+};
 const book = (patch: Partial<BookDto> = {}): BookDto => ({
-  id: ID, title: "Refactoring", author: "Martin Fowler", isbn: null, description: "", category: "Software", publisher: "",
-  publicationYear: 2018, coverImageUrl: null, totalCopies: 4, availableCopies: 3, activeLoans: 1, nextDueAt: null,
-  hasLoanHistory: true, archived: false, version: 7, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", ...patch,
+  id: ID,
+  title: "Refactoring",
+  author: "Martin Fowler",
+  isbn: null,
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: 2018,
+  coverImageUrl: null,
+  totalCopies: 4,
+  availableCopies: 3,
+  activeLoans: 1,
+  nextDueAt: null,
+  hasLoanHistory: true,
+  archived: false,
+  version: 7,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  ...patch,
 });
-const problem = (status: number, code: string) => ({ status, body: { type: "about:blank", title: code, status, code } });
+const problem = (status: number, code: string) => ({
+  status,
+  body: { type: "about:blank", title: code, status, code },
+});
 const sent = (fetchMock: { mock: { calls: unknown[][] } }, method: string, path: string) =>
   fetchMock.mock.calls.filter(([url, init]) => url === path && (init as RequestInit | undefined)?.method === method);
 
@@ -24,7 +50,8 @@ describe("Add book page", () => {
     const user = userEvent.setup();
     const { fetchMock, router } = await renderApp("/books/new", ({ method, url }) => {
       if (url.pathname === "/api/books/categories") return { body: { items: ["Fiction", "Software"] } };
-      if (url.pathname === "/api/books" && method === "POST") return { status: 201, body: book({ id: "new-1", title: "Dune" }) };
+      if (url.pathname === "/api/books" && method === "POST")
+        return { status: 201, body: book({ id: "new-1", title: "Dune" }) };
       if (url.pathname === "/api/books/new-1") return { body: book({ id: "new-1", title: "Dune" }) };
       if (url.pathname === "/api/loans") return { body: page([]) };
       return undefined;
@@ -37,7 +64,12 @@ describe("Add book page", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/books/new-1"));
     const posts = sent(fetchMock, "POST", "/api/books");
     expect(posts).toHaveLength(1);
-    expect(JSON.parse(String((posts[0]![1] as RequestInit).body))).toMatchObject({ title: "Dune", author: "Frank Herbert", category: "Fiction", totalCopies: 1 });
+    expect(JSON.parse(String((posts[0]![1] as RequestInit).body))).toMatchObject({
+      title: "Dune",
+      author: "Frank Herbert",
+      category: "Fiction",
+      totalCopies: 1,
+    });
     expect(await screen.findByText("Book added.")).toBeInTheDocument();
   });
 
@@ -75,17 +107,25 @@ describe("Add book page", () => {
 });
 
 describe("Edit book page", () => {
-  const editHandler = (b: BookDto, extra?: Parameters<typeof renderApp>[1]): Parameters<typeof renderApp>[1] => (r) => {
-    if (r.url.pathname === "/api/books/categories") return { body: { items: ["Software"] } };
-    if (r.url.pathname === `/api/books/${ID}` && r.method === "GET") return { body: b };
-    if (r.url.pathname === "/api/loans") return { body: page([]) };
-    return extra?.(r);
-  };
+  const editHandler =
+    (b: BookDto, extra?: Parameters<typeof renderApp>[1]): Parameters<typeof renderApp>[1] =>
+    (r) => {
+      if (r.url.pathname === "/api/books/categories") return { body: { items: ["Software"] } };
+      if (r.url.pathname === `/api/books/${ID}` && r.method === "GET") return { body: b };
+      if (r.url.pathname === "/api/loans") return { body: page([]) };
+      return extra?.(r);
+    };
 
   it("loads the book into the form and saves with the loaded version", async () => {
     const user = userEvent.setup();
-    const { fetchMock, router } = await renderApp(`/books/${ID}/edit`, editHandler(book(), ({ method, url }) =>
-      url.pathname === `/api/books/${ID}` && method === "PUT" ? { body: book({ title: "Refactoring 2e", version: 8 }) } : undefined));
+    const { fetchMock, router } = await renderApp(
+      `/books/${ID}/edit`,
+      editHandler(book(), ({ method, url }) =>
+        url.pathname === `/api/books/${ID}` && method === "PUT"
+          ? { body: book({ title: "Refactoring 2e", version: 8 }) }
+          : undefined,
+      ),
+    );
     expect(await screen.findByRole("heading", { name: "Edit book" })).toBeInTheDocument();
     expect(await screen.findByTestId("field-title")).toHaveValue("Refactoring");
     await user.clear(screen.getByTestId("field-title"));
@@ -94,7 +134,10 @@ describe("Edit book page", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/books/${ID}`));
     const puts = sent(fetchMock, "PUT", `/api/books/${ID}`);
     expect(puts).toHaveLength(1);
-    expect(JSON.parse(String((puts[0]![1] as RequestInit).body))).toMatchObject({ title: "Refactoring 2e", version: 7 });
+    expect(JSON.parse(String((puts[0]![1] as RequestInit).body))).toMatchObject({
+      title: "Refactoring 2e",
+      version: 7,
+    });
     expect(await screen.findByText("Changes saved.")).toBeInTheDocument();
   });
 
@@ -133,7 +176,9 @@ describe("Edit book page", () => {
   });
 
   it("shows the not-found state for an unknown book", async () => {
-    await renderApp(`/books/${ID}/edit`, ({ url }) => (url.pathname === `/api/books/${ID}` ? problem(404, "NOT_FOUND") : undefined));
+    await renderApp(`/books/${ID}/edit`, ({ url }) =>
+      url.pathname === `/api/books/${ID}` ? problem(404, "NOT_FOUND") : undefined,
+    );
     expect(await screen.findByTestId("book-not-found")).toBeInTheDocument();
     expect(screen.queryByTestId("book-form")).not.toBeInTheDocument();
   });

@@ -5,7 +5,10 @@ import { as, cookieFor, DEMO, pool, post, resetDb, seedStaff, sessionCookieFrom,
 
 afterAll(() => pool.end());
 let staff: Awaited<ReturnType<typeof seedStaff>>;
-beforeEach(async () => { await resetDb(); staff = await seedStaff(); });
+beforeEach(async () => {
+  await resetDb();
+  staff = await seedStaff();
+});
 
 describe("SL-06 health and errors", () => {
   it("GET /api/health is public and needs no DB", async () => {
@@ -36,18 +39,25 @@ describe("SL-08 session (no-auth-bypass)", () => {
   });
 
   it("no header or flag signs anyone in (no bypass)", async () => {
-    const res = await testApp().request("/api/me", { headers: { "x-dev-user": "librarian@library.test", "cf-access-jwt-assertion": "x" } });
+    const res = await testApp().request("/api/me", {
+      headers: { "x-dev-user": "librarian@library.test", "cf-access-jwt-assertion": "x" },
+    });
     expect(res.status).toBe(401);
   });
 
   it("a cookie signed with another secret is rejected", async () => {
-    const res = await testApp().request("/api/me", { headers: { cookie: await cookieFor(staff.admin, "another-secret-another-secret-0000") } });
+    const res = await testApp().request("/api/me", {
+      headers: { cookie: await cookieFor(staff.admin, "another-secret-another-secret-0000") },
+    });
     expect(res.status).toBe(401);
   });
 
   it("role and permissions come from the database on every request", async () => {
     const app = testApp();
-    const me = (await (await app.request("/api/me", await as(staff.librarian))).json()) as { role: string; permissions: string[] };
+    const me = (await (await app.request("/api/me", await as(staff.librarian))).json()) as {
+      role: string;
+      permissions: string[];
+    };
     expect(me.role).toBe("LIBRARIAN");
     expect(me.permissions.sort()).toEqual([...ROLE_PERMISSIONS.LIBRARIAN].sort());
     await pool.query("UPDATE staff_users SET role = 'SUPERVISOR' WHERE id = $1", [staff.librarian]);
@@ -85,25 +95,38 @@ describe("SL-08 demo accounts", () => {
 
   it("wrong password and unknown email get the same 401 INVALID_CREDENTIALS", async () => {
     const app = testApp();
-    const a = await app.request("/api/auth/demo-login", post({ email: DEMO.admin.email, password: "wrong-password-x" }));
-    const b = await app.request("/api/auth/demo-login", post({ email: "nobody@demo.test", password: DEMO.admin.password }));
+    const a = await app.request(
+      "/api/auth/demo-login",
+      post({ email: DEMO.admin.email, password: "wrong-password-x" }),
+    );
+    const b = await app.request(
+      "/api/auth/demo-login",
+      post({ email: "nobody@demo.test", password: DEMO.admin.password }),
+    );
     expect(a.status).toBe(401);
     expect(b.status).toBe(401);
-    expect(await a.json()).toMatchObject({ code: "INVALID_CREDENTIALS", detail: "The email or password is not correct." });
-    expect((await b.json() as { detail: string }).detail).toBe("The email or password is not correct.");
+    expect(await a.json()).toMatchObject({
+      code: "INVALID_CREDENTIALS",
+      detail: "The email or password is not correct.",
+    });
+    expect(((await b.json()) as { detail: string }).detail).toBe("The email or password is not correct.");
     expect(a.headers.get("set-cookie")).toBeNull();
   });
 
   it("6th attempt in a minute → 429 with Retry-After", async () => {
     const app = testApp();
-    for (let i = 0; i < 5; i++) await app.request("/api/auth/demo-login", post({ email: "x@demo.test", password: "nope-nope-nope" }));
+    for (let i = 0; i < 5; i++)
+      await app.request("/api/auth/demo-login", post({ email: "x@demo.test", password: "nope-nope-nope" }));
     const res = await app.request("/api/auth/demo-login", post(DEMO.librarian));
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
   it("disabled by config → 404", async () => {
-    const res = await testApp({ env: { DEMO_ACCOUNTS_ENABLED: "false" } }).request("/api/auth/demo-login", post(DEMO.librarian));
+    const res = await testApp({ env: { DEMO_ACCOUNTS_ENABLED: "false" } }).request(
+      "/api/auth/demo-login",
+      post(DEMO.librarian),
+    );
     expect(res.status).toBe(404);
   });
 
@@ -117,8 +140,18 @@ describe("SL-08 demo accounts", () => {
 describe("SL-08 Google provisioning (service level)", () => {
   it("unknown Google account → read-only SUPERVISOR; bootstrap email → ADMIN", async () => {
     const { container } = testApp();
-    expect((await container.staffIdentity.signInWithGoogle({ sub: "g-rita", email: "Reviewer@Gmail.com", name: "Rita Reviewer" })).role).toBe("SUPERVISOR");
-    expect((await container.staffIdentity.signInWithGoogle({ sub: "g-boss", email: "boss@example.org" })).role).toBe("ADMIN");
+    expect(
+      (
+        await container.staffIdentity.signInWithGoogle({
+          sub: "g-rita",
+          email: "Reviewer@Gmail.com",
+          name: "Rita Reviewer",
+        })
+      ).role,
+    ).toBe("SUPERVISOR");
+    expect((await container.staffIdentity.signInWithGoogle({ sub: "g-boss", email: "boss@example.org" })).role).toBe(
+      "ADMIN",
+    );
   });
 });
 
@@ -140,15 +173,23 @@ describe("SL-06 configuration safety", () => {
   });
 });
 
-
 describe("SL-08 CSRF details", () => {
   it("a same-origin POST without a body is allowed; a non-JSON body is refused", async () => {
     const app = testApp();
     const cookie = (await as(staff.admin)).headers as Record<string, string>;
-    const noBody = await app.request("/api/auth/logout", { method: "POST", headers: { origin: "http://localhost", cookie: cookie.cookie! } });
+    const noBody = await app.request("/api/auth/logout", {
+      method: "POST",
+      headers: { origin: "http://localhost", cookie: cookie.cookie! },
+    });
     expect(noBody.status).toBe(204);
     const form = await app.request("/api/auth/logout", {
-      method: "POST", headers: { origin: "http://localhost", "content-type": "application/x-www-form-urlencoded", "content-length": "3" }, body: "a=b",
+      method: "POST",
+      headers: {
+        origin: "http://localhost",
+        "content-type": "application/x-www-form-urlencoded",
+        "content-length": "3",
+      },
+      body: "a=b",
     });
     expect(form.status).toBe(403);
   });

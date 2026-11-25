@@ -8,8 +8,20 @@ import { SearchIcon, Spinner } from "./icons";
  * and show the reason. The caller owns the text and the query (debounce it, min 1 char).
  */
 export function Combobox<T>({
-  label, placeholder, value, onValueChange, options, loading = false, getKey, renderOption, disabledReason, onSelect,
-  inputRef, testId, emptyText = "No matches", hint,
+  label,
+  placeholder,
+  value,
+  onValueChange,
+  options,
+  loading = false,
+  getKey,
+  renderOption,
+  disabledReason,
+  onSelect,
+  inputRef,
+  testId,
+  emptyText = "No matches",
+  hint,
 }: {
   label: string;
   placeholder?: string;
@@ -144,7 +156,11 @@ export function Combobox<T>({
           </ul>
           <div className="flex items-center justify-between border-t border-border px-3 py-1.5 text-xs text-neutral-500">
             <span>↑↓ move · Enter select · Esc close</span>
-            {options !== undefined && <span className="tabular-nums">{Math.min(options.length, 8)} of {options.length} matches</span>}
+            {options !== undefined && (
+              <span className="tabular-nums">
+                {Math.min(options.length, 8)} of {options.length} matches
+              </span>
+            )}
           </div>
         </div>
       )}

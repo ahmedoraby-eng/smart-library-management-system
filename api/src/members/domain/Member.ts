@@ -40,7 +40,8 @@ export interface MemberListParams {
 }
 
 /** `ALL` and "no status" both mean no filter. */
-export const statusFilter = (s: MemberListQuery["status"]): MemberStatus | undefined => (s === "ACTIVE" || s === "INACTIVE" ? s : undefined);
+export const statusFilter = (s: MemberListQuery["status"]): MemberStatus | undefined =>
+  s === "ACTIVE" || s === "INACTIVE" ? s : undefined;
 
 /** Outcome of a guarded write; the application turns non-ok results into domain errors. */
 export type SaveResult = { kind: "ok"; member: MemberView } | { kind: "duplicate_email" };

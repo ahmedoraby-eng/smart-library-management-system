@@ -12,24 +12,54 @@ const BOOK_ID = "0b6f7c8e-1d2a-4b3c-9d4e-5f6a7b8c9d0e";
 const MEMBER_ID = "1c7a8d9e-2e3b-4c4d-8e5f-6a7b8c9d0e1f";
 
 const book = (patch: Partial<BookDto> = {}): BookDto => ({
-  id: BOOK_ID, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann", isbn: "9781449373320", description: "",
-  category: "Data", publisher: "", publicationYear: 2017, coverImageUrl: null, totalCopies: 4, availableCopies: 1, activeLoans: 3,
-  nextDueAt: null, hasLoanHistory: true, archived: false, version: 1, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+  id: BOOK_ID,
+  title: "Designing Data-Intensive Applications",
+  author: "Martin Kleppmann",
+  isbn: "9781449373320",
+  description: "",
+  category: "Data",
+  publisher: "",
+  publicationYear: 2017,
+  coverImageUrl: null,
+  totalCopies: 4,
+  availableCopies: 1,
+  activeLoans: 3,
+  nextDueAt: null,
+  hasLoanHistory: true,
+  archived: false,
+  version: 1,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
   ...patch,
 });
 const member = (patch: Partial<MemberDto> = {}): MemberDto => ({
-  id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad", email: "sara.haddad@example.com", phone: null, status: "ACTIVE",
-  registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 1, overdueLoans: 0, version: 0, ...patch,
+  id: MEMBER_ID,
+  memberNumber: "M-000142",
+  fullName: "Sara Haddad",
+  email: "sara.haddad@example.com",
+  phone: null,
+  status: "ACTIVE",
+  registeredAt: "2026-01-01T00:00:00.000Z",
+  activeLoans: 1,
+  overdueLoans: 0,
+  version: 0,
+  ...patch,
 });
 const loan = (patch: Partial<LoanDto> = {}): LoanDto => ({
-  id: "2d8b9e0f-3f4c-4d5e-9f6a-7b8c9d0e1f2a", status: "ACTIVE",
+  id: "2d8b9e0f-3f4c-4d5e-9f6a-7b8c9d0e1f2a",
+  status: "ACTIVE",
   book: { id: BOOK_ID, title: "Clean Code", author: "Robert C. Martin" },
   member: { id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad" },
-  processedBy: { id: "s1", name: "Layla Librarian" }, returnedBy: null,
-  borrowedAt: "2026-11-01T10:00:00.000Z", dueAt: new Date(Date.now() + 5 * 86_400_000).toISOString(), returnedAt: null, ...patch,
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: "2026-11-01T10:00:00.000Z",
+  dueAt: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
 const problem = (status: number, code: string, detail: string, context?: Record<string, unknown>) => ({
-  status, body: { type: "about:blank", title: code, status, code, detail, ...(context ? { context } : {}) },
+  status,
+  body: { type: "about:blank", title: code, status, code, detail, ...(context ? { context } : {}) },
 });
 
 describe("SLM-4 Borrow page (ux.md §4.1)", () => {
@@ -42,7 +72,13 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
       if (url.pathname === "/api/loans" && method === "GET") return { body: page([]) };
       if (url.pathname === "/api/loans/borrow" && method === "POST") {
         posted = body;
-        return { status: 201, body: loan({ book: { id: BOOK_ID, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann" }, dueAt: "2026-12-08T10:00:00.000Z" }) };
+        return {
+          status: 201,
+          body: loan({
+            book: { id: BOOK_ID, title: "Designing Data-Intensive Applications", author: "Martin Kleppmann" },
+            dueAt: "2026-12-08T10:00:00.000Z",
+          }),
+        };
       }
       return undefined;
     });
@@ -75,7 +111,9 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
     const input = screen.getByTestId("due-date");
     await user.clear(input);
     await user.type(input, "2099-01-01");
-    expect(screen.getByTestId("due-error")).toHaveTextContent(/^Choose a due date between tomorrow and \d{1,2} \w{3} \d{4}\.$/);
+    expect(screen.getByTestId("due-error")).toHaveTextContent(
+      /^Choose a due date between tomorrow and \d{1,2} \w{3} \d{4}\.$/,
+    );
     expect(screen.getByTestId("confirm-borrow")).toBeDisabled();
   });
 
@@ -90,7 +128,15 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
     expect(screen.getByTestId("tab-return")).not.toHaveAttribute("aria-current");
     const input = screen.getByTestId("due-date") as HTMLInputElement;
     const [y, m, d] = input.value.split("-").map(Number) as [number, number, number];
-    const expected = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d)).replace(/^(\w{3}),? /, "$1, ").replace("Sept", "Sep");
+    const expected = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+      .format(new Date(y, m - 1, d))
+      .replace(/^(\w{3}),? /, "$1, ")
+      .replace("Sept", "Sep");
     expect(screen.getByTestId("due-date-display")).toHaveTextContent(expected);
   });
 
@@ -116,11 +162,13 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
     const user = userEvent.setup();
     await renderApp("/circulation/borrow", ({ url }) => {
       if (url.pathname === "/api/members") {
-        return { body: page([
-          member({ id: "a", fullName: "Omar Nasser", status: "INACTIVE" }),
-          member({ id: "b", fullName: "Nadia Karim", activeLoans: 5 }),
-          member({ id: "c", fullName: "Sara Haddad" }),
-        ]) };
+        return {
+          body: page([
+            member({ id: "a", fullName: "Omar Nasser", status: "INACTIVE" }),
+            member({ id: "b", fullName: "Nadia Karim", activeLoans: 5 }),
+            member({ id: "c", fullName: "Sara Haddad" }),
+          ]),
+        };
       }
       if (url.pathname === "/api/loans") return { body: page([]) };
       return undefined;
@@ -144,8 +192,27 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
     const user = userEvent.setup();
     await renderApp(`/circulation/borrow?member=${MEMBER_ID}`, ({ url }) => {
       if (url.pathname === `/api/members/${MEMBER_ID}`) return { body: member() };
-      if (url.pathname === "/api/loans") return { body: page([loan({ book: { id: BOOK_ID, title: "Designing Data-Intensive Applications", author: "M" }, dueAt: "2026-12-03T10:00:00.000Z" })]) };
-      if (url.pathname === "/api/books") return { body: page([book({ availableCopies: 3 }), book({ id: "other", title: "System Design Interview", availableCopies: 0, nextDueAt: "2026-11-28T10:00:00.000Z" })]) };
+      if (url.pathname === "/api/loans")
+        return {
+          body: page([
+            loan({
+              book: { id: BOOK_ID, title: "Designing Data-Intensive Applications", author: "M" },
+              dueAt: "2026-12-03T10:00:00.000Z",
+            }),
+          ]),
+        };
+      if (url.pathname === "/api/books")
+        return {
+          body: page([
+            book({ availableCopies: 3 }),
+            book({
+              id: "other",
+              title: "System Design Interview",
+              availableCopies: 0,
+              nextDueAt: "2026-11-28T10:00:00.000Z",
+            }),
+          ]),
+        };
       return undefined;
     });
     await screen.findByTestId("picked-member");
@@ -160,7 +227,11 @@ describe("SLM-4 Borrow page (ux.md §4.1)", () => {
 describe("SLM-4 Return page (ux.md §4.2)", () => {
   it("SLM-4 AC9 active loans listed before any search; Return → confirm → POST; toast with the new count", async () => {
     const user = userEvent.setup();
-    const overdue = loan({ id: "3e9c0f1a-4a5d-4e6f-8a7b-8c9d0e1f2a3b", status: "OVERDUE", dueAt: new Date(Date.now() - 3 * 86_400_000 - 1000).toISOString() });
+    const overdue = loan({
+      id: "3e9c0f1a-4a5d-4e6f-8a7b-8c9d0e1f2a3b",
+      status: "OVERDUE",
+      dueAt: new Date(Date.now() - 3 * 86_400_000 - 1000).toISOString(),
+    });
     let returned = false;
     const { fetchMock } = await renderApp("/circulation/return", ({ method, url }) => {
       if (url.pathname === "/api/loans" && method === "GET") return { body: page(returned ? [] : [overdue]) };
@@ -168,7 +239,8 @@ describe("SLM-4 Return page (ux.md §4.2)", () => {
         returned = true;
         return { body: { ...overdue, status: "RETURNED", returnedAt: new Date().toISOString() } };
       }
-      if (url.pathname === `/api/books/${BOOK_ID}`) return { body: book({ title: "Clean Code", availableCopies: 3, totalCopies: 5 }) };
+      if (url.pathname === `/api/books/${BOOK_ID}`)
+        return { body: book({ title: "Clean Code", availableCopies: 3, totalCopies: 5 }) };
       return undefined;
     });
     const row = await screen.findByTestId("loan-row");
@@ -192,7 +264,10 @@ describe("SLM-4 Return page (ux.md §4.2)", () => {
     await renderApp("/circulation/return", ({ method, url }) => {
       if (url.pathname === "/api/loans" && method === "GET") return { body: page([l]) };
       if (url.pathname === `/api/loans/${l.id}/return`) {
-        return problem(409, "LOAN_ALREADY_RETURNED", "Already.", { returnedAt: "2026-11-24T10:42:00.000Z", returnedBy: "Omar Nasser" });
+        return problem(409, "LOAN_ALREADY_RETURNED", "Already.", {
+          returnedAt: "2026-11-24T10:42:00.000Z",
+          returnedBy: "Omar Nasser",
+        });
       }
       return undefined;
     });
@@ -206,7 +281,14 @@ describe("SLM-4 Return page (ux.md §4.2)", () => {
 
 describe("SLM-4 role rule (U10): Circulation is hidden for Supervisor", () => {
   it("Supervisor deep link to /circulation/borrow → /403; no Circulation in the sidebar", async () => {
-    const supervisor = { id: "s3", email: "sam@library.test", fullName: "Samir Supervisor", role: "SUPERVISOR" as const, permissions: [...ROLE_PERMISSIONS.SUPERVISOR], isDemo: false };
+    const supervisor = {
+      id: "s3",
+      email: "sam@library.test",
+      fullName: "Samir Supervisor",
+      role: "SUPERVISOR" as const,
+      permissions: [...ROLE_PERMISSIONS.SUPERVISOR],
+      isDemo: false,
+    };
     const { router } = await renderApp("/circulation/borrow", () => undefined, supervisor);
     expect(await screen.findByTestId("forbidden")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/403");

@@ -29,7 +29,9 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
               data-testid={`book-loans-tab-${t}`}
               className={cn(
                 "-mb-px border-b-2 pb-2 text-sm font-semibold",
-                tab === t ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-600 hover:text-neutral-900",
+                tab === t
+                  ? "border-brand-600 text-brand-700"
+                  : "border-transparent text-neutral-600 hover:text-neutral-900",
               )}
             >
               {t === "active" ? `Active (${activeCount})` : "History"}
@@ -69,15 +71,30 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
               <Tr key={l.id} data-testid="book-loan-row" className={cn(l.status === "OVERDUE" && "bg-overdue")}>
                 <Td>
                   <div className="font-medium">{l.member.fullName}</div>
-                  <div className="text-sm text-neutral-600"><MemberNumber value={l.member.memberNumber} /></div>
+                  <div className="text-sm text-neutral-600">
+                    <MemberNumber value={l.member.memberNumber} />
+                  </div>
                 </Td>
-                <Td kind="num" className="text-neutral-700">{formatDate(l.borrowedAt)}</Td>
-                <Td kind="num" className={cn(l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>{formatDate(l.dueAt)}</Td>
-                {tab === "history" && <Td kind="num" className="text-neutral-700">{l.returnedAt ? formatDate(l.returnedAt) : "—"}</Td>}
+                <Td kind="num" className="text-neutral-700">
+                  {formatDate(l.borrowedAt)}
+                </Td>
+                <Td
+                  kind="num"
+                  className={cn(l.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}
+                >
+                  {formatDate(l.dueAt)}
+                </Td>
+                {tab === "history" && (
+                  <Td kind="num" className="text-neutral-700">
+                    {l.returnedAt ? formatDate(l.returnedAt) : "—"}
+                  </Td>
+                )}
                 <Td kind="nowrap">
                   <LoanStatusBadge loan={l} />
                 </Td>
-                <Td kind="truncate" className="text-neutral-700 max-wide:hidden" title={l.processedBy.name}>{l.processedBy.name}</Td>
+                <Td kind="truncate" className="text-neutral-700 max-wide:hidden" title={l.processedBy.name}>
+                  {l.processedBy.name}
+                </Td>
               </Tr>
             ))}
           </tbody>

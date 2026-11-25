@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiClient";
 import { queryClient, setApiErrorHandler } from "./queryClient";
 
-const apiError = (status: number, code: string) => new ApiError({ type: "about:blank", title: "t", status, code } as never);
+const apiError = (status: number, code: string) =>
+  new ApiError({ type: "about:blank", title: "t", status, code } as never);
 
 afterEach(() => {
   setApiErrorHandler(undefined);
@@ -11,7 +12,11 @@ afterEach(() => {
 });
 
 async function failQuery(key: string, error: unknown) {
-  const observer = new QueryObserver(queryClient, { queryKey: [key], queryFn: () => Promise.reject(error), retry: false });
+  const observer = new QueryObserver(queryClient, {
+    queryKey: [key],
+    queryFn: () => Promise.reject(error),
+    retry: false,
+  });
   const unsubscribe = observer.subscribe(() => undefined);
   await vi.waitFor(() => expect(observer.getCurrentResult().isError).toBe(true));
   unsubscribe();

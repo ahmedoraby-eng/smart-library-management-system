@@ -92,20 +92,32 @@ describe("Select", () => {
 
   it("labels a native select and reports the chosen value", async () => {
     const onChange = vi.fn();
-    render(<Select label="Role" onChange={onChange} hint="Pick one">{options}</Select>);
+    render(
+      <Select label="Role" onChange={onChange} hint="Pick one">
+        {options}
+      </Select>,
+    );
     await userEvent.selectOptions(screen.getByLabelText("Role"), "ADMIN");
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Pick one")).toBeInTheDocument();
   });
 
   it("shows an error and marks it invalid", () => {
-    render(<Select label="Role" error="Choose a role.">{options}</Select>);
+    render(
+      <Select label="Role" error="Choose a role.">
+        {options}
+      </Select>,
+    );
     expect(screen.getByLabelText("Role")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Choose a role.")).toBeInTheDocument();
   });
 
   it("hideLabel keeps the label for screen readers only", () => {
-    render(<Select label="Filter by role" hideLabel>{options}</Select>);
+    render(
+      <Select label="Filter by role" hideLabel>
+        {options}
+      </Select>,
+    );
     expect(screen.getByText("Filter by role")).toHaveClass("sr-only");
     expect(screen.getByLabelText("Filter by role")).toBeInTheDocument();
   });

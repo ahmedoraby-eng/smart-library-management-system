@@ -8,13 +8,25 @@ import { MemberModal } from "./MemberModal";
 import { emptyValues, isDirty, validateMember, valuesFromMember } from "./memberFormModel";
 
 const existing: MemberDto = {
-  id: "m1", memberNumber: "M-000042", fullName: "Sara Haddad", email: "sara@example.org", phone: null, status: "ACTIVE",
-  registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 0, overdueLoans: 0, version: 3,
+  id: "m1",
+  memberNumber: "M-000042",
+  fullName: "Sara Haddad",
+  email: "sara@example.org",
+  phone: null,
+  status: "ACTIVE",
+  registeredAt: "2026-01-01T00:00:00.000Z",
+  activeLoans: 0,
+  overdueLoans: 0,
+  version: 3,
 };
 
 const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": status >= 400 ? "application/problem+json" : "application/json" } });
-const problem = (status: number, code: string, extra: Record<string, unknown> = {}) => json(status, { type: "about:blank", title: code, status, code, ...extra });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": status >= 400 ? "application/problem+json" : "application/json" },
+  });
+const problem = (status: number, code: string, extra: Record<string, unknown> = {}) =>
+  json(status, { type: "about:blank", title: code, status, code, ...extra });
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -34,7 +46,11 @@ const fillValid = async (user: ReturnType<typeof userEvent.setup>) => {
 
 describe("MemberModal server error mapping", () => {
   it("VALIDATION_FAILED with a field the form doesn't have shows it as the general error", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(problem(400, "VALIDATION_FAILED", { errors: [{ field: "nickname", message: "Nickname is not allowed." }] }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        problem(400, "VALIDATION_FAILED", { errors: [{ field: "nickname", message: "Nickname is not allowed." }] }),
+      );
     const { user } = await setup({ fetch: fetchMock });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
@@ -42,13 +58,15 @@ describe("MemberModal server error mapping", () => {
   });
 
   it("VALIDATION_FAILED with several errors on one field keeps the first; a field error and an unknown one both show", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(problem(400, "VALIDATION_FAILED", {
-      errors: [
-        { field: "email", message: "First email problem." },
-        { field: "email", message: "Second email problem." },
-        { field: "other", message: "Other problem." },
-      ],
-    }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      problem(400, "VALIDATION_FAILED", {
+        errors: [
+          { field: "email", message: "First email problem." },
+          { field: "email", message: "Second email problem." },
+          { field: "other", message: "Other problem." },
+        ],
+      }),
+    );
     const { user } = await setup({ fetch: fetchMock });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
@@ -67,7 +85,11 @@ describe("MemberModal server error mapping", () => {
   });
 
   it("VALIDATION_FAILED with nothing at all says to check the highlighted fields", async () => {
-    const bare = vi.fn().mockResolvedValue(json(400, { type: "about:blank", title: "", status: 400, code: "VALIDATION_FAILED", errors: [] }));
+    const bare = vi
+      .fn()
+      .mockResolvedValue(
+        json(400, { type: "about:blank", title: "", status: 400, code: "VALIDATION_FAILED", errors: [] }),
+      );
     const { user } = await setup({ fetch: bare });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
@@ -80,7 +102,9 @@ describe("MemberModal server error mapping", () => {
     await user.clear(field("fullName"));
     await user.type(field("fullName"), "Changed");
     await user.click(screen.getByTestId("save-member"));
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("This member no longer exists. Close this window and refresh the list.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "This member no longer exists. Close this window and refresh the list.",
+    );
   });
 
   it("a 403 shows nothing in the form (handled app-wide)", async () => {
@@ -99,7 +123,9 @@ describe("MemberModal server error mapping", () => {
     const { user } = await setup({ fetch: fetchMock });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't save the member. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't save the member. Nothing was saved. Try again.",
+    );
   });
 
   it("a network failure (no response) shows the same general message", async () => {
@@ -107,11 +133,14 @@ describe("MemberModal server error mapping", () => {
     const { user } = await setup({ fetch: fetchMock });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't save the member. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't save the member. Nothing was saved. Try again.",
+    );
   });
 
   it("the general error clears when the user submits again", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(problem(500, "INTERNAL"))
       .mockResolvedValueOnce(json(201, { ...existing, id: "new" }));
     const { user, onClose } = await setup({ fetch: fetchMock });
@@ -126,7 +155,8 @@ describe("MemberModal server error mapping", () => {
 
 describe("MemberModal stale edit and reload", () => {
   it("when reloading the latest version fails, the modal says so and stays blocked", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(problem(409, "STALE_VERSION"))
       .mockResolvedValueOnce(problem(500, "INTERNAL"));
     const { user } = await setup({ member: existing, fetch: fetchMock });
@@ -135,7 +165,9 @@ describe("MemberModal stale edit and reload", () => {
     await user.click(screen.getByTestId("save-member"));
     await screen.findByTestId("stale-notice");
     await user.click(screen.getByTestId("reload-member"));
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't reload this member. Close this window and try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't reload this member. Close this window and try again.",
+    );
     expect(screen.getByTestId("stale-notice")).toBeInTheDocument();
     expect(screen.getByTestId("save-member")).toBeDisabled();
     expect(field("fullName")).toHaveValue("Mine");
@@ -156,7 +188,12 @@ describe("MemberModal stale edit and reload", () => {
 describe("MemberModal while saving", () => {
   it("Escape and Cancel do nothing until the save finishes; a second submit posts only once", async () => {
     let finish: (r: Response) => void = () => undefined;
-    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    );
     const { user, onClose } = await setup({ fetch: fetchMock });
     await fillValid(user);
     await user.click(screen.getByTestId("save-member"));
@@ -188,8 +225,16 @@ describe("MemberModal while saving", () => {
 
 describe("memberFormModel", () => {
   it("valuesFromMember maps a missing phone to an empty string and keeps the status", () => {
-    expect(valuesFromMember(existing)).toEqual({ fullName: "Sara Haddad", email: "sara@example.org", phone: "", status: "ACTIVE" });
-    expect(valuesFromMember({ ...existing, phone: "+20 1", status: "INACTIVE" })).toMatchObject({ phone: "+20 1", status: "INACTIVE" });
+    expect(valuesFromMember(existing)).toEqual({
+      fullName: "Sara Haddad",
+      email: "sara@example.org",
+      phone: "",
+      status: "ACTIVE",
+    });
+    expect(valuesFromMember({ ...existing, phone: "+20 1", status: "INACTIVE" })).toMatchObject({
+      phone: "+20 1",
+      status: "INACTIVE",
+    });
   });
 
   it("validateMember returns normalised data on success and the first message per field on failure", () => {

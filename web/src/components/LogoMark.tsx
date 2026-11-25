@@ -16,7 +16,10 @@ export function LogoMark({ large = false }: { large?: boolean }) {
       </span>
       <span
         aria-hidden="true"
-        className={cn("hidden shrink-0 place-items-center bg-brand-600 text-white plain:grid", large ? "h-10 w-10 rounded-lg" : "h-7.5 w-7.5 rounded-md")}
+        className={cn(
+          "hidden shrink-0 place-items-center bg-brand-600 text-white plain:grid",
+          large ? "h-10 w-10 rounded-lg" : "h-7.5 w-7.5 rounded-md",
+        )}
       >
         <BookIcon size={large ? 22 : 17} />
       </span>

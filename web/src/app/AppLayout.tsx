@@ -3,8 +3,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useRouter } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
-  BookIcon, Button, DashboardIcon, EmptyState, HistoryIcon, InlineAlert, LampIcon, LogoutIcon, MemberCardIcon, ShieldIcon, Skeleton,
-  SwapIcon, useToast,
+  BookIcon,
+  Button,
+  DashboardIcon,
+  EmptyState,
+  HistoryIcon,
+  InlineAlert,
+  LampIcon,
+  LogoutIcon,
+  MemberCardIcon,
+  ShieldIcon,
+  Skeleton,
+  SwapIcon,
+  useToast,
 } from "../components/ui";
 import { LogoMark } from "../components/LogoMark";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -31,7 +42,9 @@ const NAV: NavItem[] = [
   { to: "/loans", label: "Loan history", icon: <HistoryIcon />, needs: "LOAN_READ" },
   { to: "/discover", label: "Book discovery", icon: <LampIcon />, needs: "AI_DISCOVER", tag: "AI" },
 ];
-const ADMIN_NAV: NavItem[] = [{ to: "/admin/users", label: "Staff users", icon: <ShieldIcon />, needs: "STAFF_MANAGE" }];
+const ADMIN_NAV: NavItem[] = [
+  { to: "/admin/users", label: "Staff users", icon: <ShieldIcon />, needs: "STAFF_MANAGE" },
+];
 
 const ROLE_LABEL = { ADMIN: "Admin", LIBRARIAN: "Librarian", SUPERVISOR: "Supervisor" } as const;
 
@@ -85,7 +98,14 @@ export function AppLayout() {
     if (me.error instanceof ApiError && me.error.status === 401) return null;
     return (
       <main className="mx-auto max-w-lg p-10">
-        <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void me.refetch()}>Try again</Button>}>
+        <InlineAlert
+          variant="danger"
+          action={
+            <Button size="sm" onClick={() => void me.refetch()}>
+              Try again
+            </Button>
+          }
+        >
           Couldn't load your account. Check your connection and try again.
         </InlineAlert>
       </main>
@@ -171,11 +191,19 @@ function UserCard({ onSignOut, signingOut }: { onSignOut: () => void; signingOut
     };
   }, [open]);
 
-  const initials = me.fullName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = me.fullName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
   return (
     <div ref={box} className="relative mt-auto mr-2 border-t border-spine-line pt-3 xl:mr-3 plain:mr-0 plain:xl:mr-0">
       {open && (
-        <div role="menu" className="absolute right-0 bottom-full left-0 mb-2 min-w-40 rounded-lg border border-border bg-surface p-1 shadow-pop">
+        <div
+          role="menu"
+          className="absolute right-0 bottom-full left-0 mb-2 min-w-40 rounded-lg border border-border bg-surface p-1 shadow-pop"
+        >
           <button
             type="button"
             role="menuitem"
@@ -196,11 +224,17 @@ function UserCard({ onSignOut, signingOut }: { onSignOut: () => void; signingOut
         onClick={() => setOpen((v) => !v)}
         data-testid="user-menu"
         title={`${me.fullName} · ${ROLE_LABEL[me.role]}`}
-        className={cn("flex w-full items-center gap-2.5 rounded-md p-1.5 text-left hover:bg-white/5 max-xl:justify-center plain:hover:bg-neutral-50")}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-md p-1.5 text-left hover:bg-white/5 max-xl:justify-center plain:hover:bg-neutral-50",
+        )}
       >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#2a4d3e] text-xs font-semibold text-[#f6efe0] plain:bg-neutral-100 plain:text-neutral-700">{initials}</span>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#2a4d3e] text-xs font-semibold text-[#f6efe0] plain:bg-neutral-100 plain:text-neutral-700">
+          {initials}
+        </span>
         <span className="hidden min-w-0 flex-1 xl:block">
-          <span className="block truncate text-sm font-semibold text-[#f6efe0] plain:text-neutral-900">{me.fullName}</span>
+          <span className="block truncate text-sm font-semibold text-[#f6efe0] plain:text-neutral-900">
+            {me.fullName}
+          </span>
           <span className="block truncate text-xs text-spine-muted plain:text-neutral-500">{me.email}</span>
           <span className="mt-1 flex gap-1">
             <span
@@ -210,7 +244,11 @@ function UserCard({ onSignOut, signingOut }: { onSignOut: () => void; signingOut
             >
               {ROLE_LABEL[me.role]}
             </span>
-            {me.isDemo && <span className="rounded-xs border border-spine-ink/35 bg-transparent px-1.5 text-[11px] leading-4 font-medium text-spine-ink plain:border-brand-200 plain:bg-brand-50 plain:text-brand-700">Demo</span>}
+            {me.isDemo && (
+              <span className="rounded-xs border border-spine-ink/35 bg-transparent px-1.5 text-[11px] leading-4 font-medium text-spine-ink plain:border-brand-200 plain:bg-brand-50 plain:text-brand-700">
+                Demo
+              </span>
+            )}
           </span>
         </span>
       </button>

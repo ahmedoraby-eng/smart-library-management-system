@@ -12,7 +12,12 @@ import { Skeleton } from "./Skeleton";
 describe("Button", () => {
   it("is a type=button by default, so it never submits a form by accident", async () => {
     const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
-    render(<form onSubmit={onSubmit}><Button>Plain</Button><Button type="submit">Send</Button></form>);
+    render(
+      <form onSubmit={onSubmit}>
+        <Button>Plain</Button>
+        <Button type="submit">Send</Button>
+      </form>,
+    );
     expect(screen.getByRole("button", { name: "Plain" })).toHaveAttribute("type", "button");
     await userEvent.click(screen.getByRole("button", { name: "Plain" }));
     expect(onSubmit).not.toHaveBeenCalled();
@@ -22,7 +27,11 @@ describe("Button", () => {
 
   it("loading keeps the label, shows a spinner instead of the icon, disables the button and sets aria-busy", async () => {
     const onClick = vi.fn();
-    render(<Button loading icon={<i data-testid="icon" />} onClick={onClick}>Save</Button>);
+    render(
+      <Button loading icon={<i data-testid="icon" />} onClick={onClick}>
+        Save
+      </Button>,
+    );
     const b = screen.getByRole("button", { name: "Save" });
     expect(b).toBeDisabled();
     expect(b).toHaveAttribute("aria-busy", "true");
@@ -40,14 +49,22 @@ describe("Button", () => {
 
   it("disabled blocks clicks", async () => {
     const onClick = vi.fn();
-    render(<Button disabled onClick={onClick}>No</Button>);
+    render(
+      <Button disabled onClick={onClick}>
+        No
+      </Button>,
+    );
     await userEvent.click(screen.getByRole("button"));
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("applies variant, size, block and a custom class; forwards its ref", () => {
     const ref = createRef<HTMLButtonElement>();
-    render(<Button ref={ref} variant="danger" size="lg" block className="mine">Delete</Button>);
+    render(
+      <Button ref={ref} variant="danger" size="lg" block className="mine">
+        Delete
+      </Button>,
+    );
     const b = screen.getByRole("button");
     expect(ref.current).toBe(b);
     expect(b.className).toContain("bg-danger-600");
@@ -90,7 +107,15 @@ describe("Card", () => {
 
 describe("EmptyState", () => {
   it("shows title, text, icon and action when all are given", () => {
-    render(<EmptyState testId="empty" icon={<i data-testid="ic" />} title="No books" text="Add the first one." action={<button>Add</button>} />);
+    render(
+      <EmptyState
+        testId="empty"
+        icon={<i data-testid="ic" />}
+        title="No books"
+        text="Add the first one."
+        action={<button>Add</button>}
+      />,
+    );
     expect(screen.getByTestId("empty")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "No books" })).toBeInTheDocument();
     expect(screen.getByText("Add the first one.")).toBeInTheDocument();
@@ -111,13 +136,21 @@ describe("InlineAlert", () => {
     ["info", "status"],
     ["success", "status"],
   ] as const)("%s uses role %s", (variant, role) => {
-    render(<InlineAlert variant={variant} testId="a">Message</InlineAlert>);
+    render(
+      <InlineAlert variant={variant} testId="a">
+        Message
+      </InlineAlert>,
+    );
     expect(screen.getByRole(role)).toHaveTextContent("Message");
     expect(screen.getByTestId("a")).toBeInTheDocument();
   });
 
   it("defaults to info, and shows an action and extra class", () => {
-    render(<InlineAlert className="mb-3" action={<button>Retry</button>}>Hello</InlineAlert>);
+    render(
+      <InlineAlert className="mb-3" action={<button>Retry</button>}>
+        Hello
+      </InlineAlert>,
+    );
     const a = screen.getByRole("status");
     expect(a).toHaveClass("mb-3");
     expect(a.className).toContain("bg-info-50");

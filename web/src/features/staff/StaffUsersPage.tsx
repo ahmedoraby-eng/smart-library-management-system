@@ -3,7 +3,22 @@ import { cn } from "../../lib/cn";
 import { getRouteApi } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import {
-  Badge, Button, Card, ConfirmDialog, EmptyState, InlineAlert, Pagination, Select, Skeleton, Table, Td, Th, Thead, Tr, UsersIcon, useToast,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  InlineAlert,
+  Pagination,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  UsersIcon,
+  useToast,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { formatDate } from "../../lib/format";
@@ -51,7 +66,8 @@ export function StaffUsersPage() {
     update.mutate(
       { id: u.id, change: { role: u.role, status } },
       {
-        onSuccess: (saved) => toast.success(status === "DISABLED" ? `${saved.fullName} is disabled.` : `${saved.fullName} is enabled.`),
+        onSuccess: (saved) =>
+          toast.success(status === "DISABLED" ? `${saved.fullName} is disabled.` : `${saved.fullName} is enabled.`),
         onError: (err) => toast.error(errorText(err)),
         onSettled: done,
       },
@@ -85,17 +101,32 @@ export function StaffUsersPage() {
       <Card>
         {staff.isError && !data ? (
           <div className="p-5" data-testid="staff-error">
-            <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void staff.refetch()}>Try again</Button>}>
+            <InlineAlert
+              variant="danger"
+              action={
+                <Button size="sm" onClick={() => void staff.refetch()}>
+                  Try again
+                </Button>
+              }
+            >
               Couldn't load staff users. Check your connection and try again.
             </InlineAlert>
           </div>
         ) : staff.isPending ? (
           <StaffSkeleton />
         ) : data && data.items.length === 0 ? (
-          <EmptyState testId="staff-empty" icon={<UsersIcon size={40} />} title="No staff users yet" text="People appear here after their first Google sign-in." />
+          <EmptyState
+            testId="staff-empty"
+            icon={<UsersIcon size={40} />}
+            title="No staff users yet"
+            text="People appear here after their first Google sign-in."
+          />
         ) : (
           data && (
-            <div className={staff.isPlaceholderData ? "opacity-60 transition-opacity" : undefined} aria-busy={staff.isPlaceholderData}>
+            <div
+              className={staff.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+              aria-busy={staff.isPlaceholderData}
+            >
               <Table aria-label="Staff users" data-testid="staff-table">
                 <Thead>
                   <tr>
@@ -157,7 +188,8 @@ export function StaffUsersPage() {
           testId="reset-dialog"
         >
           <p>
-            Books, members and loans go back to the original demo set. Staff accounts stay. This also runs every night at 02:00 (Cairo).
+            Books, members and loans go back to the original demo set. Staff accounts stay. This also runs every night
+            at 02:00 (Cairo).
           </p>
         </ConfirmDialog>
       )}
@@ -165,7 +197,17 @@ export function StaffUsersPage() {
   );
 }
 
-function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; isSelf: boolean; onDisable: () => void; onEnable: () => void }) {
+function StaffRow({
+  user,
+  isSelf,
+  onDisable,
+  onEnable,
+}: {
+  user: StaffUserDto;
+  isSelf: boolean;
+  onDisable: () => void;
+  onEnable: () => void;
+}) {
   const toast = useToast();
   const update = useUpdateStaffUser();
   // The select shows the chosen role at once; it goes back to the stored role if the API refuses.
@@ -195,7 +237,9 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
       <Td kind="nowrap">
         <div className="flex items-center gap-2">
           {user.isDemo && <LockIcon className="shrink-0 text-neutral-500" data-testid="demo-lock" />}
-          <span className="font-semibold text-neutral-900" data-testid="staff-name">{user.fullName}</span>
+          <span className="font-semibold text-neutral-900" data-testid="staff-name">
+            {user.fullName}
+          </span>
           {user.isDemo && (
             <Badge variant="neutral" dot={false} data-testid="demo-tag">
               Demo
@@ -204,7 +248,9 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
           {isSelf && <span className="text-sm text-neutral-500">(you)</span>}
         </div>
       </Td>
-      <Td kind="truncate" className="text-neutral-700" title={user.email}>{user.email}</Td>
+      <Td kind="truncate" className="text-neutral-700" title={user.email}>
+        {user.email}
+      </Td>
       <Td kind="nowrap">
         {/* Fixed-width box: the select fills it whether or not it sits in the tooltip wrapper (Haya pass 4). */}
         <Tip text={roleTip} className="w-36">
@@ -223,19 +269,37 @@ function StaffRow({ user, isSelf, onDisable, onEnable }: { user: StaffUserDto; i
         </Tip>
       </Td>
       <Td kind="nowrap">
-        <Badge variant={user.status === "ACTIVE" ? "success" : "neutral"} data-testid="staff-status" data-status={user.status}>
+        <Badge
+          variant={user.status === "ACTIVE" ? "success" : "neutral"}
+          data-testid="staff-status"
+          data-status={user.status}
+        >
           {user.status === "ACTIVE" ? "Active" : "Disabled"}
         </Badge>
       </Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(user.createdAt)}</Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">
+        {formatDate(user.createdAt)}
+      </Td>
       <Td align="right" kind="actions">
         <Tip text={statusTip}>
           {user.status === "ACTIVE" ? (
-            <Button size="sm" variant="secondary" disabled={Boolean(statusTip)} onClick={onDisable} data-testid="disable-user">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={Boolean(statusTip)}
+              onClick={onDisable}
+              data-testid="disable-user"
+            >
               Disable
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" disabled={Boolean(statusTip)} onClick={onEnable} data-testid="enable-user">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={Boolean(statusTip)}
+              onClick={onEnable}
+              data-testid="enable-user"
+            >
               Enable
             </Button>
           )}
@@ -258,7 +322,20 @@ function Tip({ text, children, className }: { text: string | undefined; children
 
 function LockIcon({ className, ...rest }: { className?: string; "data-testid"?: string }) {
   return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} role="img" aria-label="Locked demo account" {...rest}>
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      role="img"
+      aria-label="Locked demo account"
+      {...rest}
+    >
       <rect x="4" y="11" width="16" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>

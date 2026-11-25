@@ -31,7 +31,13 @@ import { GoogleOidcProvider } from "./staff/infrastructure/GoogleOidcProvider";
 import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserRepository";
 
 /** Manual wiring: env bindings → repositories → services. One place, no DI framework. */
-export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBinding, overrides: { oidc?: OidcProvider; isbnLookup?: IsbnLookup } = {}) {
+export function buildContainer(
+  db: Db,
+  config: Config,
+  clock: Clock,
+  ai?: AiBinding,
+  overrides: { oidc?: OidcProvider; isbnLookup?: IsbnLookup } = {},
+) {
   const staffRepo = new PgStaffUserRepository(db);
   const staffIdentity = new StaffIdentityService(staffRepo, config);
   // SLM-16 hybrid retrieval: one embedder and one chunk store for indexing and search.
@@ -48,14 +54,28 @@ export function buildContainer(db: Db, config: Config, clock: Clock, ai?: AiBind
     staffRepo,
     staffIdentity,
     // Google sign-in exists only when its client is configured; tests pass a fake provider.
-    googleSignIn: config.google ? new GoogleSignIn(overrides.oidc ?? new GoogleOidcProvider(config.google), staffIdentity) : null,
+    googleSignIn: config.google
+      ? new GoogleSignIn(overrides.oidc ?? new GoogleOidcProvider(config.google), staffIdentity)
+      : null,
     staffAdmin: new StaffAdminService(staffRepo),
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
     isbnLookup: overrides.isbnLookup ?? new OpenLibraryIsbnLookup(),
     books: new BookService(new PgBookRepository(db)),
-    circulation: new CirculationService(new PgCirculationStore(db, pgBookStockFor), new PgLoanReader(db), config, clock),
+    circulation: new CirculationService(
+      new PgCirculationStore(db, pgBookStockFor),
+      new PgLoanReader(db),
+      config,
+      clock,
+    ),
     discovery: new BookDiscoveryService(
-      new HybridCatalogRetrieval(new PgCatalogRetrieval(db), chunkStore, embedder, (e) => logJson({ event: "ai_retrieval", ...e }), undefined, { cache: aiCache, budget: aiBudget }),
+      new HybridCatalogRetrieval(
+        new PgCatalogRetrieval(db),
+        chunkStore,
+        embedder,
+        (e) => logJson({ event: "ai_retrieval", ...e }),
+        undefined,
+        { cache: aiCache, budget: aiBudget },
+      ),
       selectAiProvider(config, ai),
       (e) => logJson({ event: "ai_discovery", ...e }),
       undefined,

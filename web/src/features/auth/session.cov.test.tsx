@@ -7,12 +7,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { authProvidersKey, useAuthProviders } from "./providers";
 import { meQueryKey, safeNext, useCan, useMe } from "./session";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const me = { id: "u1", email: "l@x.test", fullName: "Lia Librarian", role: "LIBRARIAN", permissions: ROLE_PERMISSIONS.LIBRARIAN, isDemo: false };
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const me = {
+  id: "u1",
+  email: "l@x.test",
+  fullName: "Lia Librarian",
+  role: "LIBRARIAN",
+  permissions: ROLE_PERMISSIONS.LIBRARIAN,
+  isDemo: false,
+};
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
   return { client, Wrapper };
 }
 
@@ -30,7 +40,9 @@ describe("useMe / useCan", () => {
   });
 
   it("does not retry a failed /me: one request, then the error is exposed", async () => {
-    const fetchMock = vi.fn(async (_url: string) => json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401));
+    const fetchMock = vi.fn(async (_url: string) =>
+      json({ type: "about:blank", title: "x", status: 401, code: "UNAUTHENTICATED" }, 401),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useMe(), { wrapper: Wrapper });
@@ -39,7 +51,10 @@ describe("useMe / useCan", () => {
   });
 
   it("useCan says yes only for permissions of the signed-in role", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json(me)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(me)),
+    );
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useCan(), { wrapper: Wrapper });
     // Before the session loads nothing is allowed.
@@ -50,7 +65,10 @@ describe("useMe / useCan", () => {
   });
 
   it("useCan stays false when /me fails", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }, 500)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }, 500)),
+    );
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => ({ can: useCan(), me: useMe() }), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.me.isError).toBe(true));

@@ -11,10 +11,13 @@ import { createServer } from "node:net";
 const port = Number(process.env.PGPORT ?? 5432);
 // Refuse to start (instead of silently pointing scripts at someone else's server) if the port is taken.
 await new Promise<void>((resolve) => {
-  const probe = createServer().once("error", () => {
-    console.error(`Port ${port} is already in use. Another Postgres is running there: set PGPORT to a free port.`);
-    process.exit(1);
-  }).once("listening", () => probe.close(() => resolve())).listen(port, "127.0.0.1");
+  const probe = createServer()
+    .once("error", () => {
+      console.error(`Port ${port} is already in use. Another Postgres is running there: set PGPORT to a free port.`);
+      process.exit(1);
+    })
+    .once("listening", () => probe.close(() => resolve()))
+    .listen(port, "127.0.0.1");
 });
 
 const dir = new URL(`../.pgdata${port === 5432 ? "" : `-${port}`}`, import.meta.url).pathname;
@@ -26,6 +29,9 @@ if (!existsSync(`${dir}/.slm-created`)) {
   await import("node:fs/promises").then((fs) => fs.writeFile(`${dir}/.slm-created`, ""));
 }
 console.log(`PostgreSQL 16 running: postgres://library:library@localhost:${port}/library (Ctrl+C to stop)`);
-const stop = async () => { await pg.stop(); process.exit(0); };
+const stop = async () => {
+  await pg.stop();
+  process.exit(0);
+};
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);

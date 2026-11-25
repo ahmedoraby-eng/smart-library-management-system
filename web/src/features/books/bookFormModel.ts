@@ -16,7 +16,17 @@ export type BookField = keyof BookFormValues;
 export type BookFormErrors = Partial<Record<BookField, string>>;
 
 /** Top-to-bottom, so "focus the first error" matches what the user sees. */
-export const FIELD_ORDER: BookField[] = ["title", "author", "isbn", "category", "publisher", "publicationYear", "coverImageUrl", "description", "totalCopies"];
+export const FIELD_ORDER: BookField[] = [
+  "title",
+  "author",
+  "isbn",
+  "category",
+  "publisher",
+  "publicationYear",
+  "coverImageUrl",
+  "description",
+  "totalCopies",
+];
 
 export const emptyValues: BookFormValues = {
   title: "",
@@ -67,7 +77,8 @@ export function validateBook(v: BookFormValues): { data: BookInput | null; error
   const errors: BookFormErrors = {};
   for (const issue of r.error.issues) {
     const key = issue.path[0];
-    if (typeof key === "string" && key in emptyValues && !errors[key as BookField]) errors[key as BookField] = issue.message;
+    if (typeof key === "string" && key in emptyValues && !errors[key as BookField])
+      errors[key as BookField] = issue.message;
   }
   return { data: null, errors };
 }

@@ -3,13 +3,20 @@ import type { Clock } from "../../platform/clock";
 import { NotFoundError } from "../../platform/errors";
 import { parseSort } from "../../platform/http";
 import {
-  bookUnavailable, checkBorrow, loanAlreadyReturned, resolveDueAt,
-  type CirculationStore, type LoanPolicy, type LoanReader, type LoanView,
+  bookUnavailable,
+  checkBorrow,
+  loanAlreadyReturned,
+  resolveDueAt,
+  type CirculationStore,
+  type LoanPolicy,
+  type LoanReader,
+  type LoanView,
 } from "../domain/Loan";
 
 /** Calendar day "2026-11-24" = that UTC day; a day as `to` covers the whole day. */
 const startOf = (v: string) => new Date(v);
-const endOf = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(new Date(v).getTime() + 86_400_000 - 1) : new Date(v));
+const endOf = (v: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(new Date(v).getTime() + 86_400_000 - 1) : new Date(v);
 
 /**
  * Borrow Book and Return Book (SLM-4) and loan reads (SLM-5). Each write is one transaction owned here;

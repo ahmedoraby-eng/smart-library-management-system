@@ -9,7 +9,8 @@ import { booksKey, lookupIsbn, useBook, useBooks, useCategories, useDeleteBook, 
 
 afterEach(() => vi.unstubAllGlobals());
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const stub = (body: unknown = {}, status = 200) => {
   const f = vi.fn(async (_url: string, _init?: RequestInit) => json(body, status));
   vi.stubGlobal("fetch", f);
@@ -17,12 +18,21 @@ const stub = (body: unknown = {}, status = 200) => {
 };
 function hookWrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
   return { queryClient, wrapper };
 }
 const input: BookInput = {
-  title: "Dune", author: "Frank Herbert", isbn: null, category: "Fiction", publisher: "", publicationYear: 1965,
-  coverImageUrl: null, description: "", totalCopies: 2,
+  title: "Dune",
+  author: "Frank Herbert",
+  isbn: null,
+  category: "Fiction",
+  publisher: "",
+  publicationYear: 1965,
+  coverImageUrl: null,
+  description: "",
+  totalCopies: 2,
 };
 const saved = { id: "b1", title: "Dune", version: 1 } as BookDto;
 
@@ -59,7 +69,10 @@ describe("useSaveBook", () => {
     const { wrapper } = hookWrapper();
     const { result } = renderHook(() => useSaveBook(), { wrapper });
     await result.current.mutateAsync(input);
-    expect(f).toHaveBeenCalledWith("/api/books", expect.objectContaining({ method: "POST", body: JSON.stringify(input) }));
+    expect(f).toHaveBeenCalledWith(
+      "/api/books",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
   });
 
   it("with an id it PUTs the input plus the version the form was loaded with", async () => {

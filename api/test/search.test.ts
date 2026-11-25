@@ -11,11 +11,56 @@ type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-ex
 let staff: Awaited<ReturnType<typeof seedStaff>>;
 
 const BOOKS = [
-  { title: "Clean Code", author: "Robert C. Martin", category: "Programming", publisher: "Prentice Hall", isbn: "9780132350884", description: "A handbook of agile software craftsmanship.", publicationYear: 2008, totalCopies: 2 },
-  { title: "Clean Architecture", author: "Robert C. Martin", category: "Software Architecture", publisher: "Prentice Hall", isbn: "9780134494166", description: "A craftsman's guide to software structure.", publicationYear: 2017, totalCopies: 1 },
-  { title: "Domain-Driven Design", author: "Eric Evans", category: "Software Architecture", publisher: "Addison-Wesley", isbn: "9780321125217", description: "Tackling complexity in the heart of software.", publicationYear: 2003, totalCopies: 1 },
-  { title: "The Hobbit", author: "J.R.R. Tolkien", category: "Fiction", publisher: "Allen & Unwin", isbn: "9780547928227", description: "A dragon, a wizard and a reluctant burglar.", publicationYear: 1937, totalCopies: 3 },
-  { title: "Dune", author: "Frank Herbert", category: "Fiction", publisher: "Chilton Books", isbn: null, description: "Spice, sandworms and politics on Arrakis.", publicationYear: 1965, totalCopies: 1 },
+  {
+    title: "Clean Code",
+    author: "Robert C. Martin",
+    category: "Programming",
+    publisher: "Prentice Hall",
+    isbn: "9780132350884",
+    description: "A handbook of agile software craftsmanship.",
+    publicationYear: 2008,
+    totalCopies: 2,
+  },
+  {
+    title: "Clean Architecture",
+    author: "Robert C. Martin",
+    category: "Software Architecture",
+    publisher: "Prentice Hall",
+    isbn: "9780134494166",
+    description: "A craftsman's guide to software structure.",
+    publicationYear: 2017,
+    totalCopies: 1,
+  },
+  {
+    title: "Domain-Driven Design",
+    author: "Eric Evans",
+    category: "Software Architecture",
+    publisher: "Addison-Wesley",
+    isbn: "9780321125217",
+    description: "Tackling complexity in the heart of software.",
+    publicationYear: 2003,
+    totalCopies: 1,
+  },
+  {
+    title: "The Hobbit",
+    author: "J.R.R. Tolkien",
+    category: "Fiction",
+    publisher: "Allen & Unwin",
+    isbn: "9780547928227",
+    description: "A dragon, a wizard and a reluctant burglar.",
+    publicationYear: 1937,
+    totalCopies: 3,
+  },
+  {
+    title: "Dune",
+    author: "Frank Herbert",
+    category: "Fiction",
+    publisher: "Chilton Books",
+    isbn: null,
+    description: "Spice, sandworms and politics on Arrakis.",
+    publicationYear: 1965,
+    totalCopies: 1,
+  },
 ];
 
 beforeAll(async () => {
@@ -94,10 +139,12 @@ describe("SLM-2 AC3/AC4 sort and paging", () => {
 
   it("pages are stable and disjoint when the sort key ties (author: two books by Martin)", async () => {
     const pages = [];
-    for (let page = 1; page <= 5; page++) pages.push(...(await list(`?sort=author&size=1&page=${page}`)).items.map((b: Json) => b.id));
+    for (let page = 1; page <= 5; page++)
+      pages.push(...(await list(`?sort=author&size=1&page=${page}`)).items.map((b: Json) => b.id));
     expect(new Set(pages).size).toBe(BOOKS.length);
     const again = [];
-    for (let page = 1; page <= 5; page++) again.push(...(await list(`?sort=author&size=1&page=${page}`)).items.map((b: Json) => b.id));
+    for (let page = 1; page <= 5; page++)
+      again.push(...(await list(`?sort=author&size=1&page=${page}`)).items.map((b: Json) => b.id));
     expect(again).toEqual(pages);
   });
 
@@ -117,7 +164,15 @@ describe("SLM-2 search latency on the demo dataset (D13)", () => {
     const app = testApp();
     const reset = await app.request("/api/admin/reset-demo", await as(staff.admin, { method: "POST", body: {} }));
     expect(reset.status).toBe(200);
-    const queries = ["?q=clean", "?q=tolkein", "?q=history", "?q=978", "?q=software&availability=available", "?sort=-createdAt", "?category=Fiction&sort=author"];
+    const queries = [
+      "?q=clean",
+      "?q=tolkein",
+      "?q=history",
+      "?q=978",
+      "?q=software&availability=available",
+      "?sort=-createdAt",
+      "?category=Fiction&sort=author",
+    ];
     const cookie = await as(staff.librarian);
     await app.request(`/api/books${queries[0]}`, cookie); // warm-up: first query plans and connects
     const times: Record<string, number> = {};

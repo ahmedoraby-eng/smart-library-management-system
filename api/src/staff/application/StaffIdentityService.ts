@@ -26,7 +26,10 @@ export class GoogleAccountRefusedError extends AppError {
  * The role always comes from our database, never from a token or cookie (architecture §5.2).
  */
 export class StaffIdentityService {
-  constructor(private readonly repo: StaffUserRepository, private readonly config: Config) {}
+  constructor(
+    private readonly repo: StaffUserRepository,
+    private readonly config: Config,
+  ) {}
 
   /** Every request: the session carries only the id; role and status are read fresh. */
   async principalForSession(staffId: string): Promise<Principal> {
@@ -42,12 +45,14 @@ export class StaffIdentityService {
    */
   async signInWithGoogle(identity: { sub: string; email: string; name?: string | null }): Promise<Principal> {
     const email = identity.email.trim().toLowerCase();
-    if (this.config.demoAccounts.some((a) => a.email === email)) throw new GoogleAccountRefusedError("Demo accounts sign in with their password only.");
+    if (this.config.demoAccounts.some((a) => a.email === email))
+      throw new GoogleAccountRefusedError("Demo accounts sign in with their password only.");
     let user = await this.repo.findByGoogleSub(identity.sub);
     if (!user) {
       user = await this.repo.findByEmail(email);
       if (user && !user.isDemo) {
-        if (user.googleSub && user.googleSub !== identity.sub) throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
+        if (user.googleSub && user.googleSub !== identity.sub)
+          throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
         if (!user.googleSub && !(await this.repo.bindGoogleSub(user.id, identity.sub))) {
           throw new GoogleAccountRefusedError("This staff account was just bound to another Google account.");
         }
@@ -56,9 +61,15 @@ export class StaffIdentityService {
     if (user?.isDemo) throw new GoogleAccountRefusedError("Demo accounts sign in with their password only.");
     if (!user) {
       const role = this.config.bootstrapAdminEmails.includes(email) ? "ADMIN" : "SUPERVISOR";
-      user = await this.repo.provision({ email, fullName: identity.name?.trim() || email.split("@")[0]!, role, googleSub: identity.sub });
+      user = await this.repo.provision({
+        email,
+        fullName: identity.name?.trim() || email.split("@")[0]!,
+        role,
+        googleSub: identity.sub,
+      });
       // A concurrent first sign-in with the same email but another subject inserted first.
-      if (user.googleSub !== identity.sub) throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
+      if (user.googleSub !== identity.sub)
+        throw new GoogleAccountRefusedError("This staff account is bound to another Google account.");
     }
     return this.active(user);
   }

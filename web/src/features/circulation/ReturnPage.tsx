@@ -2,8 +2,22 @@ import type { BookDto, LoanDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Button, buttonClasses, Card, EmptyState, HistoryIcon, InlineAlert, Input, Pagination, SearchIcon, Skeleton,
-  Table, Td, Th, Thead, Tr, useToast,
+  Button,
+  buttonClasses,
+  Card,
+  EmptyState,
+  HistoryIcon,
+  InlineAlert,
+  Input,
+  Pagination,
+  SearchIcon,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  useToast,
 } from "../../components/ui";
 import { api } from "../../lib/apiClient";
 import { MemberNumber } from "../../components/MemberNumber";
@@ -35,12 +49,20 @@ export function ReturnPage() {
   useEffect(() => {
     const next = qText.trim();
     if (next === (search.q ?? "")) return;
-    const t = setTimeout(() => void navigate({ search: { q: next || undefined, page: 1 }, replace: true }), SEARCH_DEBOUNCE_MS);
+    const t = setTimeout(
+      () => void navigate({ search: { q: next || undefined, page: 1 }, replace: true }),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qText]);
 
-  const loans = useLoans({ status: "ACTIVE", ...(search.q ? { q: search.q } : {}), page: search.page, size: PAGE_SIZE });
+  const loans = useLoans({
+    status: "ACTIVE",
+    ...(search.q ? { q: search.q } : {}),
+    page: search.page,
+    size: PAGE_SIZE,
+  });
   const data = loans.data;
 
   // Scanner-friendly: an exact ISBN or member number that yields one loan puts focus on its [Return].
@@ -61,7 +83,10 @@ export function ReturnPage() {
         const book = await api<BookDto>(`/books/${encodeURIComponent(loan.book.id)}`).catch(() => null);
         toast.success(
           <>
-            Returned: <em>{loan.book.title}</em>.{book ? ` ${book.availableCopies} of ${book.totalCopies} ${book.totalCopies === 1 ? "copy" : "copies"} now available.` : ""}
+            Returned: <em>{loan.book.title}</em>.
+            {book
+              ? ` ${book.availableCopies} of ${book.totalCopies} ${book.totalCopies === 1 ? "copy" : "copies"} now available.`
+              : ""}
           </>,
         );
       },
@@ -96,7 +121,15 @@ export function ReturnPage() {
 
       {loans.isError && !data ? (
         <div className="p-5">
-          <InlineAlert variant="danger" testId="loans-error" action={<Button size="sm" onClick={() => void loans.refetch()}>Try again</Button>}>
+          <InlineAlert
+            variant="danger"
+            testId="loans-error"
+            action={
+              <Button size="sm" onClick={() => void loans.refetch()}>
+                Try again
+              </Button>
+            }
+          >
             Couldn't load active loans. Check your connection and try again.
           </InlineAlert>
         </div>
@@ -119,11 +152,18 @@ export function ReturnPage() {
             }
           />
         ) : (
-          <EmptyState testId="return-empty" icon={<HistoryIcon size={40} />} title="No books are out on loan right now." />
+          <EmptyState
+            testId="return-empty"
+            icon={<HistoryIcon size={40} />}
+            title="No books are out on loan right now."
+          />
         )
       ) : (
         data && (
-          <div className={loans.isPlaceholderData ? "opacity-60 transition-opacity" : undefined} aria-busy={loans.isPlaceholderData}>
+          <div
+            className={loans.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+            aria-busy={loans.isPlaceholderData}
+          >
             <Table aria-label="Active loans" data-testid="active-loans">
               <Thead>
                 <tr>
@@ -151,17 +191,28 @@ export function ReturnPage() {
                     style={{ transitionDuration: `${FADE_MS}ms` }}
                   >
                     <Td>
-                      <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base">
+                      <Link
+                        to="/books/$bookId"
+                        params={{ bookId: loan.book.id }}
+                        className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                      >
                         {loan.book.title}
                       </Link>
                       <div className="text-sm text-neutral-600">{loan.book.author}</div>
                     </Td>
                     <Td>
                       <div className="font-medium">{loan.member.fullName}</div>
-                      <div className="text-sm text-neutral-600"><MemberNumber value={loan.member.memberNumber} /></div>
+                      <div className="text-sm text-neutral-600">
+                        <MemberNumber value={loan.member.memberNumber} />
+                      </div>
                     </Td>
-                    <Td kind="num" className="text-neutral-700 max-lg:hidden">{formatDate(loan.borrowedAt)}</Td>
-                    <Td kind="num" className={cn(loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}>
+                    <Td kind="num" className="text-neutral-700 max-lg:hidden">
+                      {formatDate(loan.borrowedAt)}
+                    </Td>
+                    <Td
+                      kind="num"
+                      className={cn(loan.status === "OVERDUE" ? "font-semibold text-danger-700" : "text-neutral-700")}
+                    >
                       {formatDate(loan.dueAt)}
                     </Td>
                     <Td kind="nowrap">
@@ -184,13 +235,23 @@ export function ReturnPage() {
                 ))}
               </tbody>
             </Table>
-            <Pagination page={data.page} size={data.size} total={data.total} onPage={(page) => void navigate({ search: (p) => ({ ...p, page }), replace: true })} />
+            <Pagination
+              page={data.page}
+              size={data.size}
+              total={data.total}
+              onPage={(page) => void navigate({ search: (p) => ({ ...p, page }), replace: true })}
+            />
           </div>
         )
       )}
 
       {confirming && (
-        <ReturnConfirmDialog loan={confirming} loading={giveBack.isPending} onCancel={() => setConfirming(null)} onConfirm={() => confirm(confirming)} />
+        <ReturnConfirmDialog
+          loan={confirming}
+          loading={giveBack.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => confirm(confirming)}
+        />
       )}
     </Card>
   );

@@ -7,23 +7,52 @@ import { renderWithProviders } from "../../test/render";
 import { DeleteBookDialog } from "./DeleteBookDialog";
 
 const book = (patch: Partial<BookDto>): BookDto => ({
-  id: "b1", title: "Clean Code", author: "R. Martin", isbn: null, description: "", category: "Software", publisher: "",
-  publicationYear: null, coverImageUrl: null, totalCopies: 5, availableCopies: 5, activeLoans: 0, nextDueAt: null,
-  hasLoanHistory: false, archived: false, version: 1, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", ...patch,
+  id: "b1",
+  title: "Clean Code",
+  author: "R. Martin",
+  isbn: null,
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: null,
+  coverImageUrl: null,
+  totalCopies: 5,
+  availableCopies: 5,
+  activeLoans: 0,
+  nextDueAt: null,
+  hasLoanHistory: false,
+  archived: false,
+  version: 1,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  ...patch,
 });
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("DeleteBookDialog variants (ux.md §3.4)", () => {
   it("open loans → blocking dialog, no destructive action", async () => {
-    await renderWithProviders(<DeleteBookDialog book={book({ activeLoans: 2, availableCopies: 3 })} onClose={() => undefined} />);
-    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent("2 copies are on loan. Record their returns first.");
+    await renderWithProviders(
+      <DeleteBookDialog book={book({ activeLoans: 2, availableCopies: 3 })} onClose={() => undefined} />,
+    );
+    expect(await screen.findByTestId("delete-dialog-blocked")).toHaveTextContent(
+      "2 copies are on loan. Record their returns first.",
+    );
     expect(screen.queryByTestId("dialog-confirm")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View active loans" })).toBeInTheDocument();
   });
 
   it("past loans only → archive wording with the past-loan count, focus on the safe button", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ items: [], total: 14, page: 1, size: 1 }), { status: 200, headers: { "content-type": "application/json" } })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ items: [], total: 14, page: 1, size: 1 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
     await renderWithProviders(<DeleteBookDialog book={book({ hasLoanHistory: true })} onClose={() => undefined} />);
     const dialog = await screen.findByTestId("delete-dialog-archive");
     expect(dialog).toHaveTextContent("archived");
@@ -48,8 +77,17 @@ describe("DeleteBookDialog variants (ux.md §3.4)", () => {
   });
 
   it("confirming calls DELETE and reports the archived toast", async () => {
-    const fetchMock = vi.fn().mockImplementation(async (_url: string, init?: { method?: string }) =>
-      new Response(JSON.stringify(init?.method === "DELETE" ? { result: "archived" } : { items: [], total: 1, page: 1, size: 1 }), { status: 200, headers: { "content-type": "application/json" } }));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(
+        async (_url: string, init?: { method?: string }) =>
+          new Response(
+            JSON.stringify(
+              init?.method === "DELETE" ? { result: "archived" } : { items: [], total: 1, page: 1, size: 1 },
+            ),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      );
     vi.stubGlobal("fetch", fetchMock);
     await renderWithProviders(<DeleteBookDialog book={book({ hasLoanHistory: true })} onClose={() => undefined} />);
     await userEvent.click(await screen.findByRole("button", { name: "Archive book" }));

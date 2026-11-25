@@ -56,7 +56,17 @@ export class BookIndexSync {
    * the model. Idempotent and resumable: call again while `remaining` > 0. Throws on failure.
    */
   async syncAll(maxEmbedBooks = DEFAULT_BATCH_BOOKS): Promise<SyncResult> {
-    if (!this.embedder) return { embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0, total: 0 };
+    if (!this.embedder)
+      return {
+        embeddedBooks: 0,
+        chunks: 0,
+        reusedBooks: 0,
+        upToDate: 0,
+        removed: 0,
+        neurons: 0,
+        remaining: 0,
+        total: 0,
+      };
     return this.sync(await this.store.liveBooks(), maxEmbedBooks);
   }
 
@@ -68,7 +78,9 @@ export class BookIndexSync {
       const books = await this.store.liveBooks([bookId]);
       await Promise.race([
         this.sync(books, 1),
-        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), timeoutMs); }),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+        }),
       ]);
     } catch (e) {
       this.log({ level: "warn", event: "book_index_sync_failed", reason: e instanceof Error ? e.message : "error" });
@@ -82,7 +94,8 @@ export class BookIndexSync {
     try {
       const r = await this.syncAll(maxEmbedBooks);
       // The hourly top-up usually finds nothing to do: log only real work.
-      if (r.embeddedBooks || r.reusedBooks || r.removed || r.remaining) this.log({ level: "info", event: "book_index_sync", ...r });
+      if (r.embeddedBooks || r.reusedBooks || r.removed || r.remaining)
+        this.log({ level: "info", event: "book_index_sync", ...r });
       return r;
     } catch (e) {
       this.log({ level: "warn", event: "book_index_sync_failed", reason: e instanceof Error ? e.message : "error" });
@@ -103,17 +116,28 @@ export class BookIndexSync {
     const known = await this.store.knownHashes([...new Set(stale.map((s) => s.hash))], embedder.model);
     const copied = stale.filter((s) => known.has(s.hash));
     const needEmbedding = stale.filter((s) => !known.has(s.hash));
-    const toEmbed = needEmbedding.slice(0, Math.max(maxEmbedBooks, 0)).map((s) => ({ ...s, chunks: chunkBook(s.book) }));
+    const toEmbed = needEmbedding
+      .slice(0, Math.max(maxEmbedBooks, 0))
+      .map((s) => ({ ...s, chunks: chunkBook(s.book) }));
 
     let neurons = 0;
     const embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }> = [];
     if (toEmbed.length > 0) {
       const texts = toEmbed.flatMap((s) => s.chunks);
       const vectors = await embedder.embed(texts);
-      neurons = neuronsFor({ model: embedder.model, inputTokens: texts.reduce((n, t) => n + estimateTokens(t), 0), outputTokens: 0, estimated: true });
+      neurons = neuronsFor({
+        model: embedder.model,
+        inputTokens: texts.reduce((n, t) => n + estimateTokens(t), 0),
+        outputTokens: 0,
+        estimated: true,
+      });
       let at = 0;
       for (const s of toEmbed) {
-        embedded.push({ bookId: s.book.id, hash: s.hash, rows: s.chunks.map((content, index) => ({ index, content, embedding: vectors[at + index]! })) });
+        embedded.push({
+          bookId: s.book.id,
+          hash: s.hash,
+          rows: s.chunks.map((content, index) => ({ index, content, embedding: vectors[at + index]! })),
+        });
         at += s.chunks.length;
       }
     }
@@ -124,8 +148,12 @@ export class BookIndexSync {
     });
     if (neurons > 0) await this.budget?.addNeurons(neurons).catch(() => undefined);
     return {
-      embeddedBooks: embedded.length, chunks: embedded.reduce((n, e) => n + e.rows.length, 0), reusedBooks: copied.length,
-      upToDate: books.length - stale.length, removed, neurons: Math.round(neurons * 1000) / 1000,
+      embeddedBooks: embedded.length,
+      chunks: embedded.reduce((n, e) => n + e.rows.length, 0),
+      reusedBooks: copied.length,
+      upToDate: books.length - stale.length,
+      removed,
+      neurons: Math.round(neurons * 1000) / 1000,
       remaining: needEmbedding.length - toEmbed.length,
       total: books.length,
     };

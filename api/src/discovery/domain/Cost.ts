@@ -32,7 +32,12 @@ export function neuronsFor(u: TokenUsage): number {
 
 /** Cache key form of a request: case, spacing and edge punctuation don't make a new request. */
 export function normaliseQuery(q: string): string {
-  return q.toLowerCase().normalize("NFKC").replace(/\s+/g, " ").trim().replace(/^[\p{P}\s]+|[\p{P}\s]+$/gu, "");
+  return q
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[\p{P}\s]+|[\p{P}\s]+$/gu, "");
 }
 
 export type BudgetVerdict = "OK" | "QUOTA_EXCEEDED" | "BUDGET_EXHAUSTED";

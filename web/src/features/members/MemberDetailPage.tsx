@@ -2,8 +2,23 @@ import type { LoanDto, MemberDto } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent } from "react";
 import {
-  ActionMenu, ArrowLeftIcon, Button, buttonClasses, Card, CardBody, EditIcon, EmptyState, PlusIcon, InlineAlert, Skeleton, Table, Td, Th,
-  Thead, Tr, useToast,
+  ActionMenu,
+  ArrowLeftIcon,
+  Button,
+  buttonClasses,
+  Card,
+  CardBody,
+  EditIcon,
+  EmptyState,
+  PlusIcon,
+  InlineAlert,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  useToast,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { cn } from "../../lib/cn";
@@ -26,7 +41,11 @@ const BORROW_TO = "/circulation/borrow" as "/circulation";
 
 function BackToMembers() {
   return (
-    <Link to="/members" search={{ page: 1, size: 20 }} className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900">
+    <Link
+      to="/members"
+      search={{ page: 1, size: 20 }}
+      className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900"
+    >
       <ArrowLeftIcon size={16} /> Members
     </Link>
   );
@@ -55,11 +74,23 @@ export function MemberDetailPage() {
             <EmptyState
               testId="member-not-found"
               title="This member doesn't exist."
-              action={<Link to="/members" search={{ page: 1, size: 20 }} className={buttonClasses()}>Back to Members</Link>}
+              action={
+                <Link to="/members" search={{ page: 1, size: 20 }} className={buttonClasses()}>
+                  Back to Members
+                </Link>
+              }
             />
           </Card>
         ) : (
-          <InlineAlert variant="danger" testId="member-error" action={<Button size="sm" onClick={() => void query.refetch()}>Try again</Button>}>
+          <InlineAlert
+            variant="danger"
+            testId="member-error"
+            action={
+              <Button size="sm" onClick={() => void query.refetch()}>
+                Try again
+              </Button>
+            }
+          >
             Couldn't load this member. Check your connection and try again.
           </InlineAlert>
         )}
@@ -101,17 +132,24 @@ function MemberDetail({ member }: { member: MemberDto }) {
       <BackToMembers />
       <header className="page-head mb-6 flex items-start justify-between gap-6">
         <div>
-          <h1 className="flex flex-wrap items-center gap-3 font-book text-title plain:tracking-tight" data-testid="member-detail-name">
+          <h1
+            className="flex flex-wrap items-center gap-3 font-book text-title plain:tracking-tight"
+            data-testid="member-detail-name"
+          >
             {member.fullName}
             <MemberStatusBadge status={member.status} />
           </h1>
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-neutral-700" data-testid="member-profile">
             <dt className="text-neutral-600">Member no.</dt>
-            <dd data-testid="profile-number"><MemberNumber value={member.memberNumber} /></dd>
+            <dd data-testid="profile-number">
+              <MemberNumber value={member.memberNumber} />
+            </dd>
             <dt className="text-neutral-600">Email</dt>
             <dd data-testid="profile-email">{member.email}</dd>
             <dt className="text-neutral-600">Phone</dt>
-            <dd className="tabular-nums" data-testid="profile-phone">{member.phone ?? "—"}</dd>
+            <dd className="tabular-nums" data-testid="profile-phone">
+              {member.phone ?? "—"}
+            </dd>
             <dt className="text-neutral-600">Registered</dt>
             <dd data-testid="profile-registered">{formatDate(member.registeredAt)}</dd>
           </dl>
@@ -125,7 +163,12 @@ function MemberDetail({ member }: { member: MemberDto }) {
                 </Button>
               </span>
             ) : (
-              <Link to={BORROW_TO} search={{ member: member.id } as never} className={buttonClasses({ variant: "primary" })} data-testid="borrow-for-member">
+              <Link
+                to={BORROW_TO}
+                search={{ member: member.id } as never}
+                className={buttonClasses({ variant: "primary" })}
+                data-testid="borrow-for-member"
+              >
                 <PlusIcon size={16} /> Borrow a book
               </Link>
             ))}
@@ -159,7 +202,14 @@ function MemberDetail({ member }: { member: MemberDto }) {
       </Card>
 
       {editing && <MemberModal member={member} onClose={() => setEditing(false)} />}
-      {deactivating && <DeactivateDialog name={member.fullName} loading={setStatus.isPending} onCancel={() => setDeactivating(false)} onConfirm={() => change("INACTIVE")} />}
+      {deactivating && (
+        <DeactivateDialog
+          name={member.fullName}
+          loading={setStatus.isPending}
+          onCancel={() => setDeactivating(false)}
+          onConfirm={() => change("INACTIVE")}
+        />
+      )}
     </>
   );
 }
@@ -184,7 +234,14 @@ function Loans({ memberId }: { memberId: string }) {
   if (loans.isError) {
     return (
       <div className="p-5" data-testid="loans-error">
-        <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void loans.refetch()}>Try again</Button>}>
+        <InlineAlert
+          variant="danger"
+          action={
+            <Button size="sm" onClick={() => void loans.refetch()}>
+              Try again
+            </Button>
+          }
+        >
           Couldn't load this member's loans. Check your connection and try again.
         </InlineAlert>
       </div>
@@ -209,7 +266,9 @@ function Loans({ memberId }: { memberId: string }) {
         {tabs.map((t) => (
           <button
             key={t.key}
-            ref={(el) => { tabRefs.current[t.key] = el; }}
+            ref={(el) => {
+              tabRefs.current[t.key] = el;
+            }}
             type="button"
             role="tab"
             id={`loans-tab-${t.key}`}
@@ -220,7 +279,9 @@ function Loans({ memberId }: { memberId: string }) {
             data-testid={`loans-tab-${t.key}`}
             className={cn(
               "-mb-px border-b-2 py-3 text-base font-semibold",
-              tab === t.key ? "border-brand-600 text-brand-700" : "border-transparent text-neutral-600 hover:text-neutral-900",
+              tab === t.key
+                ? "border-brand-600 text-brand-700"
+                : "border-transparent text-neutral-600 hover:text-neutral-900",
             )}
           >
             {t.label}
@@ -229,9 +290,25 @@ function Loans({ memberId }: { memberId: string }) {
       </div>
       <div role="tabpanel" id={`loans-panel-${tab}`} aria-labelledby={`loans-tab-${tab}`} data-testid="loans-panel">
         {tab === "open" ? (
-          <LoanTable loans={open} history={false} empty={<EmptyState testId="loans-empty" title="No books on loan" text="This member has nothing out right now." />} />
+          <LoanTable
+            loans={open}
+            history={false}
+            empty={
+              <EmptyState testId="loans-empty" title="No books on loan" text="This member has nothing out right now." />
+            }
+          />
         ) : (
-          <LoanTable loans={history} history empty={<EmptyState testId="loans-empty" title="No returned loans yet" text="Returned books will be listed here." />} />
+          <LoanTable
+            loans={history}
+            history
+            empty={
+              <EmptyState
+                testId="loans-empty"
+                title="No returned loans yet"
+                text="Returned books will be listed here."
+              />
+            }
+          />
         )}
       </div>
     </>
@@ -250,7 +327,11 @@ function LoanTable({ loans, history, empty }: { loans: LoanDto[]; history: boole
     giveBack.mutate(loan.id, {
       onSuccess: () => {
         setConfirming(null);
-        toast.success(<>Returned: <em>{loan.book.title}</em>.</>);
+        toast.success(
+          <>
+            Returned: <em>{loan.book.title}</em>.
+          </>,
+        );
       },
       onError: (err) => {
         setConfirming(null);
@@ -284,32 +365,62 @@ function LoanTable({ loans, history, empty }: { loans: LoanDto[]; history: boole
         </tbody>
       </Table>
       {confirming && (
-        <ReturnConfirmDialog loan={confirming} loading={giveBack.isPending} onCancel={() => setConfirming(null)} onConfirm={() => confirm(confirming)} />
+        <ReturnConfirmDialog
+          loan={confirming}
+          loading={giveBack.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => confirm(confirming)}
+        />
       )}
     </>
   );
 }
 
-function LoanRow({ loan, history, onReturn }: { loan: LoanDto; history: boolean; onReturn?: (() => void) | undefined }) {
+function LoanRow({
+  loan,
+  history,
+  onReturn,
+}: {
+  loan: LoanDto;
+  history: boolean;
+  onReturn?: (() => void) | undefined;
+}) {
   const overdue = loan.status === "OVERDUE";
   return (
     <Tr data-testid="loan-row" data-loan-status={loan.status} className={overdue ? "bg-overdue" : undefined}>
       <Td>
-        <Link to="/books/$bookId" params={{ bookId: loan.book.id }} className="block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base" data-testid="loan-book">
+        <Link
+          to="/books/$bookId"
+          params={{ bookId: loan.book.id }}
+          className="block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+          data-testid="loan-book"
+        >
           {loan.book.title}
         </Link>
         <div className="truncate text-sm text-neutral-600">{loan.book.author}</div>
       </Td>
-      <Td kind="num" className="text-neutral-700">{formatDate(loan.borrowedAt)}</Td>
-      <Td kind="num" className={overdue ? "font-semibold text-danger-700" : "text-neutral-700"}>{formatDate(loan.dueAt)}</Td>
-      {history && <Td kind="num" className="text-neutral-700 max-lg:hidden">{loan.returnedAt ? formatDate(loan.returnedAt) : "—"}</Td>}
+      <Td kind="num" className="text-neutral-700">
+        {formatDate(loan.borrowedAt)}
+      </Td>
+      <Td kind="num" className={overdue ? "font-semibold text-danger-700" : "text-neutral-700"}>
+        {formatDate(loan.dueAt)}
+      </Td>
+      {history && (
+        <Td kind="num" className="text-neutral-700 max-lg:hidden">
+          {loan.returnedAt ? formatDate(loan.returnedAt) : "—"}
+        </Td>
+      )}
       <Td kind="nowrap">
         <LoanStatusBadge loan={loan} />
       </Td>
-      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>{loan.processedBy.name}</Td>
+      <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>
+        {loan.processedBy.name}
+      </Td>
       {onReturn && (
         <Td align="right" kind="actions">
-          <Button size="sm" onClick={onReturn} data-testid="return-button">Return</Button>
+          <Button size="sm" onClick={onReturn} data-testid="return-button">
+            Return
+          </Button>
         </Td>
       )}
     </Tr>

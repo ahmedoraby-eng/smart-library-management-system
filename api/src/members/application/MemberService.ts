@@ -39,10 +39,18 @@ export class MemberService {
   async update(id: string, version: number, input: MemberInput & { status: MemberStatus }): Promise<MemberView> {
     const r = await this.members.update(id, version, input);
     switch (r.kind) {
-      case "ok": return r.member;
-      case "not_found": throw new NotFoundError("This member");
-      case "stale": throw new ConflictError("STALE_VERSION", "Changed by someone else", "Someone else changed this member while you were editing. Reload to see their version.");
-      case "duplicate_email": throw duplicateEmail();
+      case "ok":
+        return r.member;
+      case "not_found":
+        throw new NotFoundError("This member");
+      case "stale":
+        throw new ConflictError(
+          "STALE_VERSION",
+          "Changed by someone else",
+          "Someone else changed this member while you were editing. Reload to see their version.",
+        );
+      case "duplicate_email":
+        throw duplicateEmail();
     }
   }
 

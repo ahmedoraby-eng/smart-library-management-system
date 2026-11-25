@@ -11,13 +11,17 @@ describe("Table pieces", () => {
         <Thead>
           <tr>
             <Th>Title</Th>
-            <Th align="right" kind="actions">Copies</Th>
+            <Th align="right" kind="actions">
+              Copies
+            </Th>
           </tr>
         </Thead>
         <tbody>
           <Tr data-testid="row">
             <Td>Dune</Td>
-            <Td align="right" kind="num">3</Td>
+            <Td align="right" kind="num">
+              3
+            </Td>
           </Tr>
         </tbody>
       </Table>,
@@ -40,7 +44,17 @@ describe("Table pieces", () => {
     ["actions", "w-px"],
     ["truncate", "truncate"],
   ] as const)("a %s cell gets its layout class", (kind, cls) => {
-    render(<table><tbody><tr><Td kind={kind} className="mine">x</Td></tr></tbody></table>);
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <Td kind={kind} className="mine">
+              x
+            </Td>
+          </tr>
+        </tbody>
+      </table>,
+    );
     const td = screen.getByRole("cell");
     expect(td).toHaveClass("mine");
     if (cls) expect(td.className).toContain(cls);
@@ -50,7 +64,23 @@ describe("Table pieces", () => {
 describe("SortableTh", () => {
   const renderTh = (sort: string | undefined, defaultSort?: string) => {
     const onSort = vi.fn();
-    render(<table><thead><tr><SortableTh label="Title" sortKey="title" sort={sort} defaultSort={defaultSort} onSort={onSort} align="right" className="c" /></tr></thead></table>);
+    render(
+      <table>
+        <thead>
+          <tr>
+            <SortableTh
+              label="Title"
+              sortKey="title"
+              sort={sort}
+              defaultSort={defaultSort}
+              onSort={onSort}
+              align="right"
+              className="c"
+            />
+          </tr>
+        </thead>
+      </table>,
+    );
     return onSort;
   };
 

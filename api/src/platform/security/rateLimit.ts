@@ -18,7 +18,10 @@ export class RateLimitedError extends AppError {
 
 /** Shared across isolates and locations by Cloudflare. The binding has a fixed period, which we report as Retry-After. */
 export class BindingLimiter implements Limiter {
-  constructor(private readonly binding: RateLimitBinding, private readonly periodSeconds: number) {}
+  constructor(
+    private readonly binding: RateLimitBinding,
+    private readonly periodSeconds: number,
+  ) {}
   async check(key: string): Promise<void> {
     const { success } = await this.binding.limit({ key });
     if (!success) throw new RateLimitedError(this.periodSeconds);
@@ -31,7 +34,11 @@ export class BindingLimiter implements Limiter {
  */
 export class MemoryLimiter implements Limiter {
   private readonly hits = new Map<string, { windowStart: number; count: number }>();
-  constructor(private readonly limit: number, private readonly windowMs: number, private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly limit: number,
+    private readonly windowMs: number,
+    private readonly now: () => number = Date.now,
+  ) {}
 
   async check(key: string): Promise<void> {
     const t = this.now();

@@ -30,7 +30,12 @@ export function Thead({ children }: { children: ReactNode }) {
   return <thead className="eyebrow bg-transparent plain:bg-neutral-25">{children}</thead>;
 }
 
-export function Th({ className, align, kind = "text", ...rest }: ThHTMLAttributes<HTMLTableCellElement> & { align?: "right"; kind?: CellKind }) {
+export function Th({
+  className,
+  align,
+  kind = "text",
+  ...rest
+}: ThHTMLAttributes<HTMLTableCellElement> & { align?: "right"; kind?: CellKind }) {
   return (
     <th
       scope="col"
@@ -46,7 +51,15 @@ export function Th({ className, align, kind = "text", ...rest }: ThHTMLAttribute
 }
 
 /** Sort strings are "key" (ascending) or "-key" (descending), as the API expects. */
-export function SortableTh({ label, sortKey, sort, defaultSort, onSort, className, align }: {
+export function SortableTh({
+  label,
+  sortKey,
+  sort,
+  defaultSort,
+  onSort,
+  className,
+  align,
+}: {
   label: string;
   sortKey: string;
   sort: string | undefined;
@@ -63,11 +76,20 @@ export function SortableTh({ label, sortKey, sort, defaultSort, onSort, classNam
       <button
         type="button"
         onClick={() => onSort(dir === "ascending" ? `-${sortKey}` : sortKey)}
-        className={cn("-mx-1 inline-flex items-center gap-1 rounded-sm px-1 [font-weight:inherit] [text-transform:inherit] hover:text-neutral-900", dir !== "none" && "text-neutral-900")}
+        className={cn(
+          "-mx-1 inline-flex items-center gap-1 rounded-sm px-1 [font-weight:inherit] [text-transform:inherit] hover:text-neutral-900",
+          dir !== "none" && "text-neutral-900",
+        )}
         data-testid={`sort-${sortKey}`}
       >
         {label}
-        {dir === "ascending" ? <ChevronUpIcon size={14} /> : dir === "descending" ? <ChevronDownIcon size={14} /> : <span className="w-3.5" aria-hidden="true" />}
+        {dir === "ascending" ? (
+          <ChevronUpIcon size={14} />
+        ) : dir === "descending" ? (
+          <ChevronDownIcon size={14} />
+        ) : (
+          <span className="w-3.5" aria-hidden="true" />
+        )}
       </button>
     </Th>
   );
@@ -77,6 +99,21 @@ export function Tr({ className, ...rest }: HTMLAttributes<HTMLTableRowElement>) 
   return <tr className={cn("border-b border-border last:border-b-0 hover:bg-neutral-25", className)} {...rest} />;
 }
 
-export function Td({ className, align, kind = "text", ...rest }: TdHTMLAttributes<HTMLTableCellElement> & { align?: "right"; kind?: CellKind }) {
-  return <td className={cn("px-4 py-3 align-middle", align === "right" && "text-right tabular-nums", kindClass[kind], className)} {...rest} />;
+export function Td({
+  className,
+  align,
+  kind = "text",
+  ...rest
+}: TdHTMLAttributes<HTMLTableCellElement> & { align?: "right"; kind?: CellKind }) {
+  return (
+    <td
+      className={cn(
+        "px-4 py-3 align-middle",
+        align === "right" && "text-right tabular-nums",
+        kindClass[kind],
+        className,
+      )}
+      {...rest}
+    />
+  );
 }

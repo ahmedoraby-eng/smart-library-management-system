@@ -29,7 +29,7 @@ const builder = (result: unknown): unknown => {
 const fakeDb = (o: { execute?: Result | Result[]; select?: unknown[] } = {}): Db => {
   const queue = Array.isArray(o.execute) ? [...o.execute] : null;
   return {
-    execute: async () => (queue ? queue.shift()! : (o.execute as Result | undefined) ?? { rows: [], rowCount: null }),
+    execute: async () => (queue ? queue.shift()! : ((o.execute as Result | undefined) ?? { rows: [], rowCount: null })),
     select: () => builder(o.select ?? []),
     insert: () => builder(undefined),
     update: () => builder([]),
@@ -39,20 +39,31 @@ const fakeDb = (o: { execute?: Result | Result[]; select?: unknown[] } = {}): Db
 describe("PgStaffUserRepository guards", () => {
   it("provision and upsertDemo fail loudly when the row is not there afterwards (it would mean the table lost it between statements)", async () => {
     const repo = new PgStaffUserRepository(fakeDb({ select: [] }));
-    await expect(repo.provision({ email: "a@x.test", fullName: "A", role: "LIBRARIAN", googleSub: "g" })).rejects.toThrow("provision: row missing after insert");
-    await expect(repo.upsertDemo({ email: "a@x.test", fullName: "A", role: "LIBRARIAN" })).rejects.toThrow("upsertDemo: row missing after upsert");
+    await expect(
+      repo.provision({ email: "a@x.test", fullName: "A", role: "LIBRARIAN", googleSub: "g" }),
+    ).rejects.toThrow("provision: row missing after insert");
+    await expect(repo.upsertDemo({ email: "a@x.test", fullName: "A", role: "LIBRARIAN" })).rejects.toThrow(
+      "upsertDemo: row missing after upsert",
+    );
   });
 
   it("an UPDATE that reports no row count binds nothing; a count query with no row means zero users", async () => {
-    expect(await new PgStaffUserRepository(fakeDb({ execute: { rows: [], rowCount: null } })).bindGoogleSub("id", "sub")).toBe(false);
-    const empty = await new PgStaffUserRepository(fakeDb({ execute: [{ rows: [] }, { rows: [] }] })).search({ page: 1, size: 10 });
+    expect(
+      await new PgStaffUserRepository(fakeDb({ execute: { rows: [], rowCount: null } })).bindGoogleSub("id", "sub"),
+    ).toBe(false);
+    const empty = await new PgStaffUserRepository(fakeDb({ execute: [{ rows: [] }, { rows: [] }] })).search({
+      page: 1,
+      size: 10,
+    });
     expect(empty).toEqual({ items: [], total: 0 });
   });
 });
 
 describe("PgAiCache.purgeExpired", () => {
   it("counts zero when the driver gives no row count", async () => {
-    expect(await new PgAiCache(fakeDb({ execute: { rows: [], rowCount: null } }), () => new Date()).purgeExpired()).toBe(0);
+    expect(
+      await new PgAiCache(fakeDb({ execute: { rows: [], rowCount: null } }), () => new Date()).purgeExpired(),
+    ).toBe(0);
   });
 });
 
@@ -61,7 +72,14 @@ describe("PgCatalogRetrieval row mapping", () => {
   it("a row with no description, year or score still maps to a candidate (floor score, empty text)", async () => {
     const r = new PgCatalogRetrieval(fakeDb({ execute: { rows: [book] } }));
     const [c] = await r.hits("whale", { limit: 5, availableOnly: false });
-    expect(c).toMatchObject({ id: "b1", description: "", publicationYear: null, score: 0.002, matchedTerms: [], related: false });
+    expect(c).toMatchObject({
+      id: "b1",
+      description: "",
+      publicationYear: null,
+      score: 0.002,
+      matchedTerms: [],
+      related: false,
+    });
   });
 
   it("an empty catalogue query row set still yields a version string", async () => {
@@ -79,7 +97,10 @@ describe("services built with their defaults", () => {
   it("BookDiscoveryService works with only a catalog and a provider (no log callback, default timeout, no cost controls)", async () => {
     const res = await new BookDiscoveryService(catalog, null).discover({ query: "anything" });
     expect(res).toMatchObject({ mode: "FALLBACK", items: [] });
-    const withProvider = new BookDiscoveryService({ ...catalog, candidates: async () => [] }, { name: "p", rank: async () => ({}) });
+    const withProvider = new BookDiscoveryService(
+      { ...catalog, candidates: async () => [] },
+      { name: "p", rank: async () => ({}) },
+    );
     expect(await withProvider.discover({ query: "anything" })).toMatchObject({ mode: "AI", items: [] });
   });
 
@@ -88,11 +109,20 @@ describe("services built with their defaults", () => {
       liveBooks: async () => [{ id: "1", title: "T", author: "A", category: "C", description: "d" }],
       indexedHashes: async () => new Map(),
       knownHashes: async () => new Set(),
-      apply: async () => { if (fail) throw new Error("x"); return 0; },
+      apply: async () => {
+        if (fail) throw new Error("x");
+        return 0;
+      },
       nearest: async () => [],
       usesPgvector: async () => false,
     });
-    const embedder: Embedder = { model: "m", dimensions: 2, queryPrefix: "", minSimilarity: 0.1, embed: async (t) => t.map(() => [1, 0]) };
+    const embedder: Embedder = {
+      model: "m",
+      dimensions: 2,
+      queryPrefix: "",
+      minSimilarity: 0.1,
+      embed: async (t) => t.map(() => [1, 0]),
+    };
     expect(await new BookIndexSync(store(true), embedder).syncAllSafely()).toBeNull();
     await expect(new BookIndexSync(store(true), embedder).syncBookSafely("1")).resolves.toBeUndefined();
     expect(await new BookIndexSync(store(false), embedder).syncAll()).toMatchObject({ embeddedBooks: 1 });
@@ -101,7 +131,13 @@ describe("services built with their defaults", () => {
 
 describe("FakeEmbedder", () => {
   it("text without searchable words embeds to the zero vector (no NaN), and similar texts embed closer than unrelated ones", async () => {
-    const [empty, stop, grief, mourning, space] = await new FakeEmbedder().embed(["", "a an of", "grief and loss", "mourning a death", "stars and galaxies"]);
+    const [empty, stop, grief, mourning, space] = await new FakeEmbedder().embed([
+      "",
+      "a an of",
+      "grief and loss",
+      "mourning a death",
+      "stars and galaxies",
+    ]);
     expect(empty!.every((x) => x === 0)).toBe(true);
     expect(stop!.every((x) => x === 0)).toBe(true);
     const dot = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i]!, 0);

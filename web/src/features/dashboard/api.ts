@@ -11,7 +11,12 @@ export function useDashboard() {
 
 /** SLM-16: today's AI spend against the daily cap (Admin only; the endpoint needs STAFF_MANAGE). */
 export function useAiUsageToday(enabled: boolean) {
-  return useQuery({ queryKey: ["ai-usage-today"], queryFn: () => api<AiUsageToday>("/admin/discovery/usage"), enabled, staleTime: 60_000 });
+  return useQuery({
+    queryKey: ["ai-usage-today"],
+    queryFn: () => api<AiUsageToday>("/admin/discovery/usage"),
+    enabled,
+    staleTime: 60_000,
+  });
 }
 
 /** POST /api/admin/discovery/reindex answer: one batch of the discovery index (SLM-16). */

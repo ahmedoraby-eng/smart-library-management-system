@@ -1,7 +1,10 @@
 import type { Role } from "@slm/contracts";
 import type { StaffStatus, StaffUser } from "./StaffUser";
 
-export interface AccessChange { role: Role; status: StaffStatus }
+export interface AccessChange {
+  role: Role;
+  status: StaffStatus;
+}
 
 /** Why an Admin's role/status change is refused (ux.md §3.7, architecture §5). */
 export type AccessViolation = "actor_not_admin" | "protected_demo" | "self" | "last_admin";

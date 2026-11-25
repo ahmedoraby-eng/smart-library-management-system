@@ -22,11 +22,19 @@ export function loanStatus(loan: Pick<LoanDto, "status" | "dueAt">, now: Date = 
   if (loan.status === "RETURNED") return { kind: "returned", variant: "neutral", label: "Returned" };
   const due = new Date(loan.dueAt);
   if (loan.status === "OVERDUE") {
-    return { kind: "overdue", variant: "danger", label: `Overdue · ${plural(Math.max(1, Math.floor((now.getTime() - due.getTime()) / DAY)), "day")}` };
+    return {
+      kind: "overdue",
+      variant: "danger",
+      label: `Overdue · ${plural(Math.max(1, Math.floor((now.getTime() - due.getTime()) / DAY)), "day")}`,
+    };
   }
   const left = due.getTime() - now.getTime();
   if (left <= DUE_SOON_DAYS * DAY) {
-    return { kind: "due-soon", variant: "warning", label: sameLocalDay(due, now) ? "Due today" : `Due in ${plural(Math.max(1, Math.ceil(left / DAY)), "day")}` };
+    return {
+      kind: "due-soon",
+      variant: "warning",
+      label: sameLocalDay(due, now) ? "Due today" : `Due in ${plural(Math.max(1, Math.ceil(left / DAY)), "day")}`,
+    };
   }
   return { kind: "active", variant: "info", label: "Active" };
 }

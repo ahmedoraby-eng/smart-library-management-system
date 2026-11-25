@@ -2,8 +2,28 @@ import type { BookDto, BookListQuery } from "@slm/contracts";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActionMenu, type ActionMenuItem, AvailabilityBadge, BookIcon, Button, buttonClasses, Card, EditIcon, EmptyState, Input, InlineAlert,
-  Pagination, Select, SearchIcon, Skeleton, SortableTh, Table, Td, Th, Thead, TrashIcon, Tr,
+  ActionMenu,
+  type ActionMenuItem,
+  AvailabilityBadge,
+  BookIcon,
+  Button,
+  buttonClasses,
+  Card,
+  EditIcon,
+  EmptyState,
+  Input,
+  InlineAlert,
+  Pagination,
+  Select,
+  SearchIcon,
+  Skeleton,
+  SortableTh,
+  Table,
+  Td,
+  Th,
+  Thead,
+  TrashIcon,
+  Tr,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { useCan } from "../auth/session";
@@ -61,7 +81,10 @@ export function BooksPage() {
   const clearFilters = () => {
     lastPushed.current = "";
     setQText("");
-    void navigate({ search: (prev) => ({ ...prev, q: undefined, category: undefined, availability: undefined, page: 1 }), replace: true });
+    void navigate({
+      search: (prev) => ({ ...prev, q: undefined, category: undefined, availability: undefined, page: 1 }),
+      replace: true,
+    });
   };
 
   const sort = search.sort || DEFAULT_SORT;
@@ -118,20 +141,32 @@ export function BooksPage() {
                 {c}
               </option>
             ))}
-            {search.category && !categories.data?.includes(search.category) && <option value={search.category}>{search.category}</option>}
+            {search.category && !categories.data?.includes(search.category) && (
+              <option value={search.category}>{search.category}</option>
+            )}
           </Select>
           <Select
             label="Availability"
             hideLabel
             value={availability}
-            onChange={(e) => setSearch({ availability: e.target.value === "all" ? undefined : (e.target.value as BookListQuery["availability"]) })}
+            onChange={(e) =>
+              setSearch({
+                availability: e.target.value === "all" ? undefined : (e.target.value as BookListQuery["availability"]),
+              })
+            }
             data-testid="filter-availability"
           >
             <option value="all">All availability</option>
             <option value="available">Available</option>
             <option value="unavailable">Unavailable</option>
           </Select>
-          <Select label="Sort" hideLabel value={sort} onChange={(e) => setSearch({ sort: e.target.value })} data-testid="sort-select">
+          <Select
+            label="Sort"
+            hideLabel
+            value={sort}
+            onChange={(e) => setSearch({ sort: e.target.value })}
+            data-testid="sort-select"
+          >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -143,7 +178,14 @@ export function BooksPage() {
 
         {books.isError && !data ? (
           <div className="p-5" data-testid="books-error">
-            <InlineAlert variant="danger" action={<Button size="sm" onClick={() => void books.refetch()}>Try again</Button>}>
+            <InlineAlert
+              variant="danger"
+              action={
+                <Button size="sm" onClick={() => void books.refetch()}>
+                  Try again
+                </Button>
+              }
+            >
               {books.error instanceof ApiError && books.error.status === 400
                 ? "These filters aren't valid. Clear them and try again."
                 : "Couldn't load books. Check your connection and try again."}
@@ -165,17 +207,36 @@ export function BooksPage() {
               testId="books-empty"
               icon={<BookIcon size={40} />}
               title="No books yet"
-              text={can("BOOK_WRITE") ? "Add your first book to start lending." : "Books added by the library team will show here."}
-              action={can("BOOK_WRITE") ? <Link to="/books/new" className={buttonClasses({ variant: "primary" })}>Add book</Link> : undefined}
+              text={
+                can("BOOK_WRITE")
+                  ? "Add your first book to start lending."
+                  : "Books added by the library team will show here."
+              }
+              action={
+                can("BOOK_WRITE") ? (
+                  <Link to="/books/new" className={buttonClasses({ variant: "primary" })}>
+                    Add book
+                  </Link>
+                ) : undefined
+              }
             />
           )
         ) : (
           data && (
-            <div className={books.isPlaceholderData ? "opacity-60 transition-opacity" : undefined} aria-busy={books.isPlaceholderData}>
+            <div
+              className={books.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+              aria-busy={books.isPlaceholderData}
+            >
               <Table aria-label="Books" data-testid="books-table">
                 <Thead>
                   <tr>
-                    <SortableTh label="Book" sortKey="title" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
+                    <SortableTh
+                      label="Book"
+                      sortKey="title"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
                     <Th>Category</Th>
                     <SortableTh
                       label="Year"
@@ -186,7 +247,13 @@ export function BooksPage() {
                       className="max-lg:hidden"
                     />
                     <Th className="max-wide:hidden">ISBN</Th>
-                    <SortableTh label="Availability" sortKey="availableCopies" sort={search.sort} defaultSort={DEFAULT_SORT} onSort={(s) => setSearch({ sort: s })} />
+                    <SortableTh
+                      label="Availability"
+                      sortKey="availableCopies"
+                      sort={search.sort}
+                      defaultSort={DEFAULT_SORT}
+                      onSort={(s) => setSearch({ sort: s })}
+                    />
                     <Th align="right" kind="actions">
                       <span className="sr-only">Actions</span>
                     </Th>
@@ -198,13 +265,20 @@ export function BooksPage() {
                   ))}
                 </tbody>
               </Table>
-              <Pagination page={data.page} size={data.size} total={data.total} onPage={(page) => setSearch({ page }, { resetPage: false })} />
+              <Pagination
+                page={data.page}
+                size={data.size}
+                total={data.total}
+                onPage={(page) => setSearch({ page }, { resetPage: false })}
+              />
             </div>
           )
         )}
       </Card>
 
-      {deleting && <DeleteBookDialog book={deleting} onClose={() => setDeleting(null)} onDone={() => setDeleting(null)} />}
+      {deleting && (
+        <DeleteBookDialog book={deleting} onClose={() => setDeleting(null)} onDone={() => setDeleting(null)} />
+      )}
     </>
   );
 }
@@ -224,7 +298,13 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
       icon: <EditIcon size={16} />,
       onSelect: () => void navigate({ to: "/books/$bookId/edit", params: { bookId: book.id } }),
     },
-    can("BOOK_DELETE") && { key: "delete", label: "Delete", icon: <TrashIcon size={16} />, danger: true, onSelect: () => onDelete(book) },
+    can("BOOK_DELETE") && {
+      key: "delete",
+      label: "Delete",
+      icon: <TrashIcon size={16} />,
+      danger: true,
+      onSelect: () => onDelete(book),
+    },
   ];
   const items = candidates.filter((i): i is ActionMenuItem => i !== false);
 
@@ -255,16 +335,27 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
           </div>
         </div>
       </Td>
-      <Td kind="nowrap" className="text-neutral-700">{book.category}</Td>
-      <Td kind="num" className="text-neutral-700 max-lg:hidden">{book.publicationYear ?? "—"}</Td>
-      <Td kind="num" className="font-mono text-[12.5px] text-neutral-700 max-wide:hidden plain:text-base">{book.isbn ?? "—"}</Td>
+      <Td kind="nowrap" className="text-neutral-700">
+        {book.category}
+      </Td>
+      <Td kind="num" className="text-neutral-700 max-lg:hidden">
+        {book.publicationYear ?? "—"}
+      </Td>
+      <Td kind="num" className="font-mono text-[12.5px] text-neutral-700 max-wide:hidden plain:text-base">
+        {book.isbn ?? "—"}
+      </Td>
       <Td kind="nowrap">
         <AvailabilityBadge book={book} showNextDue />
       </Td>
       <Td align="right" kind="actions">
         <div className="flex items-center justify-end gap-2">
           {can("LOAN_PROCESS") && book.availableCopies > 0 && (
-            <Link to="/circulation/borrow" search={{ book: book.id }} className={buttonClasses({ size: "sm" })} data-testid="row-borrow">
+            <Link
+              to="/circulation/borrow"
+              search={{ book: book.id }}
+              className={buttonClasses({ size: "sm" })}
+              data-testid="row-borrow"
+            >
               Borrow
             </Link>
           )}

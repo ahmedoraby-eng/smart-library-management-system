@@ -13,24 +13,61 @@ const MEMBER_ID = "1c7a8d9e-2e3b-4c4d-8e5f-6a7b8c9d0e1f";
 const DAY = 86_400_000;
 
 const book = (patch: Partial<BookDto> = {}): BookDto => ({
-  id: BOOK_ID, title: "Clean Code", author: "Robert C. Martin", isbn: "9780132350884", description: "",
-  category: "Software", publisher: "", publicationYear: 2008, coverImageUrl: null, totalCopies: 4, availableCopies: 3, activeLoans: 1,
-  nextDueAt: null, hasLoanHistory: true, archived: false, version: 1, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+  id: BOOK_ID,
+  title: "Clean Code",
+  author: "Robert C. Martin",
+  isbn: "9780132350884",
+  description: "",
+  category: "Software",
+  publisher: "",
+  publicationYear: 2008,
+  coverImageUrl: null,
+  totalCopies: 4,
+  availableCopies: 3,
+  activeLoans: 1,
+  nextDueAt: null,
+  hasLoanHistory: true,
+  archived: false,
+  version: 1,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
   ...patch,
 });
 const member = (patch: Partial<MemberDto> = {}): MemberDto => ({
-  id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad", email: "sara.haddad@example.com", phone: null, status: "ACTIVE",
-  registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 1, overdueLoans: 0, version: 0, ...patch,
+  id: MEMBER_ID,
+  memberNumber: "M-000142",
+  fullName: "Sara Haddad",
+  email: "sara.haddad@example.com",
+  phone: null,
+  status: "ACTIVE",
+  registeredAt: "2026-01-01T00:00:00.000Z",
+  activeLoans: 1,
+  overdueLoans: 0,
+  version: 0,
+  ...patch,
 });
 const loan = (patch: Partial<LoanDto> = {}): LoanDto => ({
-  id: "2d8b9e0f-3f4c-4d5e-9f6a-7b8c9d0e1f2a", status: "ACTIVE",
+  id: "2d8b9e0f-3f4c-4d5e-9f6a-7b8c9d0e1f2a",
+  status: "ACTIVE",
   book: { id: BOOK_ID, title: "Clean Code", author: "Robert C. Martin" },
   member: { id: MEMBER_ID, memberNumber: "M-000142", fullName: "Sara Haddad" },
-  processedBy: { id: "s1", name: "Layla Librarian" }, returnedBy: null,
-  borrowedAt: "2026-11-01T10:00:00.000Z", dueAt: new Date(Date.now() + 5 * DAY).toISOString(), returnedAt: null, ...patch,
+  processedBy: { id: "s1", name: "Layla Librarian" },
+  returnedBy: null,
+  borrowedAt: "2026-11-01T10:00:00.000Z",
+  dueAt: new Date(Date.now() + 5 * DAY).toISOString(),
+  returnedAt: null,
+  ...patch,
 });
 const problem = (status: number, code: string, detail?: string, errors?: { field: string; message: string }[]) => ({
-  status, body: { type: "about:blank", title: code, status, code, ...(detail ? { detail } : {}), ...(errors ? { errors } : {}) },
+  status,
+  body: {
+    type: "about:blank",
+    title: code,
+    status,
+    code,
+    ...(detail ? { detail } : {}),
+    ...(errors ? { errors } : {}),
+  },
 });
 
 interface Setup {
@@ -52,7 +89,8 @@ function api(opts: Setup = {}) {
     const p = url.pathname;
     if (p === `/api/members/${MEMBER_ID}` && opts.member) return { body: opts.member };
     if (p === `/api/books/${BOOK_ID}` && opts.book) {
-      if (posts.length > 0 && opts.bookAfterBorrow) return opts.bookAfterBorrow === "fail" ? problem(500, "INTERNAL") : { body: opts.bookAfterBorrow };
+      if (posts.length > 0 && opts.bookAfterBorrow)
+        return opts.bookAfterBorrow === "fail" ? problem(500, "INTERNAL") : { body: opts.bookAfterBorrow };
       return { body: opts.book };
     }
     if (p === "/api/members") return { body: page(opts.members ?? []) };
@@ -140,7 +178,9 @@ describe("BorrowPage prefill, search and picking", () => {
   });
 
   it("a member at the loan limit (live count from their open loans) blocks Confirm with the reason", async () => {
-    const held = Array.from({ length: 5 }, (_, i) => loan({ id: `loan-${i}`, book: { id: `other-${i}`, title: `Other ${i}`, author: "A" } }));
+    const held = Array.from({ length: 5 }, (_, i) =>
+      loan({ id: `loan-${i}`, book: { id: `other-${i}`, title: `Other ${i}`, author: "A" } }),
+    );
     const a = api({ member: member({ activeLoans: 1 }), book: book(), held });
     await renderApp(prefilled, a.handler);
     expect(await screen.findByTestId("member-notice")).toHaveTextContent("5 of 5 books on loan — return one first");
@@ -186,7 +226,9 @@ describe("BorrowPage prefill, search and picking", () => {
     await waitFor(() => expect(input).toHaveFocus());
     await waitFor(() => expect(screen.getByTestId("picked-book")).toBeInTheDocument());
     expect(screen.getByTestId("copies-change")).toHaveTextContent("3 → 2 of 4");
-    expect(screen.queryByText("This is the last copy on the shelf. The book will show as Unavailable.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("This is the last copy on the shelf. The book will show as Unavailable."),
+    ).not.toBeInTheDocument();
   });
 
   it("the member's current loans card is absent when they hold nothing", async () => {
@@ -295,7 +337,11 @@ describe("BorrowPage due date", () => {
 describe("BorrowPage submitting", () => {
   it("success: banner with the live copy count, View loan link, Borrow another and New borrowing", async () => {
     const user = userEvent.setup();
-    const a = api({ member: member(), book: book({ totalCopies: 1, availableCopies: 1 }), bookAfterBorrow: book({ totalCopies: 1, availableCopies: 0 }) });
+    const a = api({
+      member: member(),
+      book: book({ totalCopies: 1, availableCopies: 1 }),
+      bookAfterBorrow: book({ totalCopies: 1, availableCopies: 0 }),
+    });
     await renderApp(prefilled, a.handler);
     await confirmReady();
     expect(screen.getByTestId("copies-change")).toHaveTextContent("This is the last copy on the shelf.");
@@ -370,12 +416,16 @@ describe("BorrowPage submitting", () => {
   it("409 ALREADY_BORROWED: the server's message goes under Book, the book is cleared and the member's loans are refetched", async () => {
     const user = userEvent.setup();
     const a = api({
-      member: member(), book: book(),
+      member: member(),
+      book: book(),
       borrow: () => problem(409, "ALREADY_BORROWED", "Sara Haddad already has Clean Code."),
     });
     const { fetchMock } = await renderApp(prefilled, a.handler);
     await confirmReady();
-    const loanGets = () => fetchMock.mock.calls.filter(([u, init]) => String(u).startsWith("/api/loans?") && (init?.method ?? "GET") === "GET").length;
+    const loanGets = () =>
+      fetchMock.mock.calls.filter(
+        ([u, init]) => String(u).startsWith("/api/loans?") && (init?.method ?? "GET") === "GET",
+      ).length;
     const before = loanGets();
     await user.click(screen.getByTestId("confirm-borrow"));
     expect(await screen.findByTestId("book-notice")).toHaveTextContent("Sara Haddad already has Clean Code.");
@@ -384,16 +434,23 @@ describe("BorrowPage submitting", () => {
     await waitFor(() => expect(loanGets()).toBeGreaterThan(before));
   });
 
-  it.each(["MEMBER_INACTIVE", "LOAN_LIMIT_REACHED"])("409 %s: the message goes under Member and the member is cleared", async (code) => {
-    const user = userEvent.setup();
-    const a = api({ member: member(), book: book(), borrow: () => problem(409, code, "This member can't borrow right now.") });
-    await renderApp(prefilled, a.handler);
-    await confirmReady();
-    await user.click(screen.getByTestId("confirm-borrow"));
-    expect(await screen.findByTestId("member-notice")).toHaveTextContent("This member can't borrow right now.");
-    expect(screen.queryByTestId("picked-member")).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId("member-combobox-input")).toHaveFocus());
-  });
+  it.each(["MEMBER_INACTIVE", "LOAN_LIMIT_REACHED"])(
+    "409 %s: the message goes under Member and the member is cleared",
+    async (code) => {
+      const user = userEvent.setup();
+      const a = api({
+        member: member(),
+        book: book(),
+        borrow: () => problem(409, code, "This member can't borrow right now."),
+      });
+      await renderApp(prefilled, a.handler);
+      await confirmReady();
+      await user.click(screen.getByTestId("confirm-borrow"));
+      expect(await screen.findByTestId("member-notice")).toHaveTextContent("This member can't borrow right now.");
+      expect(screen.queryByTestId("picked-member")).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId("member-combobox-input")).toHaveFocus());
+    },
+  );
 
   it("404 NOT_FOUND: 'no longer exists' error banner; the choices stay", async () => {
     const user = userEvent.setup();
@@ -401,7 +458,9 @@ describe("BorrowPage submitting", () => {
     await renderApp(prefilled, a.handler);
     await confirmReady();
     await user.click(screen.getByTestId("confirm-borrow"));
-    expect(await screen.findByTestId("borrow-error")).toHaveTextContent("This member or book no longer exists. Choose again.");
+    expect(await screen.findByTestId("borrow-error")).toHaveTextContent(
+      "This member or book no longer exists. Choose again.",
+    );
     expect(screen.getByTestId("picked-member")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   });
@@ -409,8 +468,12 @@ describe("BorrowPage submitting", () => {
   it("400 VALIDATION_FAILED on dueAt shows the server message under Due date; editing the date clears it", async () => {
     const user = userEvent.setup();
     const a = api({
-      member: member(), book: book(),
-      borrow: () => problem(400, "VALIDATION_FAILED", "Invalid", [{ field: "dueAt", message: "The due date can't be more than 60 days away." }]),
+      member: member(),
+      book: book(),
+      borrow: () =>
+        problem(400, "VALIDATION_FAILED", "Invalid", [
+          { field: "dueAt", message: "The due date can't be more than 60 days away." },
+        ]),
     });
     await renderApp(prefilled, a.handler);
     await confirmReady();
@@ -425,8 +488,10 @@ describe("BorrowPage submitting", () => {
   it("400 VALIDATION_FAILED on another field shows the message in the form banner", async () => {
     const user = userEvent.setup();
     const a = api({
-      member: member(), book: book(),
-      borrow: () => problem(400, "VALIDATION_FAILED", "Check the request.", [{ field: "bookId", message: "Bad book." }]),
+      member: member(),
+      book: book(),
+      borrow: () =>
+        problem(400, "VALIDATION_FAILED", "Check the request.", [{ field: "bookId", message: "Bad book." }]),
     });
     await renderApp(prefilled, a.handler);
     await confirmReady();
@@ -436,7 +501,11 @@ describe("BorrowPage submitting", () => {
 
   it("an unknown 4xx code shows the server message in the banner; a 403 shows no banner (handled app-wide)", async () => {
     const user = userEvent.setup();
-    const a = api({ member: member(), book: book(), borrow: () => problem(422, "SOMETHING_ELSE", "Not allowed today.") });
+    const a = api({
+      member: member(),
+      book: book(),
+      borrow: () => problem(422, "SOMETHING_ELSE", "Not allowed today."),
+    });
     await renderApp(prefilled, a.handler);
     await confirmReady();
     await user.click(screen.getByTestId("confirm-borrow"));
@@ -458,7 +527,8 @@ describe("BorrowPage submitting", () => {
     const user = userEvent.setup();
     let attempts = 0;
     const a = api({
-      member: member(), book: book(),
+      member: member(),
+      book: book(),
       borrow: () => (++attempts === 1 ? problem(503, "UNAVAILABLE", "down") : { status: 201, body: loan() }),
     });
     await renderApp(prefilled, a.handler);
@@ -474,7 +544,8 @@ describe("BorrowPage submitting", () => {
   it("a network failure (no response) is treated like a server error", async () => {
     const user = userEvent.setup();
     const a = api({
-      member: member(), book: book(),
+      member: member(),
+      book: book(),
       borrow: () => {
         throw new TypeError("Failed to fetch");
       },
@@ -482,7 +553,9 @@ describe("BorrowPage submitting", () => {
     await renderApp(prefilled, a.handler);
     await confirmReady();
     await user.click(screen.getByTestId("confirm-borrow"));
-    expect(await screen.findByTestId("borrow-error")).toHaveTextContent("Couldn't record the borrowing. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("borrow-error")).toHaveTextContent(
+      "Couldn't record the borrowing. Nothing was saved. Try again.",
+    );
   });
 
   it("the processed-by row shows the signed-in staff member", async () => {

@@ -6,7 +6,13 @@ describe("common contracts", () => {
   it("ProblemSchema accepts the minimal RFC 9457 shape and the optional extras, and rejects a non-integer status", () => {
     const minimal = { type: "about:blank", title: "Not found", status: 404, code: "NOT_FOUND" };
     expect(ProblemSchema.parse(minimal)).toEqual(minimal);
-    const full = { ...minimal, detail: "d", requestId: "r", errors: [{ field: "title", message: "Enter a title." }], context: { bookId: "b", n: 1 } };
+    const full = {
+      ...minimal,
+      detail: "d",
+      requestId: "r",
+      errors: [{ field: "title", message: "Enter a title." }],
+      context: { bookId: "b", n: 1 },
+    };
     expect(ProblemSchema.parse(full)).toEqual(full);
     expect(ProblemSchema.safeParse({ ...minimal, status: 404.5 }).success).toBe(false);
     expect(ProblemSchema.safeParse({ ...minimal, errors: [{ field: "x" }] }).success).toBe(false);
@@ -23,7 +29,14 @@ describe("common contracts", () => {
     const q = z.object(pageQuery);
     expect(q.parse({})).toEqual({ page: 1, size: 20 });
     expect(q.parse({ page: "3", size: "100" })).toEqual({ page: 3, size: 100 });
-    for (const bad of [{ page: "0" }, { page: "-1" }, { page: "1.5" }, { size: "0" }, { size: "101" }, { page: "abc" }]) {
+    for (const bad of [
+      { page: "0" },
+      { page: "-1" },
+      { page: "1.5" },
+      { size: "0" },
+      { size: "101" },
+      { page: "abc" },
+    ]) {
       expect(q.safeParse(bad).success).toBe(false);
     }
   });

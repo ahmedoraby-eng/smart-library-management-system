@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { ToastProvider } from "../components/ui";
@@ -11,7 +18,11 @@ import { ToastProvider } from "../components/ui";
 export async function renderWithProviders(ui: ReactElement) {
   const rootRoute = createRootRoute({ component: Outlet });
   const index = createRoute({ getParentRoute: () => rootRoute, path: "/", component: () => ui });
-  const bookDetail = createRoute({ getParentRoute: () => rootRoute, path: "/books/$bookId", component: () => <p>detail</p> });
+  const bookDetail = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/books/$bookId",
+    component: () => <p>detail</p>,
+  });
   const books = createRoute({ getParentRoute: () => rootRoute, path: "/books", component: () => <p>books</p> });
   const router = createRouter({
     routeTree: rootRoute.addChildren([index, bookDetail, books]),

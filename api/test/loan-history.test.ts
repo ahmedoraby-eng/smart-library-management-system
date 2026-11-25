@@ -3,29 +3,54 @@ import { as, pool, resetDb, seedStaff, testApp } from "./support";
 
 afterAll(() => pool.end());
 let staff: Awaited<ReturnType<typeof seedStaff>>;
-beforeEach(async () => { await resetDb(); staff = await seedStaff(); });
+beforeEach(async () => {
+  await resetDb();
+  staff = await seedStaff();
+});
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test convenience
 const MIN = 60_000;
 const DAY = 86_400_000;
 
 async function book(title: string, total = 5): Promise<string> {
-  return (await pool.query(
-    "INSERT INTO books (title, author, category, total_copies, available_copies) VALUES ($1, 'Author', 'Cat', $2, $2) RETURNING id",
-    [title, total],
-  )).rows[0].id;
+  return (
+    await pool.query(
+      "INSERT INTO books (title, author, category, total_copies, available_copies) VALUES ($1, 'Author', 'Cat', $2, $2) RETURNING id",
+      [title, total],
+    )
+  ).rows[0].id;
 }
 async function member(fullName: string): Promise<string> {
-  return (await pool.query("INSERT INTO members (full_name, email) VALUES ($1, $2) RETURNING id", [fullName, `${crypto.randomUUID()}@example.org`])).rows[0].id;
+  return (
+    await pool.query("INSERT INTO members (full_name, email) VALUES ($1, $2) RETURNING id", [
+      fullName,
+      `${crypto.randomUUID()}@example.org`,
+    ])
+  ).rows[0].id;
 }
 /** A loan with explicit times (raw SQL, keeps the stock in step so the inventory stays consistent). */
-async function loan(bookId: string, memberId: string, t: { borrowedAt: Date; dueAt: Date; returnedAt?: Date }): Promise<string> {
-  const id = (await pool.query(
-    `INSERT INTO loans (book_id, member_id, processed_by, borrowed_at, due_at, returned_at, returned_by)
+async function loan(
+  bookId: string,
+  memberId: string,
+  t: { borrowedAt: Date; dueAt: Date; returnedAt?: Date },
+): Promise<string> {
+  const id = (
+    await pool.query(
+      `INSERT INTO loans (book_id, member_id, processed_by, borrowed_at, due_at, returned_at, returned_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [bookId, memberId, staff.librarian, t.borrowedAt, t.dueAt, t.returnedAt ?? null, t.returnedAt ? staff.librarian : null],
-  )).rows[0].id;
-  if (!t.returnedAt) await pool.query("UPDATE books SET available_copies = available_copies - 1 WHERE id = $1", [bookId]);
+      [
+        bookId,
+        memberId,
+        staff.librarian,
+        t.borrowedAt,
+        t.dueAt,
+        t.returnedAt ?? null,
+        t.returnedAt ? staff.librarian : null,
+      ],
+    )
+  ).rows[0].id;
+  if (!t.returnedAt)
+    await pool.query("UPDATE books SET available_copies = available_copies - 1 WHERE id = $1", [bookId]);
   return id;
 }
 async function get(app: ReturnType<typeof testApp>, path: string, by = staff.librarian) {
@@ -38,7 +63,10 @@ describe("SLM-5 loan history", () => {
     const now = new Date();
     const app = testApp({ clock: () => now });
     const b = await book("Clean Code");
-    const id = await loan(b, await member("Sara Haddad"), { borrowedAt: new Date(now.getTime() - 14 * DAY), dueAt: new Date(now.getTime() - MIN) });
+    const id = await loan(b, await member("Sara Haddad"), {
+      borrowedAt: new Date(now.getTime() - 14 * DAY),
+      dueAt: new Date(now.getTime() - MIN),
+    });
     expect((await get(app, `/api/loans/${id}`)).json.status).toBe("OVERDUE");
     expect((await get(app, "/api/loans?status=OVERDUE")).json.items.map((l: Json) => l.id)).toEqual([id]);
 
@@ -52,7 +80,10 @@ describe("SLM-5 loan history", () => {
   it("SLM-5 AC3 the derivation follows the injected clock (no sleeps): ACTIVE now, OVERDUE a day after the due date", async () => {
     const now = new Date();
     const b = await book("Refactoring");
-    const id = await loan(b, await member("Omar Nasser"), { borrowedAt: now, dueAt: new Date(now.getTime() + 3 * DAY) });
+    const id = await loan(b, await member("Omar Nasser"), {
+      borrowedAt: now,
+      dueAt: new Date(now.getTime() + 3 * DAY),
+    });
     expect((await get(testApp({ clock: () => now }), `/api/loans/${id}`)).json.status).toBe("ACTIVE");
     const later = new Date(now.getTime() + 4 * DAY);
     expect((await get(testApp({ clock: () => later }), `/api/loans/${id}`)).json.status).toBe("OVERDUE");
@@ -61,14 +92,36 @@ describe("SLM-5 loan history", () => {
   it("SLM-5 AC1 + AC5 each row has book, member, dates, processed by and status; no fee, fine or payment field", async () => {
     const now = new Date();
     const app = testApp({ clock: () => now });
-    await loan(await book("Clean Code"), await member("Sara Haddad"), { borrowedAt: new Date(now.getTime() - DAY), dueAt: new Date(now.getTime() + DAY) });
+    await loan(await book("Clean Code"), await member("Sara Haddad"), {
+      borrowedAt: new Date(now.getTime() - DAY),
+      dueAt: new Date(now.getTime() + DAY),
+    });
     const { json } = await get(app, "/api/loans");
     const row = json.items[0];
-    expect(Object.keys(row).sort()).toEqual(["book", "borrowedAt", "dueAt", "id", "member", "processedBy", "returnedAt", "returnedBy", "status"]);
-    expect(row).toMatchObject({ book: { title: "Clean Code" }, member: { fullName: "Sara Haddad" }, processedBy: { name: "Layla Librarian" }, returnedAt: null });
+    expect(Object.keys(row).sort()).toEqual([
+      "book",
+      "borrowedAt",
+      "dueAt",
+      "id",
+      "member",
+      "processedBy",
+      "returnedAt",
+      "returnedBy",
+      "status",
+    ]);
+    expect(row).toMatchObject({
+      book: { title: "Clean Code" },
+      member: { fullName: "Sara Haddad" },
+      processedBy: { name: "Layla Librarian" },
+      returnedAt: null,
+    });
     // Keys only, at every depth: a random UUID or a title may contain "fee" (flaky on main 7a35f93).
     const keys = (v: unknown): string[] =>
-      Array.isArray(v) ? v.flatMap(keys) : v && typeof v === "object" ? Object.entries(v).flatMap(([k, x]) => [k, ...keys(x)]) : [];
+      Array.isArray(v)
+        ? v.flatMap(keys)
+        : v && typeof v === "object"
+          ? Object.entries(v).flatMap(([k, x]) => [k, ...keys(x)])
+          : [];
     expect(keys(json).filter((k) => /fee|fine|payment/i.test(k))).toEqual([]);
   });
 
@@ -79,7 +132,11 @@ describe("SLM-5 loan history", () => {
     const [sara, omar] = [await member("Sara Haddad"), await member("Omar Nasser")];
     const at = (iso: string) => new Date(iso);
     const l1 = await loan(cc, sara, { borrowedAt: at("2026-11-01T09:00:00Z"), dueAt: at("2026-11-15T09:00:00Z") }); // overdue
-    const l2 = await loan(ddia, sara, { borrowedAt: at("2026-11-10T09:00:00Z"), dueAt: at("2026-11-24T09:00:00Z"), returnedAt: at("2026-11-20T09:00:00Z") });
+    const l2 = await loan(ddia, sara, {
+      borrowedAt: at("2026-11-10T09:00:00Z"),
+      dueAt: at("2026-11-24T09:00:00Z"),
+      returnedAt: at("2026-11-20T09:00:00Z"),
+    });
     const l3 = await loan(ddia, omar, { borrowedAt: at("2026-11-20T09:00:00Z"), dueAt: at("2026-12-04T09:00:00Z") }); // active
     const ids = async (qs: string) => {
       const { res, json } = await get(app, `/api/loans${qs}`);
@@ -115,11 +172,20 @@ describe("SLM-5 loan history", () => {
     const b = await book("Many", 20);
     const offsets = [-5 * DAY, -MIN, MIN, 2 * DAY, -3 * DAY, 10 * DAY];
     for (const [i, off] of offsets.entries()) {
-      await loan(b, await member(`Reader ${i}`), { borrowedAt: new Date(now.getTime() - 20 * DAY), dueAt: new Date(now.getTime() + off), ...(i === 4 ? { returnedAt: now } : {}) });
+      await loan(b, await member(`Reader ${i}`), {
+        borrowedAt: new Date(now.getTime() - 20 * DAY),
+        dueAt: new Date(now.getTime() + off),
+        ...(i === 4 ? { returnedAt: now } : {}),
+      });
     }
     const all = (await get(app, "/api/loans?size=100")).json.items as Json[];
-    const derived = all.filter((l) => l.status === "OVERDUE").map((l) => l.id).sort();
-    const filtered = ((await get(app, "/api/loans?status=OVERDUE&size=100")).json.items as Json[]).map((l) => l.id).sort();
+    const derived = all
+      .filter((l) => l.status === "OVERDUE")
+      .map((l) => l.id)
+      .sort();
+    const filtered = ((await get(app, "/api/loans?status=OVERDUE&size=100")).json.items as Json[])
+      .map((l) => l.id)
+      .sort();
     expect(filtered).toEqual(derived);
     expect(filtered).toHaveLength(2); // −5 days and −1 minute; the returned one (−3 days) is RETURNED
   });

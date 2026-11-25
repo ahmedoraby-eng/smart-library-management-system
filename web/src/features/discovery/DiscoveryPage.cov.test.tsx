@@ -8,17 +8,43 @@ import { DiscoveryPage } from "./DiscoveryPage";
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
-const book = { id: "b1", title: "Fundamentals of Software Architecture", author: "Some Author", category: "Software architecture", publicationYear: 2020, coverImageUrl: null, availableCopies: 2, totalCopies: 3, nextDueAt: null };
-const answer = (reason: string): DiscoveryResponse => ({ mode: "AI", note: null, items: [{ book, reason, matchedTerms: [] }] });
+const book = {
+  id: "b1",
+  title: "Fundamentals of Software Architecture",
+  author: "Some Author",
+  category: "Software architecture",
+  publicationYear: 2020,
+  coverImageUrl: null,
+  availableCopies: 2,
+  totalCopies: 3,
+  nextDueAt: null,
+};
+const answer = (reason: string): DiscoveryResponse => ({
+  mode: "AI",
+  note: null,
+  items: [{ book, reason, matchedTerms: [] }],
+});
 
 type Reply = DiscoveryResponse | { status: number; retryAfter?: number };
 function stubApi(reply: Reply) {
   const fn = vi.fn(async (url: string) => {
-    if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Test", role: "LIBRARIAN", permissions: ROLE_PERMISSIONS.LIBRARIAN, isDemo: false });
+    if (url === "/api/me")
+      return json({
+        id: "u1",
+        email: "x@y.test",
+        fullName: "Test",
+        role: "LIBRARIAN",
+        permissions: ROLE_PERMISSIONS.LIBRARIAN,
+        isDemo: false,
+      });
     if (url === "/api/ai/quota") return json({ left: 50, limit: 50 });
     if (url === "/api/ai/book-discovery") {
       if ("status" in reply) {
-        return json({ type: "about:blank", title: "x", status: reply.status, code: "RATE_LIMITED" }, reply.status, reply.retryAfter ? { "retry-after": String(reply.retryAfter) } : {});
+        return json(
+          { type: "about:blank", title: "x", status: reply.status, code: "RATE_LIMITED" },
+          reply.status,
+          reply.retryAfter ? { "retry-after": String(reply.retryAfter) } : {},
+        );
       }
       return json(reply);
     }

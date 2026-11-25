@@ -10,11 +10,23 @@ import { queryClient } from "../lib/queryClient";
 import { meQueryKey } from "../features/auth/session";
 import { router } from "./router";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const problem = (status: number, code: string) => ({ type: "about:blank", title: code, status, code });
 const summary = {
-  kpis: { totalTitles: 1, totalCopies: 2, availableCopies: 2, borrowedCopies: 0, activeMembers: 1, inactiveMembers: 0, activeLoans: 0, overdueLoans: 0 },
-  recentBorrowings: [], popularBooks: [], recentlyAdded: [],
+  kpis: {
+    totalTitles: 1,
+    totalCopies: 2,
+    availableCopies: 2,
+    borrowedCopies: 0,
+    activeMembers: 1,
+    inactiveMembers: 0,
+    activeLoans: 0,
+    overdueLoans: 0,
+  },
+  recentBorrowings: [],
+  popularBooks: [],
+  recentlyAdded: [],
 };
 
 /** `disabledOnce`: the next /me answer is USER_DISABLED, later ones are fine. `disabledAlways`: every /me answer is. */
@@ -34,7 +46,14 @@ function stubFetch() {
         return json(problem(403, "USER_DISABLED"), 403);
       }
       if (!world.role) return json(problem(401, "UNAUTHENTICATED"), 401);
-      return json({ id: "u1", email: "ada@library.test", fullName: "Ada L", role: world.role, permissions: ROLE_PERMISSIONS[world.role], isDemo: false });
+      return json({
+        id: "u1",
+        email: "ada@library.test",
+        fullName: "Ada L",
+        role: world.role,
+        permissions: ROLE_PERMISSIONS[world.role],
+        isDemo: false,
+      });
     }
     if (url === "/api/dashboard/summary") return json(summary);
     if (url === "/api/auth/providers") return json({ google: false, demo: true });
@@ -62,7 +81,10 @@ const path = () => router.state.location.pathname;
 const search = () => router.state.location.search as Record<string, unknown>;
 const apiError = (status: number, code: string) => new ApiError(problem(status, code) as never);
 /** A request elsewhere in the app failing: goes through the shared query cache like any real one. */
-const fail = (err: ApiError) => queryClient.fetchQuery({ queryKey: ["probe", Math.random()], queryFn: () => Promise.reject(err), retry: false }).catch(() => undefined);
+const fail = (err: ApiError) =>
+  queryClient
+    .fetchQuery({ queryKey: ["probe", Math.random()], queryFn: () => Promise.reject(err), retry: false })
+    .catch(() => undefined);
 
 beforeEach(() => {
   world.role = "LIBRARIAN";
@@ -138,7 +160,9 @@ describe("search params in the URL", () => {
   });
 
   it("stringify drops empty values and keeps zero and false", () => {
-    expect(stringifySearch!({ q: "clean code", page: 2, a: undefined, b: null, c: "", z: 0, f: false })).toBe("?q=clean+code&page=2&z=0&f=false");
+    expect(stringifySearch!({ q: "clean code", page: 2, a: undefined, b: null, c: "", z: 0, f: false })).toBe(
+      "?q=clean+code&page=2&z=0&f=false",
+    );
     expect(stringifySearch!({})).toBe("");
     expect(stringifySearch!({ q: "" })).toBe("");
   });

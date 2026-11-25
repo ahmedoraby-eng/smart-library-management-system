@@ -1,28 +1,78 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  AI_TIMEOUT_MS, BookDiscoveryService, BUDGET_NOTE, NO_MATCH_NOTE, quotaKeywordNote, quotaNote, RESULT_CACHE_TTL_SECONDS, SINGLE_NOTE,
-  type CostControls, type DiscoveryLog,
+  AI_TIMEOUT_MS,
+  BookDiscoveryService,
+  BUDGET_NOTE,
+  NO_MATCH_NOTE,
+  quotaKeywordNote,
+  quotaNote,
+  RESULT_CACHE_TTL_SECONDS,
+  SINGLE_NOTE,
+  type CostControls,
+  type DiscoveryLog,
 } from "../src/discovery/application/BookDiscoveryService";
 import { BOOK_SYNC_TIMEOUT_MS, BookIndexSync, DEFAULT_BATCH_BOOKS } from "../src/discovery/application/BookIndexSync";
 import { WORST_CASE_RANK_NEURONS, type AiBudget, type AiCache, type BudgetVerdict } from "../src/discovery/domain/Cost";
-import type { AiProvider, Candidate, CatalogRetrieval, DiscoveryBook, Embedder, RetrievalMode } from "../src/discovery/domain/Discovery";
+import type {
+  AiProvider,
+  Candidate,
+  CatalogRetrieval,
+  DiscoveryBook,
+  Embedder,
+  RetrievalMode,
+} from "../src/discovery/domain/Discovery";
 import type { ChunkStore, IndexableBook } from "../src/discovery/domain/Indexing";
 
 afterEach(() => vi.useRealTimers());
 
 const cand = (id: string, over: Partial<Candidate> = {}): Candidate => ({
-  id, title: `Title ${id}`, author: "Au", category: "Cat", publicationYear: null, description: "d", score: 1, matchedTerms: ["t"], related: false, ...over,
+  id,
+  title: `Title ${id}`,
+  author: "Au",
+  category: "Cat",
+  publicationYear: null,
+  description: "d",
+  score: 1,
+  matchedTerms: ["t"],
+  related: false,
+  ...over,
 });
-const summary = (id: string): DiscoveryBook => ({ id, title: `Title ${id}`, author: "Au", category: "Cat", publicationYear: null, coverImageUrl: null, availableCopies: 1, totalCopies: 2, nextDueAt: null });
-const recs = (...ids: string[]) => ({ recommendations: ids.map((id, i) => ({ bookId: id, reason: `because ${id}`, fit: 5 - i })), note: "model note" });
+const summary = (id: string): DiscoveryBook => ({
+  id,
+  title: `Title ${id}`,
+  author: "Au",
+  category: "Cat",
+  publicationYear: null,
+  coverImageUrl: null,
+  availableCopies: 1,
+  totalCopies: 2,
+  nextDueAt: null,
+});
+const recs = (...ids: string[]) => ({
+  recommendations: ids.map((id, i) => ({ bookId: id, reason: `because ${id}`, fit: 5 - i })),
+  note: "model note",
+});
 
-interface FakeCatalogOptions { candidates?: Candidate[]; missing?: string[]; mode?: RetrievalMode; neurons?: number; version?: string | null; recent?: string[] }
+interface FakeCatalogOptions {
+  candidates?: Candidate[];
+  missing?: string[];
+  mode?: RetrievalMode;
+  neurons?: number;
+  version?: string | null;
+  recent?: string[];
+}
 function catalog(o: FakeCatalogOptions = {}) {
   const calls = { candidates: [] as Array<{ query: string; opts: unknown }>, recent: [] as Array<[string, number]> };
   const c: CatalogRetrieval = {
-    candidates: async (query, opts) => { calls.candidates.push({ query, opts }); return o.candidates ?? []; },
+    candidates: async (query, opts) => {
+      calls.candidates.push({ query, opts });
+      return o.candidates ?? [];
+    },
     summaries: async (ids) => new Map(ids.filter((i) => !(o.missing ?? []).includes(i)).map((i) => [i, summary(i)])),
-    recentLoanTitles: async (memberId, limit) => { calls.recent.push([memberId, limit]); return o.recent ?? []; },
+    recentLoanTitles: async (memberId, limit) => {
+      calls.recent.push([memberId, limit]);
+      return o.recent ?? [];
+    },
     ...(o.mode ? { lastMode: () => o.mode! } : {}),
     ...(o.neurons !== undefined ? { lastNeurons: () => o.neurons! } : {}),
     ...(o.version === null ? {} : { catalogueVersion: async () => o.version ?? "v1" }),
@@ -35,27 +85,51 @@ function memoryCache() {
   const cache: AiCache & { store: typeof store } = {
     store,
     get: async (k) => store.get(k)?.value ?? null,
-    set: async (k, value, ttl) => { store.set(k, { value, ttl }); },
+    set: async (k, value, ttl) => {
+      store.set(k, { value, ttl });
+    },
   };
   return cache;
 }
 
-function fakeBudget(o: { verdict?: BudgetVerdict; under?: boolean; today?: number | Error; left?: { left: number; limit: number } | Error; addFails?: boolean } = {}) {
+function fakeBudget(
+  o: {
+    verdict?: BudgetVerdict;
+    under?: boolean;
+    today?: number | Error;
+    left?: { left: number; limit: number } | Error;
+    addFails?: boolean;
+  } = {},
+) {
   const added: Array<[number, string | undefined]> = [];
   const b: AiBudget = {
     reserveSearch: vi.fn(async () => o.verdict ?? "OK"),
     underCap: vi.fn(async () => o.under ?? true),
-    addNeurons: async (n, u) => { if (o.addFails) throw new Error("db down"); added.push([n, u]); },
-    today: async () => { if (o.today instanceof Error) throw o.today; return { day: "d", searches: 0, neurons: o.today ?? 0, neuronCap: 1, userQuota: 1 }; },
-    searchesLeft: async () => { if (o.left instanceof Error) throw o.left; return o.left ?? { left: 3, limit: 5 }; },
+    addNeurons: async (n, u) => {
+      if (o.addFails) throw new Error("db down");
+      added.push([n, u]);
+    },
+    today: async () => {
+      if (o.today instanceof Error) throw o.today;
+      return { day: "d", searches: 0, neurons: o.today ?? 0, neuronCap: 1, userQuota: 1 };
+    },
+    searchesLeft: async () => {
+      if (o.left instanceof Error) throw o.left;
+      return o.left ?? { left: 3, limit: 5 };
+    },
   };
   return Object.assign(b, { added });
 }
 
 const provider = (rank: AiProvider["rank"], name = "test"): AiProvider => ({ name, rank });
 const good = (...ids: string[]) => provider(async () => recs(...ids));
-const run = (c: CatalogRetrieval, p: AiProvider | null, cost: CostControls = {}, log: DiscoveryLog = () => undefined, timeout = AI_TIMEOUT_MS) =>
-  new BookDiscoveryService(c, p, log, timeout, cost);
+const run = (
+  c: CatalogRetrieval,
+  p: AiProvider | null,
+  cost: CostControls = {},
+  log: DiscoveryLog = () => undefined,
+  timeout = AI_TIMEOUT_MS,
+) => new BookDiscoveryService(c, p, log, timeout, cost);
 const ask = (svc: BookDiscoveryService, extra: Record<string, unknown> = {}, ctx: { userId?: string } = {}) =>
   svc.discover({ query: "a book about whales", ...extra } as never, ctx);
 
@@ -114,11 +188,34 @@ describe("discovery: model ranking", () => {
       onUsage?.({ model: "@cf/baai/bge-base-en-v1.5", inputTokens: 1_000_000, outputTokens: 0, estimated: false }); // 6058 Neurons
       return recs("c", "a");
     }, "wai");
-    const res = await ask(run(c, p, { budget: fakeBudget({ today: 12.34 }) }, (e) => logs.push(e)), {}, { userId: "u1" });
-    expect(res).toMatchObject({ mode: "AI", note: "model note", tier: 1, retrieval: "hybrid", aiSearches: { left: 3, limit: 5 } });
-    expect(res.items.map((i) => [i.book.id, i.reason])).toEqual([["c", "because c"], ["a", "because a"]]);
+    const res = await ask(
+      run(c, p, { budget: fakeBudget({ today: 12.34 }) }, (e) => logs.push(e)),
+      {},
+      { userId: "u1" },
+    );
+    expect(res).toMatchObject({
+      mode: "AI",
+      note: "model note",
+      tier: 1,
+      retrieval: "hybrid",
+      aiSearches: { left: 3, limit: 5 },
+    });
+    expect(res.items.map((i) => [i.book.id, i.reason])).toEqual([
+      ["c", "because c"],
+      ["a", "because a"],
+    ]);
     expect(logs).toHaveLength(1);
-    expect(logs[0]).toMatchObject({ mode: "AI", candidates: 3, fallbackReason: null, provider: "wai", dropped: 0, cacheHit: false, retrieval: "hybrid", neuronsToday: 12.34, neurons: 6058.5 });
+    expect(logs[0]).toMatchObject({
+      mode: "AI",
+      candidates: 3,
+      fallbackReason: null,
+      provider: "wai",
+      dropped: 0,
+      cacheHit: false,
+      retrieval: "hybrid",
+      neuronsToday: 12.34,
+      neurons: 6058.5,
+    });
     expect(JSON.stringify(logs[0])).not.toContain("whales"); // the request text is never logged
   });
 
@@ -126,7 +223,10 @@ describe("discovery: model ranking", () => {
     const seen: string[][] = [];
     const cache = memoryCache();
     const { c, calls } = catalog({ candidates: [cand("a"), cand("b")], recent: ["Old Title"] });
-    const p = provider(async ({ memberRecentTitles }) => { seen.push(memberRecentTitles); return recs("a"); });
+    const p = provider(async ({ memberRecentTitles }) => {
+      seen.push(memberRecentTitles);
+      return recs("a");
+    });
     await ask(run(c, p, { cache }), { memberId: "11111111-1111-4111-8111-111111111111" });
     expect(seen).toEqual([["Old Title"]]);
     expect(calls.recent).toEqual([["11111111-1111-4111-8111-111111111111", 5]]);
@@ -135,26 +235,45 @@ describe("discovery: model ranking", () => {
 
   it("failure to read the member's loans is a provider-side failure → keyword fallback", async () => {
     const { c } = catalog({ candidates: [cand("a"), cand("b")] });
-    c.recentLoanTitles = async () => { throw new Error("db down"); };
-    expect(await ask(run(c, good("a")), { memberId: "11111111-1111-4111-8111-111111111111" })).toMatchObject({ mode: "FALLBACK", fallbackReason: "PROVIDER_ERROR" });
+    c.recentLoanTitles = async () => {
+      throw new Error("db down");
+    };
+    expect(await ask(run(c, good("a")), { memberId: "11111111-1111-4111-8111-111111111111" })).toMatchObject({
+      mode: "FALLBACK",
+      fallbackReason: "PROVIDER_ERROR",
+    });
   });
 
   it("a provider that throws → PROVIDER_ERROR and the call is charged the model's own usage when it reported one, else the worst case", async () => {
     const { c } = catalog({ candidates: [cand("a"), cand("b")] });
     const b1 = fakeBudget();
-    const reported = provider(async ({ onUsage }) => { onUsage?.({ model: "@cf/meta/llama-3.2-3b-instruct", inputTokens: 1_000_000, outputTokens: 0, estimated: false }); throw new Error("boom"); });
+    const reported = provider(async ({ onUsage }) => {
+      onUsage?.({ model: "@cf/meta/llama-3.2-3b-instruct", inputTokens: 1_000_000, outputTokens: 0, estimated: false });
+      throw new Error("boom");
+    });
     const r1 = await ask(run(c, reported, { budget: b1 }), {}, { userId: "u1" });
     expect(r1).toMatchObject({ mode: "FALLBACK", fallbackReason: "PROVIDER_ERROR" });
     expect(b1.added).toEqual([[4625, "u1"]]);
     const b2 = fakeBudget();
-    await ask(run(c, provider(async () => { throw new Error("boom"); }), { budget: b2 }));
+    await ask(
+      run(
+        c,
+        provider(async () => {
+          throw new Error("boom");
+        }),
+        { budget: b2 },
+      ),
+    );
     expect(b2.added).toEqual([[WORST_CASE_RANK_NEURONS, undefined]]);
   });
 
   it("a provider that never answers times out → TIMEOUT, the request is aborted, the worst case is charged", async () => {
     vi.useFakeTimers();
     let signal: AbortSignal | undefined;
-    const slow = provider(({ signal: s }) => { signal = s; return new Promise(() => undefined); });
+    const slow = provider(({ signal: s }) => {
+      signal = s;
+      return new Promise(() => undefined);
+    });
     const budget = fakeBudget();
     const { c } = catalog({ candidates: [cand("a"), cand("b")] });
     const pending = ask(run(c, slow, { budget }, undefined, 50));
@@ -171,16 +290,33 @@ describe("discovery: model ranking", () => {
   it("an answer that is not a ranking → INVALID_OUTPUT; one whose every pick is a made-up id → NO_VALID_ITEMS with the drop count", async () => {
     const logs: Parameters<DiscoveryLog>[0][] = [];
     const { c } = catalog({ candidates: [cand("a"), cand("b")] });
-    const bad = await ask(run(c, provider(async () => "I cannot help"), {}, (e) => logs.push(e)));
+    const bad = await ask(
+      run(
+        c,
+        provider(async () => "I cannot help"),
+        {},
+        (e) => logs.push(e),
+      ),
+    );
     expect(bad).toMatchObject({ mode: "FALLBACK", fallbackReason: "INVALID_OUTPUT" });
     expect(bad.items).toHaveLength(2);
     const made = await ask(run(c, good("zzz", "yyy"), {}, (e) => logs.push(e)));
     expect(made).toMatchObject({ mode: "FALLBACK", fallbackReason: "NO_VALID_ITEMS" });
     expect(logs[1]).toMatchObject({ fallbackReason: "NO_VALID_ITEMS", dropped: 2 });
     // an empty list with nothing dropped is a legitimate «nothing fits»
-    const none = await ask(run(c, provider(async () => ({ recommendations: [], note: "Nothing fits." }))));
+    const none = await ask(
+      run(
+        c,
+        provider(async () => ({ recommendations: [], note: "Nothing fits." })),
+      ),
+    );
     expect(none).toMatchObject({ mode: "AI", items: [], note: "Nothing fits." });
-    const noNote = await ask(run(c, provider(async () => ({ recommendations: [] }))));
+    const noNote = await ask(
+      run(
+        c,
+        provider(async () => ({ recommendations: [] })),
+      ),
+    );
     expect(noNote).toMatchObject({ mode: "AI", items: [], note: NO_MATCH_NOTE });
   });
 
@@ -199,19 +335,35 @@ describe("discovery: daily budget tiers", () => {
   it("QUOTA_EXCEEDED: ranked without the model; the note says «meaning» (hybrid) or «keywords» (embeddings down); it never calls the model", async () => {
     const rank = vi.fn();
     const hybrid = catalog({ candidates: [cand("a"), cand("b")], mode: "hybrid" });
-    const r1 = await ask(run(hybrid.c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }), userQuota: 7 }), {}, { userId: "u1" });
+    const r1 = await ask(
+      run(hybrid.c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }), userQuota: 7 }),
+      {},
+      { userId: "u1" },
+    );
     expect(r1).toMatchObject({ mode: "FALLBACK", fallbackReason: "QUOTA_EXCEEDED", note: quotaNote(7), tier: 2 });
     const lexical = catalog({ candidates: [cand("a"), cand("b")], mode: "lexical" });
-    const r2 = await ask(run(lexical.c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }), userQuota: 7 }), {}, { userId: "u1" });
+    const r2 = await ask(
+      run(lexical.c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }), userQuota: 7 }),
+      {},
+      { userId: "u1" },
+    );
     expect(r2).toMatchObject({ note: quotaKeywordNote(7), tier: 3 });
-    const unset = await ask(run(two().c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }) }), {}, { userId: "u1" });
+    const unset = await ask(
+      run(two().c, provider(rank as never), { budget: fakeBudget({ verdict: "QUOTA_EXCEEDED" }) }),
+      {},
+      { userId: "u1" },
+    );
     expect(unset.note).toBe(quotaNote(0));
     expect(rank).not.toHaveBeenCalled();
   });
 
   it("BUDGET_EXHAUSTED from the reservation, or an exhausted cap for a caller with no user id, gives the keyword fallback", async () => {
     const rank = vi.fn();
-    const reserved = await ask(run(two().c, provider(rank as never), { budget: fakeBudget({ verdict: "BUDGET_EXHAUSTED" }) }), {}, { userId: "u1" });
+    const reserved = await ask(
+      run(two().c, provider(rank as never), { budget: fakeBudget({ verdict: "BUDGET_EXHAUSTED" }) }),
+      {},
+      { userId: "u1" },
+    );
     expect(reserved).toMatchObject({ fallbackReason: "BUDGET_EXHAUSTED", note: BUDGET_NOTE });
     const anon = fakeBudget({ under: false });
     const capped = await ask(run(two().c, provider(rank as never), { budget: anon }));
@@ -249,7 +401,14 @@ describe("discovery: result cache", () => {
     expect(first).not.toHaveProperty("cached");
     expect([...cache.store.values()][0]!.ttl).toBe(RESULT_CACHE_TTL_SECONDS);
     const second = await ask(svc, { query: "  A book about WHALES! " }, { userId: "u1" }); // same normalised request
-    expect(second).toMatchObject({ cached: true, mode: "AI", tier: 1, retrieval: "hybrid", aiSearches: { left: 3, limit: 5 }, note: "model note" });
+    expect(second).toMatchObject({
+      cached: true,
+      mode: "AI",
+      tier: 1,
+      retrieval: "hybrid",
+      aiSearches: { left: 3, limit: 5 },
+      note: "model note",
+    });
     expect(second.items.map((i) => i.book.id)).toEqual(["b", "a"]);
     expect(second.items[1]).toMatchObject({ foundBy: "semantic" });
     expect(rank).toHaveBeenCalledTimes(1);
@@ -259,7 +418,8 @@ describe("discovery: result cache", () => {
   it("the cache key depends on the catalogue version, the limit, availability and the provider", async () => {
     const cache = memoryCache();
     const rank = vi.fn(async () => recs("a"));
-    const mk = (version: string, name = "p1") => run(catalog({ candidates: [cand("a"), cand("b")], version }).c, provider(rank as never, name), { cache });
+    const mk = (version: string, name = "p1") =>
+      run(catalog({ candidates: [cand("a"), cand("b")], version }).c, provider(rank as never, name), { cache });
     await ask(mk("v1"));
     await ask(mk("v2"));
     await ask(mk("v1"), { limit: 2 });
@@ -274,7 +434,9 @@ describe("discovery: result cache", () => {
   it("no catalogue version, no cache: nothing is stored or read", async () => {
     const cache = memoryCache();
     const rank = vi.fn(async () => recs("a"));
-    const svc = run(catalog({ candidates: [cand("a"), cand("b")], version: null }).c, provider(rank as never), { cache });
+    const svc = run(catalog({ candidates: [cand("a"), cand("b")], version: null }).c, provider(rank as never), {
+      cache,
+    });
     await ask(svc);
     await ask(svc);
     expect(rank).toHaveBeenCalledTimes(2);
@@ -284,7 +446,13 @@ describe("discovery: result cache", () => {
   it("fallbacks and empty answers are never cached", async () => {
     const cache = memoryCache();
     await ask(run(two().c, null, { cache }));
-    await ask(run(two().c, provider(async () => ({ recommendations: [] })), { cache }));
+    await ask(
+      run(
+        two().c,
+        provider(async () => ({ recommendations: [] })),
+        { cache },
+      ),
+    );
     expect(cache.store.size).toBe(0);
   });
 
@@ -293,16 +461,33 @@ describe("discovery: result cache", () => {
       { v: 2, mode: "AI", note: null, picks: [{ id: "a", reason: "r", matchedTerms: [] }] },
       { v: 1, mode: "AI", note: null, picks: [] },
       { v: 1, mode: "AI", note: null, picks: "nope" },
-      { v: 1, mode: "AI", note: null, picks: [{ id: "a", reason: "r", matchedTerms: [] }, { id: "gone", reason: "r", matchedTerms: [] }] },
+      {
+        v: 1,
+        mode: "AI",
+        note: null,
+        picks: [
+          { id: "a", reason: "r", matchedTerms: [] },
+          { id: "gone", reason: "r", matchedTerms: [] },
+        ],
+      },
     ];
     for (const entry of entries) {
       const cache: AiCache = { get: async () => entry, set: vi.fn(async () => undefined) };
       const rank = vi.fn(async () => recs("a"));
-      const res = await ask(run(catalog({ candidates: [cand("a"), cand("b")], missing: ["gone"] }).c, provider(rank as never), { cache }));
+      const res = await ask(
+        run(catalog({ candidates: [cand("a"), cand("b")], missing: ["gone"] }).c, provider(rank as never), { cache }),
+      );
       expect(res).not.toHaveProperty("cached");
       expect(rank).toHaveBeenCalledTimes(1);
     }
-    const throwing: AiCache = { get: async () => { throw new Error("cache down"); }, set: async () => { throw new Error("cache down"); } };
+    const throwing: AiCache = {
+      get: async () => {
+        throw new Error("cache down");
+      },
+      set: async () => {
+        throw new Error("cache down");
+      },
+    };
     const res = await ask(run(two().c, good("a"), { cache: throwing }));
     expect(res).toMatchObject({ mode: "AI", items: [{ book: { id: "a" } }] }); // neither the read nor the write failure reaches the user
   });
@@ -317,8 +502,18 @@ describe("discovery: result cache", () => {
   });
 
   it("a cached fallback-mode entry reports the tier of the retrieval it was made with", async () => {
-    const cached = (retrieval?: "hybrid" | "lexical") => ({ v: 1, mode: "FALLBACK", note: "n", ...(retrieval ? { retrieval } : {}), picks: [{ id: "a", reason: "r", matchedTerms: ["x"] }] });
-    for (const [entry, tier] of [[cached("hybrid"), 2], [cached("lexical"), 3], [cached(), 3]] as const) {
+    const cached = (retrieval?: "hybrid" | "lexical") => ({
+      v: 1,
+      mode: "FALLBACK",
+      note: "n",
+      ...(retrieval ? { retrieval } : {}),
+      picks: [{ id: "a", reason: "r", matchedTerms: ["x"] }],
+    });
+    for (const [entry, tier] of [
+      [cached("hybrid"), 2],
+      [cached("lexical"), 3],
+      [cached(), 3],
+    ] as const) {
       const cache: AiCache = { get: async () => entry, set: async () => undefined };
       const res = await ask(run(two().c, good("a"), { cache }));
       expect(res).toMatchObject({ cached: true, mode: "FALLBACK", tier });
@@ -327,18 +522,45 @@ describe("discovery: result cache", () => {
 });
 
 describe("index sync (store and embedder faked)", () => {
-  const book = (id: string, over: Partial<IndexableBook> = {}): IndexableBook => ({ id, title: `T${id}`, author: "A", category: "C", description: `About ${id}.`, ...over });
+  const book = (id: string, over: Partial<IndexableBook> = {}): IndexableBook => ({
+    id,
+    title: `T${id}`,
+    author: "A",
+    category: "C",
+    description: `About ${id}.`,
+    ...over,
+  });
   const embedder = (over: Partial<Embedder> = {}): Embedder & { embed: ReturnType<typeof vi.fn> } => {
-    const e = { model: "m", dimensions: 3, queryPrefix: "", minSimilarity: 0.5, embed: vi.fn(async (texts: string[]) => texts.map(() => [1, 0, 0])), ...over };
+    const e = {
+      model: "m",
+      dimensions: 3,
+      queryPrefix: "",
+      minSimilarity: 0.5,
+      embed: vi.fn(async (texts: string[]) => texts.map(() => [1, 0, 0])),
+      ...over,
+    };
     return e as Embedder & { embed: ReturnType<typeof vi.fn> };
   };
-  function store(o: { live?: IndexableBook[]; indexed?: Map<string, string>; known?: Set<string>; pgvector?: boolean; removed?: number; applyFails?: boolean } = {}) {
+  function store(
+    o: {
+      live?: IndexableBook[];
+      indexed?: Map<string, string>;
+      known?: Set<string>;
+      pgvector?: boolean;
+      removed?: number;
+      applyFails?: boolean;
+    } = {},
+  ) {
     const applied: Array<Parameters<ChunkStore["apply"]>> = [];
     const s: ChunkStore = {
       liveBooks: vi.fn(async (ids?: string[]) => (o.live ?? []).filter((b) => !ids || ids.includes(b.id))),
       indexedHashes: async () => o.indexed ?? new Map(),
       knownHashes: async (hashes) => new Set([...(o.known ?? [])].filter((h) => hashes.includes(h))),
-      apply: async (...args) => { if (o.applyFails) throw new Error("apply failed"); applied.push(args); return o.removed ?? 0; },
+      apply: async (...args) => {
+        if (o.applyFails) throw new Error("apply failed");
+        applied.push(args);
+        return o.removed ?? 0;
+      },
       nearest: async () => [],
       usesPgvector: async () => o.pgvector ?? false,
     };
@@ -356,7 +578,16 @@ describe("index sync (store and embedder faked)", () => {
   it("with no embedder every operation is a no-op that never touches the store", async () => {
     const s = store({ live: [book("1")] });
     const sync = new BookIndexSync(s, null);
-    expect(await sync.syncAll()).toEqual({ embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0, total: 0 });
+    expect(await sync.syncAll()).toEqual({
+      embeddedBooks: 0,
+      chunks: 0,
+      reusedBooks: 0,
+      upToDate: 0,
+      removed: 0,
+      neurons: 0,
+      remaining: 0,
+      total: 0,
+    });
     await sync.syncBookSafely("1");
     expect(await sync.syncAllSafely()).toMatchObject({ total: 0 });
     expect(s.liveBooks).not.toHaveBeenCalled();
@@ -369,7 +600,15 @@ describe("index sync (store and embedder faked)", () => {
     const emb = embedder();
     const budget = fakeBudget();
     const r = await new BookIndexSync(s, emb, undefined, budget).syncAll(2);
-    expect(r).toMatchObject({ embeddedBooks: 2, chunks: 2, reusedBooks: 0, upToDate: 0, removed: 4, remaining: 1, total: 3 });
+    expect(r).toMatchObject({
+      embeddedBooks: 2,
+      chunks: 2,
+      reusedBooks: 0,
+      upToDate: 0,
+      removed: 4,
+      remaining: 1,
+      total: 3,
+    });
     expect(r.neurons).toBeGreaterThan(0);
     expect(emb.embed).toHaveBeenCalledTimes(1);
     expect(s.applied[0]![1].embedded.map((e) => e.bookId)).toEqual(["1", "2"]);
@@ -409,10 +648,20 @@ describe("index sync (store and embedder faked)", () => {
     expect(logs).toEqual([]); // the hourly top-up that finds nothing says nothing
     await new BookIndexSync(store({ live: [book("1")] }), embedder(), (e) => logs.push(e)).syncAllSafely();
     expect(logs[0]).toMatchObject({ level: "info", event: "book_index_sync", embeddedBooks: 1 });
-    expect(await new BookIndexSync(store({ live: [book("1")], applyFails: true }), embedder(), (e) => logs.push(e)).syncAllSafely()).toBeNull();
+    expect(
+      await new BookIndexSync(store({ live: [book("1")], applyFails: true }), embedder(), (e) =>
+        logs.push(e),
+      ).syncAllSafely(),
+    ).toBeNull();
     expect(logs[1]).toEqual({ level: "warn", event: "book_index_sync_failed", reason: "apply failed" });
-    const nonError = embedder({ embed: vi.fn(async () => { throw "string failure"; }) as never });
-    expect(await new BookIndexSync(store({ live: [book("1")] }), nonError, (e) => logs.push(e)).syncAllSafely()).toBeNull();
+    const nonError = embedder({
+      embed: vi.fn(async () => {
+        throw "string failure";
+      }) as never,
+    });
+    expect(
+      await new BookIndexSync(store({ live: [book("1")] }), nonError, (e) => logs.push(e)).syncAllSafely(),
+    ).toBeNull();
     expect(logs[2]).toMatchObject({ reason: "error" });
   });
 
@@ -423,7 +672,9 @@ describe("index sync (store and embedder faked)", () => {
     expect(s.applied[0]![1].embedded.map((e) => e.bookId)).toEqual(["2"]);
 
     const logs: Record<string, unknown>[] = [];
-    await new BookIndexSync(store({ live: [book("1")], applyFails: true }), embedder(), (e) => logs.push(e)).syncBookSafely("1");
+    await new BookIndexSync(store({ live: [book("1")], applyFails: true }), embedder(), (e) =>
+      logs.push(e),
+    ).syncBookSafely("1");
     expect(logs[0]).toMatchObject({ event: "book_index_sync_failed", reason: "apply failed" });
 
     vi.useFakeTimers();

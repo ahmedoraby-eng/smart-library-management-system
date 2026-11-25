@@ -29,7 +29,14 @@ const appPort = await freePort(8790);
 const dataDir = `${root}.pgdata-demo`;
 const databaseUrl = `postgres://library:library@localhost:${pgPort}/library`;
 
-const pg = new EmbeddedPostgres({ databaseDir: dataDir, user: "library", password: "library", port: pgPort, persistent: true, onLog: () => {} });
+const pg = new EmbeddedPostgres({
+  databaseDir: dataDir,
+  user: "library",
+  password: "library",
+  port: pgPort,
+  persistent: true,
+  onLog: () => {},
+});
 const firstRun = !existsSync(dataDir);
 if (firstRun) await pg.initialise();
 await pg.start();
@@ -60,10 +67,18 @@ vars = {
   ...vars,
   DATABASE_URL: databaseUrl,
 };
-writeFileSync(varsPath, Object.entries(vars).map(([k, v]) => `${k}=${v}`).join("\n") + "\n");
+writeFileSync(
+  varsPath,
+  Object.entries(vars)
+    .map(([k, v]) => `${k}=${v}`)
+    .join("\n") + "\n",
+);
 
 execFileSync("npm", ["run", "build", "-w", "web"], { cwd: root, stdio: "ignore" });
-const wrangler = spawn("npx", ["wrangler", "dev", "--port", String(appPort)], { cwd: root, stdio: ["ignore", "pipe", "inherit"] });
+const wrangler = spawn("npx", ["wrangler", "dev", "--port", String(appPort)], {
+  cwd: root,
+  stdio: ["ignore", "pipe", "inherit"],
+});
 
 wrangler.stdout.on("data", (chunk: Buffer) => {
   if (!chunk.toString().includes("Ready on")) return;
