@@ -99,6 +99,19 @@ Bonus and extras:
 
 More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md). Why each choice was made: the [decision register](docs/decisions.md) (one ADR per decision in [docs/adr/](docs/adr/)).
 
+## How it was built: an AI team
+
+This project was planned, designed, built, tested and documented by a team of **AI agents**: Claude Code sessions,
+each given one role (product owner, architect, engineer, UX designer, QA, DevOps) and its own Jira, Confluence and
+GitHub accounts, coordinated by an orchestrator agent. The accounts named Adam, Yousef, Malek, Haya, Salma, Basel and
+Talia, and the GitHub Apps ending in `-malek[bot]`, `-basel[bot]`, `-haya[bot]` and `-yousef-docs[bot]`, are AI agents,
+not people. The only human is the repository owner, Ahmed Oraby: he set the goals, made the decisions, reviewed the
+work and approved and merged what shipped.
+
+Each agent, its role and what it did, and the step-by-step path of a ticket from Jira to production (handoffs, reviews
+and the automation behind each step), are on the Confluence page **«AI team & disclosure»** in the Smart Library space
+(page id 20283394; the space link is in the submission).
+
 ## Tests
 
 ```bash
