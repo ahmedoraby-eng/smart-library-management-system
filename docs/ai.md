@@ -232,7 +232,7 @@ Checked on the seed by `api/test/ai-cost.test.ts`, using the deterministic local
 ## Honest limits
 
 - The model is small (3B parameters). Reasons can be generic, and ranking quality varies between requests.
-- Vector search depends on short catalogue descriptions. With one or two sentences per book, "meaning" is thin, and the 0.5 similarity cut-off for bge is a starting value that needs tuning on real queries.
+- Vector search depends on short catalogue descriptions. With one or two sentences per book, "meaning" is thin, and the 0.72 similarity cut-off for bge is a starting value that needs tuning on real queries.
 - Without pgvector (CI, local), vector search is a brute-force scan, and the fake embedder only knows a handful of concepts. The HNSW path and the real model's quality are proven only on the deployed Worker (Neon).
 - Search is configured for English text (English stemming and a small English stop-word list). Requests in other languages work poorly.
 - The model only sees the 20 best candidates and 200 characters of each description.
