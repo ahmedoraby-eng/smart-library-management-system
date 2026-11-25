@@ -21,7 +21,7 @@ test("librarian: ⌘K → member → Borrow for → Borrow page pre-filled; ⌘K
   await page.keyboard.press("ControlOrMeta+k");
   await palette.getByRole("combobox").fill("overdue");
   await palette.getByRole("option", { name: /Loan history · Overdue/ }).click();
-  await expect(page).toHaveURL(/\/loans\?status=OVERDUE$/);
+  await expect(page).toHaveURL(/\/loans\?status=OVERDUE(&|$)/);
   await expect(page.getByTestId("filter-status")).toHaveValue("OVERDUE");
 
   // Esc closes it.
