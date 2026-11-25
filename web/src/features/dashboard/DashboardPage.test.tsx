@@ -126,9 +126,9 @@ describe("dashboard model", () => {
 
   it("SLM-16: Admin «Rebuild search index» runs the batches until done, waiting out the 2/min limit", async () => {
     const replies = [
-      { status: 200, body: { result: "partial", embeddedBooks: 16, reusedBooks: 0, upToDate: 0, remaining: 48 } },
+      { status: 200, body: { result: "partial", embeddedBooks: 16, reusedBooks: 0, upToDate: 0, remaining: 48, total: 64 } },
       { status: 429, body: { type: "about:blank", title: "x", status: 429, code: "RATE_LIMITED" }, headers: { "retry-after": "1" } },
-      { status: 200, body: { result: "done", embeddedBooks: 16, reusedBooks: 32, upToDate: 16, remaining: 0 } },
+      { status: 200, body: { result: "done", embeddedBooks: 16, reusedBooks: 32, upToDate: 16, remaining: 0, total: 64 } },
     ];
     const posts: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
@@ -146,6 +146,13 @@ describe("dashboard model", () => {
     await renderWithProviders(<DashboardPage />);
     await userEvent.click(await screen.findByTestId("rebuild-index"));
     expect(screen.getByTestId("rebuild-index")).toBeDisabled();
+    // After the first batch: a determinate bar with count and percentage, then a countdown while the limit holds it.
+    const bar = await screen.findByRole("progressbar", { name: "Rebuilding the search index" });
+    await screen.findByText(/16 of 64 books · 25%/);
+    expect(bar).toHaveAttribute("aria-valuenow", "16");
+    expect(bar).toHaveAttribute("aria-valuemax", "64");
+    expect(await screen.findByTestId("rebuild-index-wait")).toHaveTextContent("next batch in 1s");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "16"); // kept during the wait, not reset
     expect(await screen.findByText("The search index is up to date.", {}, { timeout: 4000 })).toBeInTheDocument();
     expect(posts).toHaveLength(3);
     expect(screen.getByTestId("rebuild-index")).toBeEnabled();

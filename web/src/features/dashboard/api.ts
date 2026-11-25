@@ -21,6 +21,8 @@ export interface ReindexBatch {
   reusedBooks: number;
   upToDate: number;
   remaining: number;
+  /** Live books; done = total − remaining. */
+  total: number;
 }
 
 export const reindexBatch = () => api<ReindexBatch>("/admin/discovery/reindex", { method: "POST", body: {} });
