@@ -108,9 +108,11 @@ Talia, and the GitHub Apps ending in `-malek[bot]`, `-basel[bot]`, `-haya[bot]` 
 not people. The only human is the repository owner, Ahmed Oraby: he set the goals, made the decisions, reviewed the
 work and approved and merged what shipped.
 
-Each agent, its role and what it did, and the step-by-step path of a ticket from Jira to production (handoffs, reviews
-and the automation behind each step), are on the Confluence page **«AI team & disclosure»** in the Smart Library space
-(page id 20283394; the space link is in the submission).
+Read more:
+
+- [docs/ai-team.md](docs/ai-team.md): each agent, its role, what it did and its accounts, and what only the owner does.
+- [docs/how-it-works.md](docs/how-it-works.md): the step-by-step path of a ticket from Jira to production, with a
+  diagram: handoffs, reviews, and the automation behind each step.
 
 ## Tests
 
