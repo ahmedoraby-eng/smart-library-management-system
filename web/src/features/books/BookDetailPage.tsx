@@ -22,6 +22,7 @@ import { useCan } from "../auth/session";
 import { useBook } from "./api";
 import { BookCover } from "./BookCover";
 import { DeleteBookDialog } from "./DeleteBookDialog";
+import { SimilarBooks } from "./SimilarBooks";
 import { formatDay } from "../../lib/format";
 import { BookLoans } from "../circulation/BookLoans";
 
@@ -213,6 +214,9 @@ function BookDetail({ book }: { book: BookDto }) {
           </CardBody>
         </Card>
       </div>
+
+      {/* SLM-19: archived books have no index entry, so there is nothing to ask for. */}
+      {!book.archived && <SimilarBooks bookId={book.id} />}
 
       {deleting && (
         <DeleteBookDialog book={book} onClose={() => setDeleting(false)} onDone={() => setDeleting(false)} />
