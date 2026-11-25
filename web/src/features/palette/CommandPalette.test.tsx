@@ -299,6 +299,43 @@ describe("SLM-20 command palette", () => {
     }
   });
 
+  it("D-45-1 Enter right after retyping never opens the previous query's hit (debounce, then request in flight)", async () => {
+    const { user, router, fetchMock } = await openApp();
+    await user.keyboard("{Meta>}k{/Meta}");
+    const input = screen.getByTestId("palette-input");
+    await user.type(input, "sara");
+    await screen.findByText("Borrow for Sara Haddad");
+
+    // The new query's search hangs until we answer it.
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((r) => (answer = r));
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+      const u = new URL(input, "http://localhost");
+      if (u.pathname !== "/api/members" && u.pathname !== "/api/books") return original(input, init);
+      await answered;
+      return new Response(JSON.stringify(page([])), { status: 200, headers: { "content-type": "application/json" } });
+    });
+
+    // 1. Within the 200 ms debounce: the old hits are gone at once, Enter does nothing.
+    fireEvent.change(input, { target: { value: "clean code" } });
+    expect(optionLabels()).toEqual([]);
+    await user.keyboard("{Enter}");
+    expect(router.state.location.pathname).toBe("/dashboard");
+
+    // 2. Debounce settled, request in flight (the hook keeps the old data as a placeholder): still nothing to open.
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes("q=clean+code"))).toBe(true));
+    expect(optionLabels()).toEqual([]);
+    expect(screen.queryByTestId("palette-empty")).not.toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(router.state.location.pathname).toBe("/dashboard");
+
+    // 3. The answer arrives: the empty state for what was typed.
+    answer();
+    expect(await screen.findByTestId("palette-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+  });
+
   it("Enter with nothing to open does nothing", async () => {
     const { user, router, fetchMock } = await openApp();
     await user.keyboard("{Meta>}k{/Meta}");

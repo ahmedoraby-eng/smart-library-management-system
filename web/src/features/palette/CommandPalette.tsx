@@ -204,9 +204,14 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   // A role without the read permission sends no request (an empty query disables the hook).
   const members = useMemberSearch(can("MEMBER_READ") ? q : "");
   const books = useBookSearch(can("BOOK_READ") ? q : "");
-  const memberHits = q ? (members.data?.items ?? []).slice(0, MAX_RESULTS) : [];
-  const bookHits = q ? (books.data?.items ?? []).slice(0, MAX_RESULTS) : [];
-  const loading = Boolean(q) && (members.isFetching || books.isFetching);
+  // Only hits for what is typed now (D-45-1): while the debounce settles, or while a new query is still in flight
+  // (the hooks keep the previous data as a placeholder), the old hits are hidden so Enter can't open them.
+  const settled = q === text.trim();
+  const hitsOf = <T,>(r: { data?: { items: T[] }; isPlaceholderData: boolean }) =>
+    q && settled && !r.isPlaceholderData ? (r.data?.items ?? []).slice(0, MAX_RESULTS) : [];
+  const memberHits = hitsOf(members);
+  const bookHits = hitsOf(books);
+  const loading = Boolean(text.trim()) && (!settled || members.isFetching || books.isFetching);
 
   const actions: Item[] = ACTIONS.filter(
     (a) => (!a.needs || can(a.needs)) && matches(text.trim(), `${a.label} ${a.keywords ?? ""}`),
@@ -371,7 +376,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
               </div>
             );
           })}
-          {items.length === 0 && !loading && text.trim() === q && (
+          {items.length === 0 && !loading && (
             <p className="px-2.5 py-3 text-sm text-neutral-600" data-testid="palette-empty">
               No matches. Try a title, an author, a member's name or number.
             </p>
