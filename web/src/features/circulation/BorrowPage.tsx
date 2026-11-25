@@ -71,8 +71,12 @@ export function BorrowPage() {
   useEffect(() => {
     if (prefMember.data) setMember(prefMember.data);
   }, [prefMember.data]);
+  // Once per ?book= id: a borrow re-reads the books, and the refetched detail must not put the book back.
+  const prefilledBook = useRef<string | null>(null);
   useEffect(() => {
-    if (prefBook.data && !prefBook.data.archived) setBook(prefBook.data);
+    if (!prefBook.data || prefBook.data.archived || prefilledBook.current === prefBook.data.id) return;
+    prefilledBook.current = prefBook.data.id;
+    setBook(prefBook.data);
   }, [prefBook.data]);
 
   // Initial focus: the first empty field (ux.md §4.1 keyboard flow).
