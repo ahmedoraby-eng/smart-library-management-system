@@ -41,8 +41,8 @@ test("librarian adds a book, borrows it for a member, returns it", async ({ page
   await page.getByTestId("return-dialog").getByRole("button", { name: "Confirm return" }).click();
   await expect(loan).toHaveCount(0);
 
-  // Loan history shows it as Returned
-  await page.getByRole("link", { name: "Loan history" }).click();
+  // Loan history shows it as Returned (the sidebar link: the emptied Return list also offers "Open Loan history")
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Loan history" }).click();
   await page.getByTestId("loan-search").fill(title);
   const row = page.getByTestId("history-row").filter({ hasText: title });
   await expect(row).toHaveCount(1);
