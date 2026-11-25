@@ -11,9 +11,9 @@ export interface ValidatedOutput {
 }
 
 // Control characters are stripped on purpose: model output must not reach the UI with them.
-// eslint-disable-next-line no-control-regex
 const clean = (s: string, max: number) =>
   s
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
