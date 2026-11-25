@@ -2,6 +2,7 @@ import type { LoanDto } from "@slm/contracts";
 import { useState } from "react";
 import { Badge, Button, InlineAlert, useToast } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
+import { cn } from "../../lib/cn";
 import { formatDate } from "../../lib/format";
 import { useRenew } from "./api";
 
@@ -55,10 +56,12 @@ export function RenewButton({
   loan,
   pending,
   onRenew,
+  className,
 }: {
   loan: LoanDto;
   pending: boolean;
   onRenew: (loan: LoanDto) => void;
+  className?: string;
 }) {
   const block = renewBlock(loan);
   const button = (
@@ -71,13 +74,14 @@ export function RenewButton({
       aria-label={`Renew ${loan.book.title} for ${loan.member.fullName}`}
       aria-describedby={block ? `renew-block-${loan.id}` : undefined}
       data-testid="renew-button"
+      className={block ? undefined : className}
     >
       Renew
     </Button>
   );
   if (!block) return button;
   return (
-    <span className="inline-block" title={block} data-testid="renew-blocked">
+    <span className={cn("inline-block", className)} title={block} data-testid="renew-blocked">
       {button}
       <span id={`renew-block-${loan.id}`} className="sr-only">
         {block}
@@ -87,13 +91,13 @@ export function RenewButton({
 }
 
 /** «Renewed» marker next to the status badge. */
-export function RenewedBadge({ loan }: { loan: Pick<LoanDto, "renewedAt"> }) {
+export function RenewedBadge({ loan, className = "ml-1.5" }: { loan: Pick<LoanDto, "renewedAt">; className?: string }) {
   if (!loan.renewedAt) return null;
   return (
     <Badge
       variant="brand"
       dot={false}
-      className="ml-1.5"
+      className={className}
       title={`Renewed on ${formatDate(loan.renewedAt)}`}
       data-testid="renewed-badge"
     >

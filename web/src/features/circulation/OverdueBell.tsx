@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { BellIcon } from "../../components/ui";
-import { cn } from "../../lib/cn";
 import { useLoans } from "./api";
 import { overdueDays } from "./loanFormat";
 
@@ -13,7 +12,7 @@ const TOP = 5;
  * return or borrow refreshes it with the lists. The popover lists the top five, each linking to Loan history
  * scoped to that member and book, plus «View all overdue». Esc closes it and returns focus to the bell.
  */
-export function OverdueBell({ className }: { className?: string }) {
+export function OverdueBell() {
   const overdue = useLoans({ status: "OVERDUE", size: TOP });
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -54,7 +53,7 @@ export function OverdueBell({ className }: { className?: string }) {
   return (
     <div
       ref={box}
-      className={cn("relative", className)}
+      className="relative"
       onKeyDown={onKeyDown}
       onBlur={(e) => {
         // Tabbing out closes it; a click outside is the mousedown handler's.

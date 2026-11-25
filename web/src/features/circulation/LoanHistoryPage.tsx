@@ -233,11 +233,6 @@ export function LoanHistoryPage() {
                     />
                     <Th>Status</Th>
                     <Th className="max-lg:hidden">Processed by</Th>
-                    {canRenew && (
-                      <Th align="right" kind="actions">
-                        <span className="sr-only">Actions</span>
-                      </Th>
-                    )}
                   </tr>
                 </Thead>
                 <tbody>
@@ -272,7 +267,11 @@ function LoanRow({
 }: {
   loan: LoanDto;
   onMember: (memberId: string) => void;
-  /** Present for roles that may renew; a returned loan shows no button (nothing to renew). */
+  /**
+   * Present for roles that may renew; a returned loan shows no button (nothing to renew). [Renew] sits under
+   * the status badge, not in an actions column of its own: a 7th column made the table scroll sideways at
+   * 1280 px (D-46-2, SLM-7 AC4).
+   */
   renew?: { pending: boolean; onRenew: (loan: LoanDto) => void };
 }) {
   const overdue = loan.status === "OVERDUE";
@@ -312,17 +311,15 @@ function LoanRow({
         {loan.returnedAt ? formatDate(loan.returnedAt) : "—"}
       </Td>
       <Td kind="nowrap">
-        <LoanStatusBadge loan={loan} />
-        <RenewedBadge loan={loan} />
+        <div className="flex flex-col items-start gap-1">
+          <LoanStatusBadge loan={loan} />
+          <RenewedBadge loan={loan} className="ml-0" />
+          {renew && loan.status !== "RETURNED" && <RenewButton loan={loan} {...renew} className="-ml-3" />}
+        </div>
       </Td>
       <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>
         {loan.processedBy.name}
       </Td>
-      {renew && (
-        <Td align="right" kind="actions">
-          {loan.status !== "RETURNED" && <RenewButton loan={loan} {...renew} />}
-        </Td>
-      )}
     </Tr>
   );
 }

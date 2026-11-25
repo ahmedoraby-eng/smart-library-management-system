@@ -141,7 +141,12 @@ export function AppLayout() {
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
       </aside>
       <main className="relative min-w-0 flex-1 px-8 pt-7 pb-8" data-testid="main">
-        {can("LOAN_READ") && <OverdueBell className="absolute top-1 right-8" />}
+        {/* The slot is out of the flow (no layout shift); the bell's own box stays relative, so its popover opens under it (D-46-1). */}
+        {can("LOAN_READ") && (
+          <div className="absolute top-1 right-8 z-40" data-testid="overdue-bell-slot">
+            <OverdueBell />
+          </div>
+        )}
         <ThemeToggle className="absolute top-1 right-1.5" />
         <Outlet />
       </main>

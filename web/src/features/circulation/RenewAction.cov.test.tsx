@@ -181,6 +181,20 @@ describe("SLM-18 Renew in Loan history", () => {
     expect(await screen.findByTestId("toast")).toHaveTextContent(/^Renewed: Clean Code\. New due date: /);
   });
 
+  it("D-46-2 regression: Renew sits in the status cell, so a Librarian's table has the same 7 columns as a Supervisor's (no sideways scroll at 1280 px)", async () => {
+    await renderApp(
+      "/loans",
+      handler([loan("l1", { status: "OVERDUE", dueAt: new Date(Date.now() - 2 * DAY).toISOString() }), loan("l2")]),
+    );
+    const rows = await screen.findAllByTestId("history-row");
+    expect(screen.getAllByRole("columnheader")).toHaveLength(7);
+    for (const row of rows) {
+      expect(within(row).getAllByRole("cell")).toHaveLength(7);
+      const cell = within(row).getByTestId("renew-button").closest("td")!;
+      expect(cell).toContainElement(within(row).getByTestId("loan-status"));
+    }
+  });
+
   it("a refusal from Loan history shows inline above the table", async () => {
     const user = userEvent.setup();
     await renderApp(

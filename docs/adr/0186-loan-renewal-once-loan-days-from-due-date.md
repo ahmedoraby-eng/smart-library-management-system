@@ -1,9 +1,9 @@
 # 0186. Loan renewal: once, by LOAN_DAYS from the current due date, recorded in `renewed_at`/`renewed_by`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-25
 - **Area:** data
-- **Deciders:** Engineering (SLM-18); architecture review on the PR
+- **Deciders:** Ahmed Oraby (owner), architecture review (Yousef)
 
 ## Context
 
@@ -32,4 +32,4 @@ SLM-18 adds renewal as a demo extra: a Librarian or Admin extends an open loan t
 
 ## Sources
 
-Public: Jira SLM-18 (loan renewal and overdue alerts); this PR.
+Public: Jira SLM-18 (loan renewal and overdue alerts); PR #46 (architecture review approved at aac7040).
