@@ -22,6 +22,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
 import { useMe } from "../features/auth/session";
+import { CommandPalette } from "../features/palette/CommandPalette";
 
 type NavTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
 interface NavItem {
@@ -128,6 +129,7 @@ export function AppLayout() {
             Smart <i className="text-brass-200 plain:not-italic plain:text-inherit">Library</i>
           </span>
         </div>
+        <CommandPalette />
         <nav aria-label="Main" className="flex flex-col gap-0.5">
           {items.map((i) => (
             <NavLink key={i.to} item={i} />
