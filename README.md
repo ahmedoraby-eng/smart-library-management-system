@@ -96,7 +96,7 @@ Bonus and extras:
 | AI | Workers AI ranks real catalogue candidates; the app falls back to deterministic results if the AI isn't available |
 | Tests | Vitest on real PostgreSQL 16 (API), Vitest with Testing Library (UI), and a local Playwright smoke (`npm run e2e`) |
 
-More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md).
+More detail: [docs/architecture.md](docs/architecture.md) and [docs/ai.md](docs/ai.md). Why each choice was made: the [decision register](docs/decisions.md) (ADRs in [docs/adr/](docs/adr/)).
 
 ## Tests
 
@@ -161,5 +161,5 @@ migrations/     versioned SQL: 0001_init (schema, constraints), 0002_search (ful
 seed/           demo data (public book metadata, fictional members)
 web/            React SPA (features/, components/, routes/) with component tests
 scripts/        migrate, seed, local Postgres, demo-local
-docs/           architecture.md, ai.md
+docs/           architecture.md, ai.md, decisions.md (register), adr/ (one file per decision)
 ```

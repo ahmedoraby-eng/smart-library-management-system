@@ -64,6 +64,8 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ## Domain model and invariants
 
+![Data model on main: staff_users, members, loans and books; book_chunks (the AI search index); ai_usage and ai_cache (AI cost controls)](img/data-model.png)
+
 Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`.
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
@@ -146,24 +148,15 @@ The permission lists are in `contracts/src/auth.ts`. Every protected route decla
 
 ## Key decisions
 
-| Decision | Reason |
-|---|---|
-| PostgreSQL, not a key-value store or D1 | Real transactions, constraints and full-text search, so inventory consistency is guaranteed by the database. |
-| One Worker, one URL | The SPA and the API share an origin: no CORS, one deploy, one link for reviewers. |
-| Modular monolith with enforced layers | One deployable, clear seams, and the rules are checked in CI, not just written down. |
-| Copies as counts, with guarded updates | The simplest model that fits the brief, made race-safe by row locks and `CHECK` constraints. |
-| Loan status derived at read time | No job to flip statuses and no way for stored status and dates to disagree. |
-| Archive instead of delete when history exists | Loan history stays complete and readable. |
-| Hand-written SQL migrations with Drizzle for typed queries | The SQL that protects stock stays visible and reviewable. A parity test checks the Drizzle schema against the migrations. |
-| zod contracts shared by API and UI | One definition of every request and response. |
-| Problem Details errors with stable codes | The UI shows specific messages (for example, loan limit reached) without parsing text. |
-| Sign-in handled in the app, not by an access proxy | A reviewer can use a shared demo identity, and roles live in our database. |
-| Roles read from the database each request | Role changes and disables take effect at once. |
-| No role switcher in the UI | It would be a privilege-escalation path in a public app. Reviewers use the demo accounts instead. |
-| Demo credentials in Worker secrets | Nothing sensitive in the repository. |
-| Nightly demo reset | Reviewer edits never degrade the demo. Staff accounts are kept. |
-| AI behind an interface, validated, with a fallback | The catalogue stays the source of truth, and core flows never depend on AI. See [ai.md](ai.md). |
-| Staff-facing app | Every required feature is an operator action. |
+Every decision taken so far (183 on 2026-11-25), with the options we weighed and what we gave up, is an ADR in [`adr/`](adr/), listed in the [decision register](decisions.md). The main ones:
+
+- Stack: TypeScript, Hono on Workers, PostgreSQL 16 ([ADR-0002](adr/0002-stack-typescript-hono-workers-postgres.md)).
+- Modular monolith with layers enforced in CI ([ADR-0004](adr/0004-modular-monolith-enforced-layers.md)).
+- Copies as counts, with guarded updates in one transaction ([ADR-0006](adr/0006-copies-as-counts-guarded-updates.md)).
+- Sign-in: Google OIDC plus demo accounts ([ADR-0009](adr/0009-google-oidc-and-demo-accounts.md)); roles read on every request ([ADR-0011](adr/0011-roles-read-per-request.md)).
+- AI: the model only ranks, behind a validator and a fallback ([ADR-0013](adr/0013-llm-ranks-only-validator-fallback.md)); hybrid retrieval ([ADR-0016](adr/0016-hybrid-retrieval-rrf.md)); cost tiers ([ADR-0019](adr/0019-ai-cost-tiers-and-quotas.md)).
+- Deploy: Workers Builds, with migrations behind a gate ([ADR-0022](adr/0022-workers-builds-auto-deploy.md)).
+- Rate limiting: Workers bindings with an in-memory fallback ([ADR-0103](adr/0103-rate-limiting.md)).
 
 ## Deployment
 
