@@ -61,7 +61,7 @@ api  →  application  →  domain  ←  infrastructure
 
 `contracts/` holds the zod schemas, the role and permission lists, and error codes. The API validates with them and the UI imports the same types, so the two sides can't drift.
 
-The web app (`web/src`) is organised by feature (`books`, `circulation`, `members`, `dashboard`, `discovery`, `staff`, `auth`). Filters, sort and page live in the URL (TanStack Router). Server data goes through TanStack Query. The UI reads the user's permissions from `GET /api/me` to show or hide actions; the API enforces them anyway.
+The web app (`web/src`) is organised by feature (`books`, `circulation`, `members`, `dashboard`, `discovery`, `staff`, `auth`, and `palette`, the ⌘K / Ctrl K command palette mounted in the shell). Filters, sort and page live in the URL (TanStack Router). Server data goes through TanStack Query. The UI reads the user's permissions from `GET /api/me` to show or hide actions; the API enforces them anyway.
 
 ## Domain model and invariants
 
@@ -120,6 +120,7 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
 | `GET /ai/quota` | A, L, S | AI-assisted searches left today |
+| `GET /books/:id/similar` | A, L, S | More like this: up to 4 books closest in meaning (stored vectors, no model call) |
 | `GET /admin/discovery/usage`, `POST /admin/discovery/reindex` | A | AI usage today; rebuild the search index batch by batch |
 | `GET /staff-users`, `PUT /staff-users/:id` | A | Staff management |
 | `POST /admin/reset-demo` | A | Restore demo data |

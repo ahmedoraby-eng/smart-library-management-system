@@ -114,6 +114,7 @@ describe("services built with their defaults", () => {
         return 0;
       },
       nearest: async () => [],
+      similarTo: async () => [],
       usesPgvector: async () => false,
     });
     const embedder: Embedder = {
