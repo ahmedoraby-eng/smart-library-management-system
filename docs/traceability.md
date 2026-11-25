@@ -2,7 +2,7 @@
 
 Every requirement of the assessment, traced to its Jira story, the merged pull request(s) that built it, the tests that prove it, the CI run that ran those tests, and an honest status.
 
-- **Owner:** product owner. **Filled:** 25/11/2026 against `main` at `d6de6ce`.
+- **Owner:** product owner. **Filled:** 25/11/2026 against `main` at `d6de6ce`; Google sign-in rows updated the same evening after [#43][pr43] went live (`main` at `935735e`).
 - **Statuses:** **Done** (built, merged and proven by a test that runs in CI, or checked live where stated) · **Partial** (part of it is missing or not yet verified; the row says what) · **Not done** (not on `main` yet) · **Descoped** (left out on purpose, with the reason). None of the rows is descoped.
 - **Terminology.** The assessment says *checked in* = borrowed and *checked out* = returned. The app uses only **Borrow Book** (`POST /api/loans/borrow`) and **Return Book** (`POST /api/loans/{id}/return`).
 - **Jira:** project `SLM`. Epics: `SLM-14` (core, the assessment minimum) and `SLM-15` (bonus items). Out of scope on purpose: payments, fees and fines, a member portal, reservations ([ADR-0029](adr/0029-out-scope-payments-fees-member-portal-reservations.md)).
@@ -20,7 +20,7 @@ All tests below run in CI on every pull request and on every push to `main`. Las
 
 Test names below are the `it(...)` titles, shortened. API tests live in `api/test/`, UI tests in `web/src/**`, E2E in `e2e/`.
 
-## Live checks (25/11/2026, 14:33 UTC)
+## Live checks (25/11/2026, 14:33 UTC; Google rows 16:40 UTC)
 
 Public endpoints of https://smart-library.ahmedoraby.workers.dev, checked from the command line:
 
@@ -30,7 +30,10 @@ Public endpoints of https://smart-library.ahmedoraby.workers.dev, checked from t
 | `GET /api/health` | `{"status":"ok"}` |
 | `GET /api/health?deep=1` | `{"status":"ok","db":"ok","vector":"hnsw"}` (database and vector index reachable) |
 | `GET /api/books` without a session | 401 (routes are protected) |
-| `GET /api/auth/providers` | `{"google":false,"demo":true}`: demo sign-in is on, **Google sign-in is not configured on the live site yet** |
+| `GET /api/auth/providers` | `{"google":true,"demo":true}`: Google sign-in and demo sign-in are both on |
+| `GET /api/auth/google/start` | 302 to `accounts.google.com` with the production client id, PKCE S256, state and nonce |
+
+Google sign-in was also checked live by QA on 25/11 at about 18:30 Cairo time (Jira SLM-8): start and callback, forged or missing state and tampered cookies refused with no session, rate limits on start and callback, protected routes 401 without a session. The owner then signed in with a real Google account on the live site and was made Admin through Staff users.
 
 The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book; SLM-10 AC3) is **not recorded yet**. The same flows pass in the `e2e` job against the build of every commit.
 
@@ -45,7 +48,7 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | O-5 | Requirements | «Provide your source code and a brief README explaining how to run it.» | SLM-6 | R-G3, R-G4 | **Done** |
 | O-6 | Bonus | «Deploy the app and provide a URL for live testing.» | SLM-10, SLM-11 | R-X1–X3 | **Partial**: deployed and healthy; the README link and the signed-in live smoke are pending |
 | O-7 | Bonus | «Use Loom or other video software to record a demo of the app.» | SLM-11, SLM-17 | R-X4, R-X5 | **Not done**: the recording is in progress |
-| O-8 | Bonus | «Add an authentication system with SSO, preferably with different user roles and permissions.» | SLM-8 | R-X6–X9 | **Partial**: auth and roles done; Google SSO code merged, live verification pending |
+| O-8 | Bonus | «Add an authentication system with SSO, preferably with different user roles and permissions.» | SLM-8 | R-X6–X9 | **Partial**: auth, roles and Google SSO are live and verified; only the public `/privacy` page for the Google consent screen is pending (open PR [#44][pr44]) |
 | O-9 | Bonus | «Implement any AI features you can think of.» | SLM-9, SLM-16 | R-X10 | **Done** |
 | O-10 | Bonus | «Add extra features as you see fit, to demonstrate your creativity.» | SLM-12, SLM-13 | R-X11 | **Done** |
 | O-11 | Evaluation | «Completeness: Does the product work and cover the core features?» | SLM-1–SLM-7 | R-E1 | **Done** |
@@ -123,7 +126,7 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | R-X4 | Demo recording | SLM-11, SLM-17 | none merged | the captioned walkthrough is open PR [#38][pr38]; the voice-over is SLM-17 (Refinement) | — | **Not done** |
 | R-X5 | Recording URL provided | SLM-11 | none merged | README still shows `<VIDEO_URL>` | — | **Not done** |
 | R-X6 | Authentication | SLM-8, SLM-6 | [#1][pr1], [#12][pr12], [#15][pr15] | `skeleton.test.ts` «SL-08 demo accounts» (HttpOnly cookie, same 401 for wrong password and unknown email, 6th attempt → 429, logout), «no header or flag signs anyone in (no bypass)», «writes from another origin are refused (CSRF)»; `rbac-matrix.test.ts` «session-cookie-flags: missing, malformed, tampered, expired, foreign-secret or wrong-alg cookies → 401»; `e2e/*` sign in as each role | ci, e2e | **Done** |
-| R-X7 | SSO (Google) | SLM-8 | [#12][pr12], [#15][pr15] | `google-auth.test.ts` (OIDC with PKCE S256, state, nonce, ID-token verification with a local key pair, unverified email refused, open-redirect guard, demo emails refused, `sub` binding, rate limits); `SignInPage.test.tsx` «shows Google + divider when configured…». **Gap:** code merged and tested with a faked Google boundary; live verification pending: the live site reports `"google":false` (not configured). SLM-8 is In Testing | ci | **Partial** |
+| R-X7 | SSO (Google) | SLM-8 | [#12][pr12], [#15][pr15], [#43][pr43] | `google-auth.test.ts` (OIDC with PKCE S256, state, nonce, ID-token verification with a local key pair, unverified email refused, open-redirect guard, demo emails refused, `sub` binding, rate limits); `SignInPage.test.tsx` «shows Google + divider when configured…». **Live:** production Google client merged in [#43][pr43]; live checks above and QA on the live site passed; a real Google sign-in on the live site worked (25/11). **Gap:** the public `/privacy` page for the Google consent screen is open PR [#44][pr44]; this row moves to Done when it merges. SLM-8 is In Testing until then | ci, live | **Partial** |
 | R-X8 | Different roles and permissions | SLM-8 | [#1][pr1], [#12][pr12], [#15][pr15] | Admin, Librarian, Supervisor ([ADR-0172](adr/0172-rbac-matrix-test-covers-every-role-every.md)); `rbac-matrix.test.ts` «every registered route has a row, and every row a route», one case per role × route; `staff-users.test.ts` role change, disable, last Admin, demo rows protected; `e2e/2-supervisor.e2e.ts` «supervisor is read-only» | ci, e2e | **Done** |
 | R-X9 | Authorisation enforced by the API (403 on a direct call) | SLM-8 | [#12][pr12], [#15][pr15] | `rbac-matrix.test.ts` role × route cases, «a validly signed cookie that claims role=ADMIN for a Supervisor is still a Supervisor»; `skeleton.test.ts` «role and permissions come from the database on every request», «a disabled staff user gets 403 USER_DISABLED»; 403 cases in `circulation.test.ts`, `members.test.ts`, `catalog.test.ts`, `staff-users.test.ts`, `isbn-lookup.test.ts` | ci | **Done** |
 | R-X10 | An AI feature that helps the real library workflow | SLM-9, SLM-16 | [#4][pr4] via [#6][pr6], [#19][pr19], [#20][pr20], [#21][pr21] | `discovery.test.ts` «SLM-9 AC1 up to 5 real catalog books…», «SLM-9 AC2 a book id the model invented … is dropped», «SLM-9 AC3 availability always comes from the database», «SLM-9 AC5 provider error / timeout / invalid JSON → fallback», «prompt injection in the request still returns only catalog books», AC6 limits, AC8 logging; `hybrid-retrieval.test.ts` (chunking, RRF, pgvector, fallbacks); `ai-cost.test.ts` (cache, quota, daily cap, tiers); `DiscoveryPage.test.tsx`; [docs/ai.md](ai.md); live `vector: hnsw` | ci, live | **Done** |
@@ -151,7 +154,7 @@ Every minimum feature (O-1 to O-5) is Done. What is left is in the bonus items a
 1. **Live URL in the README** (R-X2): open PR [#39][pr39].
 2. **Signed-in smoke on the live URL** (R-X3, SLM-10 AC3): sign in, search, Borrow Book, Return Book on the live site, then record the date and result here.
 3. **Demo recording and its URL** (R-X4, R-X5): open PR [#38][pr38] and SLM-17.
-4. **Google SSO on the live site** (R-X7): configure the Google client on the deployment and verify a real sign-in.
+4. **Privacy page for Google sign-in** (R-X7): open PR [#44][pr44]. Google sign-in itself is live and verified.
 5. **Accessibility and viewport checks** (R-E4): an automated axe and viewport pass, or a recorded manual pass, for SLM-7 AC4 and AC5.
 
 This file is updated when any of these lands.
@@ -189,3 +192,5 @@ This file is updated when any of these lands.
 [pr35]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/35
 [pr38]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/38
 [pr39]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/39
+[pr43]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/43
+[pr44]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/44
