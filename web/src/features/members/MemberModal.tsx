@@ -5,10 +5,17 @@ import { ApiError, api } from "../../lib/apiClient";
 import { useSaveMember } from "./api";
 import { DeactivateDialog } from "./DeactivateDialog";
 import {
-  emptyValues, FIELD_ORDER, isDirty, type MemberField, type MemberFormValues, valuesFromMember, validateMember,
+  emptyValues,
+  FIELD_ORDER,
+  isDirty,
+  type MemberField,
+  type MemberFormValues,
+  valuesFromMember,
+  validateMember,
 } from "./memberFormModel";
 
-const STALE_MESSAGE = "Someone else changed this member while you were editing. Reload to see their version; your changes are not saved.";
+const STALE_MESSAGE =
+  "Someone else changed this member while you were editing. Reload to see their version; your changes are not saved.";
 const FORM_ID = "member-form";
 
 type ServerErrors = Partial<Record<MemberField, ReactNode>>;
@@ -18,7 +25,15 @@ type ServerErrors = Partial<Record<MemberField, ReactNode>>;
  * MemberInputSchema; server errors map onto the same fields (DUPLICATE_EMAIL → Email).
  * Edit pins the snapshot (and its version) it was opened with until the user reloads after a conflict.
  */
-export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; onClose: () => void; onSaved?: (m: MemberDto) => void }) {
+export function MemberModal({
+  member,
+  onClose,
+  onSaved,
+}: {
+  member?: MemberDto;
+  onClose: () => void;
+  onSaved?: (m: MemberDto) => void;
+}) {
   const toast = useToast();
   const [snapshot, setSnapshot] = useState(member);
   const initial = useMemo(() => (snapshot ? valuesFromMember(snapshot) : emptyValues), [snapshot]);
@@ -40,7 +55,8 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
     setServerErrors((s) => (s[field] ? { ...s, [field]: undefined } : s));
   };
   const blur = (field: MemberField) => () => setTouched((t) => ({ ...t, [field]: true }));
-  const errorOf = (field: MemberField): ReactNode => serverErrors[field] ?? (touched[field] || submitted ? errors[field] : undefined);
+  const errorOf = (field: MemberField): ReactNode =>
+    serverErrors[field] ?? (touched[field] || submitted ? errors[field] : undefined);
   const props = (field: Exclude<MemberField, "status">) => ({
     id: `member-${field}`,
     name: field,
@@ -69,7 +85,8 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
           else rest ??= e.message;
         }
         setServerErrors(next);
-        if (rest || Object.keys(next).length === 0) setGeneral(rest ?? err.problem.detail ?? "Check the highlighted fields and try again.");
+        if (rest || Object.keys(next).length === 0)
+          setGeneral(rest ?? err.problem.detail ?? "Check the highlighted fields and try again.");
         const first = FIELD_ORDER.find((f) => next[f]);
         if (first) focusField(first);
         return;
@@ -82,7 +99,8 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
       case "NOT_FOUND":
         return setGeneral("This member no longer exists. Close this window and refresh the list.");
       default:
-        if (err.status !== 401 && err.status !== 403) setGeneral("Couldn't save the member. Nothing was saved. Try again.");
+        if (err.status !== 401 && err.status !== 403)
+          setGeneral("Couldn't save the member. Nothing was saved. Try again.");
     }
   };
 
@@ -144,13 +162,28 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
             <Button onClick={onClose} disabled={save.isPending} data-testid="cancel-member">
               Cancel
             </Button>
-            <Button type="submit" form={FORM_ID} variant="primary" loading={save.isPending && !confirming} disabled={stale} data-testid="save-member">
+            <Button
+              type="submit"
+              form={FORM_ID}
+              variant="primary"
+              loading={save.isPending && !confirming}
+              disabled={stale}
+              data-testid="save-member"
+            >
               {snapshot ? "Save changes" : "Add member"}
             </Button>
           </>
         }
       >
-        <form id={FORM_ID} onSubmit={submit} noValidate className="flex flex-col gap-4" aria-label={snapshot ? "Edit member" : "Add member"} data-testid="member-form" data-dirty={dirty || undefined}>
+        <form
+          id={FORM_ID}
+          onSubmit={submit}
+          noValidate
+          className="flex flex-col gap-4"
+          aria-label={snapshot ? "Edit member" : "Add member"}
+          data-testid="member-form"
+          data-dirty={dirty || undefined}
+        >
           {snapshot && (
             <p className="text-sm text-neutral-600" data-testid="member-number">
               Member no. <span className="font-semibold tabular-nums text-neutral-800">{snapshot.memberNumber}</span>
@@ -173,7 +206,15 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
             </Select>
           )}
           {stale && (
-            <InlineAlert variant="danger" testId="stale-notice" action={<Button size="sm" loading={reloading} onClick={() => void reload()} data-testid="reload-member">Reload</Button>}>
+            <InlineAlert
+              variant="danger"
+              testId="stale-notice"
+              action={
+                <Button size="sm" loading={reloading} onClick={() => void reload()} data-testid="reload-member">
+                  Reload
+                </Button>
+              }
+            >
               {STALE_MESSAGE}
             </InlineAlert>
           )}
@@ -185,7 +226,12 @@ export function MemberModal({ member, onClose, onSaved }: { member?: MemberDto; 
         </form>
       </Modal>
       {confirming && snapshot && (
-        <DeactivateDialog name={snapshot.fullName} loading={save.isPending} onCancel={() => setConfirming(false)} onConfirm={() => void doSave()} />
+        <DeactivateDialog
+          name={snapshot.fullName}
+          loading={save.isPending}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => void doSave()}
+        />
       )}
     </>
   );

@@ -13,7 +13,8 @@ export function useAiQuota() {
 export function useDiscover() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: DiscoveryRequest) => api<DiscoveryResponse>("/ai/book-discovery", { method: "POST", body: input }),
+    mutationFn: (input: DiscoveryRequest) =>
+      api<DiscoveryResponse>("/ai/book-discovery", { method: "POST", body: input }),
     // Each answer carries the searches left after it, so the counter updates without another request.
     onSuccess: (data) => {
       if (data.aiSearches) queryClient.setQueryData(aiQuotaKey, data.aiSearches);

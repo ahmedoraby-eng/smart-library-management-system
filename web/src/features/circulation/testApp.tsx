@@ -10,8 +10,12 @@ import { router as appRouter } from "../../routes/router";
 type Handler = (req: { method: string; url: URL; body: unknown }) => { status?: number; body: unknown } | undefined;
 
 export const librarian: Me = {
-  id: "s1", email: "layla@library.test", fullName: "Layla Librarian", role: "LIBRARIAN",
-  permissions: [...ROLE_PERMISSIONS.LIBRARIAN], isDemo: false,
+  id: "s1",
+  email: "layla@library.test",
+  fullName: "Layla Librarian",
+  role: "LIBRARIAN",
+  permissions: [...ROLE_PERMISSIONS.LIBRARIAN],
+  isDemo: false,
 };
 
 /**
@@ -24,8 +28,14 @@ export async function renderApp(url: string, handler: Handler, me: Me = libraria
     const method = init?.method ?? "GET";
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     const hit = handler({ method, url: u, body }) ?? (u.pathname === "/api/me" ? { body: me } : undefined);
-    if (!hit) return new Response(JSON.stringify({ type: "about:blank", title: "nf", status: 404, code: "NOT_FOUND" }), { status: 404 });
-    return new Response(JSON.stringify(hit.body), { status: hit.status ?? 200, headers: { "content-type": "application/json" } });
+    if (!hit)
+      return new Response(JSON.stringify({ type: "about:blank", title: "nf", status: 404, code: "NOT_FOUND" }), {
+        status: 404,
+      });
+    return new Response(JSON.stringify(hit.body), {
+      status: hit.status ?? 200,
+      headers: { "content-type": "application/json" },
+    });
   });
   vi.stubGlobal("fetch", fetchMock);
   const router = createRouter({ ...appRouter.options, history: createMemoryHistory({ initialEntries: [url] }) });

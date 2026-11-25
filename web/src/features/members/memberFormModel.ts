@@ -15,15 +15,24 @@ export const FIELD_ORDER: MemberField[] = ["fullName", "email", "phone", "status
 
 export const emptyValues: MemberFormValues = { fullName: "", email: "", phone: "", status: "ACTIVE" };
 
-export const valuesFromMember = (m: MemberDto): MemberFormValues => ({ fullName: m.fullName, email: m.email, phone: m.phone ?? "", status: m.status });
+export const valuesFromMember = (m: MemberDto): MemberFormValues => ({
+  fullName: m.fullName,
+  email: m.email,
+  phone: m.phone ?? "",
+  status: m.status,
+});
 
-export function validateMember(v: MemberFormValues): { data: (MemberInput & { status: MemberStatus }) | null; errors: MemberFormErrors } {
+export function validateMember(v: MemberFormValues): {
+  data: (MemberInput & { status: MemberStatus }) | null;
+  errors: MemberFormErrors;
+} {
   const r = MemberInputSchema.safeParse({ fullName: v.fullName, email: v.email, phone: v.phone });
   if (r.success) return { data: { ...r.data, status: v.status }, errors: {} };
   const errors: MemberFormErrors = {};
   for (const issue of r.error.issues) {
     const key = issue.path[0];
-    if (typeof key === "string" && FIELD_ORDER.includes(key as MemberField) && !errors[key as MemberField]) errors[key as MemberField] = issue.message;
+    if (typeof key === "string" && FIELD_ORDER.includes(key as MemberField) && !errors[key as MemberField])
+      errors[key as MemberField] = issue.message;
   }
   return { data: null, errors };
 }

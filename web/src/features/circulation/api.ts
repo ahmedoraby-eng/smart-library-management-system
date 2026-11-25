@@ -48,7 +48,9 @@ export function useBookSearch(q: string) {
 function useInvalidateCirculation() {
   const queryClient = useQueryClient();
   return () =>
-    Promise.all([loansKey, booksKey, membersKey, dashboardKey].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    Promise.all(
+      [loansKey, booksKey, membersKey, dashboardKey].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
 }
 
 export function useBorrow() {

@@ -10,25 +10,100 @@ import { availabilitySegments, daysOverdue } from "./model";
 const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
 
 const summary = (patch: Partial<DashboardSummary> = {}): DashboardSummary => ({
-  kpis: { totalTitles: 128, totalCopies: 412, availableCopies: 341, borrowedCopies: 71, activeMembers: 54, inactiveMembers: 3, activeLoans: 71, overdueLoans: 6 },
+  kpis: {
+    totalTitles: 128,
+    totalCopies: 412,
+    availableCopies: 341,
+    borrowedCopies: 71,
+    activeMembers: 54,
+    inactiveMembers: 3,
+    activeLoans: 71,
+    overdueLoans: 6,
+  },
   recentBorrowings: [
-    { id: "l1", status: "ACTIVE", book: { id: "b1", title: "Dune", author: "Frank Herbert" }, member: { id: "m1", memberNumber: "M-000131", fullName: "Yasmin Adel" }, borrowedAt: iso(1), dueAt: iso(-13) },
-    { id: "l2", status: "OVERDUE", book: { id: "b2", title: "Domain-Driven Design", author: "Eric Evans" }, member: { id: "m2", memberNumber: "M-000063", fullName: "Omar Nasser" }, borrowedAt: iso(17), dueAt: iso(3) },
-    { id: "l3", status: "RETURNED", book: { id: "b3", title: "The Hobbit", author: "J.R.R. Tolkien" }, member: { id: "m3", memberNumber: "M-000071", fullName: "Karim Saleh" }, borrowedAt: iso(5), dueAt: iso(-9) },
+    {
+      id: "l1",
+      status: "ACTIVE",
+      book: { id: "b1", title: "Dune", author: "Frank Herbert" },
+      member: { id: "m1", memberNumber: "M-000131", fullName: "Yasmin Adel" },
+      borrowedAt: iso(1),
+      dueAt: iso(-13),
+    },
+    {
+      id: "l2",
+      status: "OVERDUE",
+      book: { id: "b2", title: "Domain-Driven Design", author: "Eric Evans" },
+      member: { id: "m2", memberNumber: "M-000063", fullName: "Omar Nasser" },
+      borrowedAt: iso(17),
+      dueAt: iso(3),
+    },
+    {
+      id: "l3",
+      status: "RETURNED",
+      book: { id: "b3", title: "The Hobbit", author: "J.R.R. Tolkien" },
+      member: { id: "m3", memberNumber: "M-000071", fullName: "Karim Saleh" },
+      borrowedAt: iso(5),
+      dueAt: iso(-9),
+    },
   ],
-  popularBooks: [{ id: "b4", title: "Clean Code", author: "R. Martin", coverImageUrl: null, totalCopies: 5, availableCopies: 3, nextDueAt: null, loansLast30Days: 11 }],
-  recentlyAdded: [{ id: "b5", title: "Building Microservices", author: "S. Newman", coverImageUrl: null, totalCopies: 2, availableCopies: 2, nextDueAt: null, createdAt: iso(6) }],
+  popularBooks: [
+    {
+      id: "b4",
+      title: "Clean Code",
+      author: "R. Martin",
+      coverImageUrl: null,
+      totalCopies: 5,
+      availableCopies: 3,
+      nextDueAt: null,
+      loansLast30Days: 11,
+    },
+  ],
+  recentlyAdded: [
+    {
+      id: "b5",
+      title: "Building Microservices",
+      author: "S. Newman",
+      coverImageUrl: null,
+      totalCopies: 2,
+      availableCopies: 2,
+      nextDueAt: null,
+      createdAt: iso(6),
+    },
+  ],
   ...patch,
 });
 
 function stubApi(role: Role, dash: DashboardSummary | "error") {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-    if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Test User", role, permissions: ROLE_PERMISSIONS[role], isDemo: false });
-    if (url === "/api/admin/discovery/usage") return json({ day: "2026-11-25", searches: 14, neurons: 312.4, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
-    if (url === "/api/dashboard/summary") return dash === "error" ? json({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }, 500) : json(dash);
-    return json({}, 404);
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+      if (url === "/api/me")
+        return json({
+          id: "u1",
+          email: "x@y.test",
+          fullName: "Test User",
+          role,
+          permissions: ROLE_PERMISSIONS[role],
+          isDemo: false,
+        });
+      if (url === "/api/admin/discovery/usage")
+        return json({
+          day: "2026-11-25",
+          searches: 14,
+          neurons: 312.4,
+          neuronCap: 8000,
+          userQuota: 50,
+          vectorPath: "hnsw",
+        });
+      if (url === "/api/dashboard/summary")
+        return dash === "error"
+          ? json({ type: "about:blank", title: "x", status: 500, code: "INTERNAL" }, 500)
+          : json(dash);
+      return json({}, 404);
+    }),
+  );
 }
 
 beforeEach(() => window.localStorage.clear());
@@ -46,7 +121,9 @@ describe("SLM-12 dashboard page (ux.md §3.1)", () => {
     expect(screen.getByTestId("view-overdue")).toBeInTheDocument();
     expect(screen.getByTestId("kpi-active-members")).toHaveTextContent("54");
     expect(screen.getByTestId("kpi-inactive-members")).toHaveTextContent("3");
-    expect(screen.getByTestId("availability-bar")).toHaveAccessibleName("341 available, 65 on loan, 6 overdue, of 412 copies");
+    expect(screen.getByTestId("availability-bar")).toHaveAccessibleName(
+      "341 available, 65 on loan, 6 overdue, of 412 copies",
+    );
 
     const rows = screen.getAllByTestId("recent-row");
     expect(rows).toHaveLength(3);
@@ -87,8 +164,12 @@ describe("SLM-12 dashboard page (ux.md §3.1)", () => {
     r.unmount();
 
     window.localStorage.clear();
-    const broken = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("denied"); });
-    const setBroken = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("denied"); });
+    const broken = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    const setBroken = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
     await renderWithProviders(<DashboardPage />);
     await userEvent.click(await screen.findByTestId("dismiss-notice"));
     expect(screen.queryByTestId("supervisor-notice")).not.toBeInTheDocument();
@@ -97,10 +178,24 @@ describe("SLM-12 dashboard page (ux.md §3.1)", () => {
   });
 
   it("empty library: zero KPIs and an empty state with a Borrow action for staff who can borrow", async () => {
-    stubApi("LIBRARIAN", summary({
-      kpis: { totalTitles: 0, totalCopies: 0, availableCopies: 0, borrowedCopies: 0, activeMembers: 0, inactiveMembers: 0, activeLoans: 0, overdueLoans: 0 },
-      recentBorrowings: [], popularBooks: [], recentlyAdded: [],
-    }));
+    stubApi(
+      "LIBRARIAN",
+      summary({
+        kpis: {
+          totalTitles: 0,
+          totalCopies: 0,
+          availableCopies: 0,
+          borrowedCopies: 0,
+          activeMembers: 0,
+          inactiveMembers: 0,
+          activeLoans: 0,
+          overdueLoans: 0,
+        },
+        recentBorrowings: [],
+        popularBooks: [],
+        recentlyAdded: [],
+      }),
+    );
     await renderWithProviders(<DashboardPage />);
     expect(await screen.findByTestId("recent-empty")).toHaveTextContent("No loans yet");
     expect(screen.getByTestId("kpi-titles")).toHaveTextContent("0");
@@ -121,28 +216,60 @@ describe("dashboard model", () => {
   it("SLM-16: Admin sees today's AI usage against the cap", async () => {
     stubApi("ADMIN", summary());
     await renderWithProviders(<DashboardPage />);
-    expect(await screen.findByTestId("ai-usage-today")).toHaveTextContent("AI usage today: 312 / 8,000 Neurons · 14 AI-assisted searches");
+    expect(await screen.findByTestId("ai-usage-today")).toHaveTextContent(
+      "AI usage today: 312 / 8,000 Neurons · 14 AI-assisted searches",
+    );
   });
 
   it("SLM-16: Admin «Rebuild search index» runs the batches until done, waiting out the 2/min limit", async () => {
     const replies = [
-      { status: 200, body: { result: "partial", embeddedBooks: 16, reusedBooks: 0, upToDate: 0, remaining: 48, total: 64 } },
-      { status: 429, body: { type: "about:blank", title: "x", status: 429, code: "RATE_LIMITED" }, headers: { "retry-after": "1" } },
-      { status: 200, body: { result: "done", embeddedBooks: 16, reusedBooks: 32, upToDate: 16, remaining: 0, total: 64 } },
+      {
+        status: 200,
+        body: { result: "partial", embeddedBooks: 16, reusedBooks: 0, upToDate: 0, remaining: 48, total: 64 },
+      },
+      {
+        status: 429,
+        body: { type: "about:blank", title: "x", status: 429, code: "RATE_LIMITED" },
+        headers: { "retry-after": "1" },
+      },
+      {
+        status: 200,
+        body: { result: "done", embeddedBooks: 16, reusedBooks: 32, upToDate: 16, remaining: 0, total: 64 },
+      },
     ];
     const posts: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
-      if (url === "/api/me") return json({ id: "u1", email: "x@y.test", fullName: "Admin", role: "ADMIN", permissions: ROLE_PERMISSIONS.ADMIN, isDemo: false });
-      if (url === "/api/dashboard/summary") return json(summary());
-      if (url === "/api/admin/discovery/usage") return json({ day: "2026-11-25", searches: 0, neurons: 0, neuronCap: 8000, userQuota: 50, vectorPath: "hnsw" });
-      if (url === "/api/admin/discovery/reindex" && init?.method === "POST") {
-        posts.push(url);
-        const r = replies.shift()!;
-        return json(r.body, r.status, r.headers ?? {});
-      }
-      return json({}, 404);
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+          new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
+        if (url === "/api/me")
+          return json({
+            id: "u1",
+            email: "x@y.test",
+            fullName: "Admin",
+            role: "ADMIN",
+            permissions: ROLE_PERMISSIONS.ADMIN,
+            isDemo: false,
+          });
+        if (url === "/api/dashboard/summary") return json(summary());
+        if (url === "/api/admin/discovery/usage")
+          return json({
+            day: "2026-11-25",
+            searches: 0,
+            neurons: 0,
+            neuronCap: 8000,
+            userQuota: 50,
+            vectorPath: "hnsw",
+          });
+        if (url === "/api/admin/discovery/reindex" && init?.method === "POST") {
+          posts.push(url);
+          const r = replies.shift()!;
+          return json(r.body, r.status, r.headers ?? {});
+        }
+        return json({}, 404);
+      }),
+    );
     await renderWithProviders(<DashboardPage />);
     await userEvent.click(await screen.findByTestId("rebuild-index"));
     expect(screen.getByTestId("rebuild-index")).toBeDisabled();
@@ -168,7 +295,9 @@ describe("dashboard model", () => {
   });
 
   it("availability segments split on-loan into on-loan and overdue", () => {
-    expect(availabilitySegments({ totalCopies: 412, availableCopies: 341, borrowedCopies: 71, overdueLoans: 6 })).toEqual({ available: 341, onLoan: 65, overdue: 6, total: 412 });
+    expect(
+      availabilitySegments({ totalCopies: 412, availableCopies: 341, borrowedCopies: 71, overdueLoans: 6 }),
+    ).toEqual({ available: 341, onLoan: 65, overdue: 6, total: 412 });
   });
   it("days overdue is at least 1", () => {
     const now = Date.parse("2026-11-24T12:00:00Z");

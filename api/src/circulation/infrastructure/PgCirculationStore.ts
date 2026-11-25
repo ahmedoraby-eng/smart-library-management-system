@@ -1,7 +1,14 @@
 import { sql } from "drizzle-orm";
 import type { BookStock } from "../../catalog/domain/BookStock";
 import type { Db, DbOrTx } from "../../platform/db";
-import type { CirculationStore, CirculationTx, LoanWriter, MemberForLoan, NewLoan, OpenLoanOfTitle } from "../domain/Loan";
+import type {
+  CirculationStore,
+  CirculationTx,
+  LoanWriter,
+  MemberForLoan,
+  NewLoan,
+  OpenLoanOfTitle,
+} from "../domain/Loan";
 import { circulationErrorFrom } from "./pgErrors";
 import { loans } from "./schema";
 
@@ -17,13 +24,19 @@ class PgLoanWriter implements LoanWriter {
 
   async lockMember(memberId: string): Promise<MemberForLoan | null> {
     if (!UUID.test(memberId)) return null;
-    const { rows } = await this.tx.execute(sql`SELECT id, full_name, status FROM members WHERE id = ${memberId} FOR UPDATE`);
+    const { rows } = await this.tx.execute(
+      sql`SELECT id, full_name, status FROM members WHERE id = ${memberId} FOR UPDATE`,
+    );
     const m = rows[0];
-    return m ? { id: m.id as string, fullName: m.full_name as string, status: m.status as MemberForLoan["status"] } : null;
+    return m
+      ? { id: m.id as string, fullName: m.full_name as string, status: m.status as MemberForLoan["status"] }
+      : null;
   }
 
   async countOpenLoans(memberId: string): Promise<number> {
-    const { rows } = await this.tx.execute(sql`SELECT count(*)::int AS n FROM loans WHERE member_id = ${memberId} AND returned_at IS NULL`);
+    const { rows } = await this.tx.execute(
+      sql`SELECT count(*)::int AS n FROM loans WHERE member_id = ${memberId} AND returned_at IS NULL`,
+    );
     return Number(rows[0]?.n ?? 0);
   }
 

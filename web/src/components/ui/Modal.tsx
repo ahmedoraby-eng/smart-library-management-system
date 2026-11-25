@@ -2,7 +2,8 @@ import { type ReactNode, type RefObject, useEffect, useId, useRef } from "react"
 import { createPortal } from "react-dom";
 import { Button } from "./Button";
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Modal (480 px): role=dialog, focus trapped, Esc = cancel, focus returns to the opener.
@@ -10,7 +11,14 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * otherwise to the first focusable element. The scrim does not close the dialog: a stray
  * click must not discard a decision.
  */
-export function Modal({ title, children, footer, onClose, initialFocusRef, testId }: {
+export function Modal({
+  title,
+  children,
+  footer,
+  onClose,
+  initialFocusRef,
+  testId,
+}: {
   title: string;
   children: ReactNode;
   footer: ReactNode;
@@ -79,7 +87,17 @@ export function Modal({ title, children, footer, onClose, initialFocusRef, testI
 }
 
 /** [Cancel] [Action]. Destructive dialogs focus Cancel first; non-destructive focus the action. */
-export function ConfirmDialog({ title, children, cancelLabel = "Cancel", confirmLabel, destructive = false, loading = false, onConfirm, onCancel, testId }: {
+export function ConfirmDialog({
+  title,
+  children,
+  cancelLabel = "Cancel",
+  confirmLabel,
+  destructive = false,
+  loading = false,
+  onConfirm,
+  onCancel,
+  testId,
+}: {
   title: string;
   children: ReactNode;
   cancelLabel?: string;
@@ -103,7 +121,13 @@ export function ConfirmDialog({ title, children, cancelLabel = "Cancel", confirm
           <Button ref={cancelRef} onClick={onCancel} disabled={loading} data-testid="dialog-cancel">
             {cancelLabel}
           </Button>
-          <Button ref={confirmRef} variant={destructive ? "danger" : "primary"} onClick={onConfirm} loading={loading} data-testid="dialog-confirm">
+          <Button
+            ref={confirmRef}
+            variant={destructive ? "danger" : "primary"}
+            onClick={onConfirm}
+            loading={loading}
+            data-testid="dialog-confirm"
+          >
             {confirmLabel}
           </Button>
         </>

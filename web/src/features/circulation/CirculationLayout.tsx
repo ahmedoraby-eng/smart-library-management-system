@@ -20,7 +20,10 @@ export function CirculationLayout() {
         <Tab to="/circulation/return" testId="tab-return" icon={<SwapIcon size={16} />}>
           Return book
           {active.data && (
-            <span className="ml-1 rounded-full bg-neutral-100 px-1.5 text-xs font-semibold text-neutral-700 tabular-nums" data-testid="active-count">
+            <span
+              className="ml-1 rounded-full bg-neutral-100 px-1.5 text-xs font-semibold text-neutral-700 tabular-nums"
+              data-testid="active-count"
+            >
               {active.data.total} active
             </span>
           )}
@@ -31,7 +34,17 @@ export function CirculationLayout() {
   );
 }
 
-function Tab({ to, icon, children, testId }: { to: "/circulation/borrow" | "/circulation/return"; icon: ReactNode; children: ReactNode; testId: string }) {
+function Tab({
+  to,
+  icon,
+  children,
+  testId,
+}: {
+  to: "/circulation/borrow" | "/circulation/return";
+  icon: ReactNode;
+  children: ReactNode;
+  testId: string;
+}) {
   return (
     <Link
       to={to}

@@ -10,7 +10,13 @@ import { loanStatus } from "../../lib/loanStatus";
 export function LoanStatusBadge({ loan, now }: { loan: Pick<LoanDto, "status" | "dueAt">; now?: Date }) {
   const m = loanStatus(loan, now);
   return (
-    <Badge variant={m.variant} dot={m.kind !== "returned"} data-testid="loan-status" data-status={loan.status} data-kind={m.kind}>
+    <Badge
+      variant={m.variant}
+      dot={m.kind !== "returned"}
+      data-testid="loan-status"
+      data-status={loan.status}
+      data-kind={m.kind}
+    >
       {m.label}
     </Badge>
   );

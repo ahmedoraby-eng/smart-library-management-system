@@ -12,7 +12,12 @@ import { clearSession, issueSession } from "../../platform/security/session";
 import { GoogleSignInError, type PendingGoogleSignIn } from "../application/GoogleSignIn";
 
 export const toMe = (p: Principal): Me => ({
-  id: p.id, email: p.email, fullName: p.fullName, role: p.role, isDemo: p.isDemo, permissions: [...p.permissions],
+  id: p.id,
+  email: p.email,
+  fullName: p.fullName,
+  role: p.role,
+  isDemo: p.isDemo,
+  permissions: [...p.permissions],
 });
 
 /** Public sign-in routes. They set or clear the session cookie; no other auth state exists. */
@@ -83,7 +88,15 @@ export function authRoutes(
       return c.redirect(pending?.next ?? "/", 302);
     } catch (e) {
       if (e instanceof GoogleSignInError) {
-        console.info(JSON.stringify({ level: "info", event: "google_signin_failed", reason: e.reason, detail: e.message, requestId: c.var.requestId }));
+        console.info(
+          JSON.stringify({
+            level: "info",
+            event: "google_signin_failed",
+            reason: e.reason,
+            detail: e.message,
+            requestId: c.var.requestId,
+          }),
+        );
         return c.redirect(`/signin?error=${e.reason}`, 302);
       }
       if (e instanceof ForbiddenError && e.code === "USER_DISABLED") return c.redirect("/signin?error=disabled", 302);
@@ -122,7 +135,10 @@ async function readGoogleStateCookie(c: Context, config: Config): Promise<Pendin
   const token = getCookie(c, GOOGLE_STATE_COOKIE);
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, stateKey(config.sessionSecret), { algorithms: ["HS256"], typ: GOOGLE_STATE_TYP });
+    const { payload } = await jwtVerify(token, stateKey(config.sessionSecret), {
+      algorithms: ["HS256"],
+      typ: GOOGLE_STATE_TYP,
+    });
     const { state, verifier, nonce, next } = payload as Record<string, unknown>;
     if (typeof state !== "string" || typeof verifier !== "string" || typeof nonce !== "string") return null;
     return { state, verifier, nonce, next: typeof next === "string" ? next : null };

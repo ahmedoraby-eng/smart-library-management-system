@@ -62,7 +62,11 @@ function FormScreen({ title, book, onReload }: { title: string; book?: BookDto; 
   }, []);
 
   // Unsaved changes: confirm before leaving (in-app navigation and tab close).
-  const blocker = useBlocker({ shouldBlockFn: () => dirty.current, enableBeforeUnload: () => dirty.current, withResolver: true });
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty.current,
+    enableBeforeUnload: () => dirty.current,
+    withResolver: true,
+  });
 
   const submit = async (input: BookInput) => {
     const saved = await save.mutateAsync(input);

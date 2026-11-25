@@ -1,7 +1,17 @@
 import { ConfirmDialog } from "../../components/ui";
 
 /** ux.md §3.5: deactivating needs a confirmation; reactivating doesn't (it is reversible and harmless). */
-export function DeactivateDialog({ name, loading, onConfirm, onCancel }: { name: string; loading?: boolean; onConfirm: () => void; onCancel: () => void }) {
+export function DeactivateDialog({
+  name,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  name: string;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
     <ConfirmDialog
       title={`Deactivate ${name}?`}

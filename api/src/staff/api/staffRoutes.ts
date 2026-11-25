@@ -6,7 +6,13 @@ import { requirePermission } from "../../platform/security/requirePermission";
 import type { StaffUser } from "../domain/StaffUser";
 
 export const toStaffUserDto = (u: StaffUser): StaffUserDto => ({
-  id: u.id, email: u.email, fullName: u.fullName, role: u.role, status: u.status, isDemo: u.isDemo, createdAt: u.createdAt.toISOString(),
+  id: u.id,
+  email: u.email,
+  fullName: u.fullName,
+  role: u.role,
+  status: u.status,
+  isDemo: u.isDemo,
+  createdAt: u.createdAt.toISOString(),
 });
 
 /**

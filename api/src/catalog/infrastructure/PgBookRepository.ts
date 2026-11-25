@@ -1,7 +1,14 @@
 import type { BookInput, BookSortKey } from "@slm/contracts";
 import { sql, type SQL } from "drizzle-orm";
 import { PgCode, pgError, type Db } from "../../platform/db";
-import type { BookListParams, BookRepository, BookView, CreateResult, DeletionOutcome, UpdateResult } from "../domain/Book";
+import type {
+  BookListParams,
+  BookRepository,
+  BookView,
+  CreateResult,
+  DeletionOutcome,
+  UpdateResult,
+} from "../domain/Book";
 import { books } from "./schema";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -58,7 +65,11 @@ function toView(r: Row): BookView {
 
 /** "clean arch" → "clean:* & arch:*" (prefix match while typing); null if nothing searchable is left. */
 function prefixTsQuery(q: string): string | null {
-  const terms = q.toLowerCase().match(/[\p{L}\p{N}]+/gu)?.slice(0, 8) ?? [];
+  const terms =
+    q
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+/gu)
+      ?.slice(0, 8) ?? [];
   return terms.length ? terms.map((t) => `${t}:*`).join(" & ") : null;
 }
 
@@ -96,9 +107,10 @@ export class PgBookRepository implements BookRepository {
 
     // Explicit sort wins; a search without one sorts by relevance; ties break on title then id (stable paging).
     const explicit = p.sort.map((s) => sql`${SORT_SQL[s.key]} ${s.desc ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`}`);
-    const order = relevance && p.sort.length === 1 && p.sort[0]!.key === "title" && !p.sort[0]!.desc
-      ? [sql`${relevance} DESC`, ...explicit]
-      : explicit;
+    const order =
+      relevance && p.sort.length === 1 && p.sort[0]!.key === "title" && !p.sort[0]!.desc
+        ? [sql`${relevance} DESC`, ...explicit]
+        : explicit;
     order.push(sql`lower(b.title) ASC`, sql`b.id ASC`);
 
     const whereSql = sql.join(where, sql` AND `);
@@ -169,15 +181,23 @@ export class PgBookRepository implements BookRepository {
     if (!UUID.test(id)) return null;
     return this.db.transaction(async (tx) => {
       // Lock the book: a concurrent borrow (UPDATE … WHERE archived_at IS NULL) waits for us.
-      const locked = await tx.execute(sql`SELECT id, title FROM books WHERE id = ${id} AND archived_at IS NULL FOR UPDATE`);
+      const locked = await tx.execute(
+        sql`SELECT id, title FROM books WHERE id = ${id} AND archived_at IS NULL FOR UPDATE`,
+      );
       const book = locked.rows[0];
       if (!book) return null;
       const facts = await tx.execute(sql`SELECT count(*) FILTER (WHERE returned_at IS NULL)::int AS active,
           count(*)::int AS any FROM loans WHERE book_id = ${id}`);
       const f = facts.rows[0]!;
-      const outcome = decide({ title: book.title as string, activeLoans: Number(f.active), hasLoanHistory: Number(f.any) > 0 });
+      const outcome = decide({
+        title: book.title as string,
+        activeLoans: Number(f.active),
+        hasLoanHistory: Number(f.any) > 0,
+      });
       if (outcome === "archive") {
-        await tx.execute(sql`UPDATE books SET archived_at = now(), updated_at = now(), version = version + 1 WHERE id = ${id}`);
+        await tx.execute(
+          sql`UPDATE books SET archived_at = now(), updated_at = now(), version = version + 1 WHERE id = ${id}`,
+        );
       } else {
         await tx.execute(sql`DELETE FROM books WHERE id = ${id}`);
       }
@@ -185,11 +205,19 @@ export class PgBookRepository implements BookRepository {
     });
   }
 
-  private async duplicateIsbn(e: unknown, isbn: string | null): Promise<{ kind: "duplicate_isbn"; other: { id: string; title: string } } | null> {
+  private async duplicateIsbn(
+    e: unknown,
+    isbn: string | null,
+  ): Promise<{ kind: "duplicate_isbn"; other: { id: string; title: string } } | null> {
     const pe = pgError(e);
     if (!isbn || pe?.code !== PgCode.uniqueViolation || pe.constraint !== "books_isbn_uq") return null;
-    const { rows } = await this.db.execute(sql`SELECT id, title FROM books WHERE isbn = ${isbn} AND archived_at IS NULL LIMIT 1`);
+    const { rows } = await this.db.execute(
+      sql`SELECT id, title FROM books WHERE isbn = ${isbn} AND archived_at IS NULL LIMIT 1`,
+    );
     const other = rows[0];
-    return { kind: "duplicate_isbn", other: { id: (other?.id as string) ?? "", title: (other?.title as string) ?? "" } };
+    return {
+      kind: "duplicate_isbn",
+      other: { id: (other?.id as string) ?? "", title: (other?.title as string) ?? "" },
+    };
   }
 }

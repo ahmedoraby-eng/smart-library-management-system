@@ -12,7 +12,10 @@ export interface PendingGoogleSignIn {
 
 /** Why a callback failed; the route maps it to /signin?error=<reason>. */
 export class GoogleSignInError extends Error {
-  constructor(readonly reason: "google" | "google_unverified", detail: string) {
+  constructor(
+    readonly reason: "google" | "google_unverified",
+    detail: string,
+  ) {
     super(detail);
   }
 }
@@ -42,10 +45,21 @@ export function safeNextPath(next: string | null | undefined): string | null {
 
 /** Google OIDC authorization-code flow with PKCE (S256), state and nonce (architecture §5.1–5.2). */
 export class GoogleSignIn {
-  constructor(private readonly provider: OidcProvider, private readonly identity: StaffIdentityService) {}
+  constructor(
+    private readonly provider: OidcProvider,
+    private readonly identity: StaffIdentityService,
+  ) {}
 
-  async begin(redirectUri: string, next: string | null | undefined): Promise<{ url: string; pending: PendingGoogleSignIn }> {
-    const pending: PendingGoogleSignIn = { state: random(), verifier: random(48), nonce: random(), next: safeNextPath(next) };
+  async begin(
+    redirectUri: string,
+    next: string | null | undefined,
+  ): Promise<{ url: string; pending: PendingGoogleSignIn }> {
+    const pending: PendingGoogleSignIn = {
+      state: random(),
+      verifier: random(48),
+      nonce: random(),
+      next: safeNextPath(next),
+    };
     const url = this.provider.authorizeUrl({
       redirectUri,
       state: pending.state,
@@ -59,7 +73,11 @@ export class GoogleSignIn {
    * Checks state, exchanges the code, checks nonce and email_verified, then provisions or loads the
    * staff user. USER_DISABLED (ForbiddenError) passes through untouched.
    */
-  async complete(pending: PendingGoogleSignIn | null, params: { code?: string; state?: string; error?: string }, redirectUri: string): Promise<Principal> {
+  async complete(
+    pending: PendingGoogleSignIn | null,
+    params: { code?: string; state?: string; error?: string },
+    redirectUri: string,
+  ): Promise<Principal> {
     if (params.error) throw new GoogleSignInError("google", "Google returned an error");
     if (!pending || !params.state || !params.code || params.state !== pending.state) {
       throw new GoogleSignInError("google", "Missing or mismatched state");

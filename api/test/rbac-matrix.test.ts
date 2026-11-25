@@ -42,7 +42,13 @@ const MATRIX: Record<string, Who[]> = {
 const PUBLIC = new Set(["GET /api/health", "POST /api/auth/demo-login", "POST /api/auth/logout"]);
 const isPublic = (route: string) => PUBLIC.has(route) || route.startsWith("GET /api/auth/");
 
-const registered = [...new Set(testApp().routes.filter((r) => r.method !== "ALL").map((r) => `${r.method} ${r.path}`))];
+const registered = [
+  ...new Set(
+    testApp()
+      .routes.filter((r) => r.method !== "ALL")
+      .map((r) => `${r.method} ${r.path}`),
+  ),
+];
 const protectedRoutes = registered.filter((r) => !isPublic(r));
 
 const NO_SUCH_ID = "00000000-0000-4000-8000-000000000000";
@@ -61,12 +67,19 @@ beforeAll(async () => {
 
 describe("rbac-matrix", () => {
   it("every registered route has a row, and every row a route", () => {
-    expect(protectedRoutes.filter((r) => !(r in MATRIX)), "routes with no RBAC row").toEqual([]);
-    expect(Object.keys(MATRIX).filter((r) => !registered.includes(r)), "rows with no route").toEqual([]);
+    expect(
+      protectedRoutes.filter((r) => !(r in MATRIX)),
+      "routes with no RBAC row",
+    ).toEqual([]);
+    expect(
+      Object.keys(MATRIX).filter((r) => !registered.includes(r)),
+      "rows with no route",
+    ).toEqual([]);
   });
 
   const cases = Object.entries(MATRIX).flatMap(([route, allowed]) =>
-    (["A", "L", "S"] as const).map((who) => ({ route, who, allowed: allowed.includes(who) })));
+    (["A", "L", "S"] as const).map((who) => ({ route, who, allowed: allowed.includes(who) })),
+  );
 
   it.each(cases)("$who $route → allowed: $allowed", async ({ route, who, allowed }) => {
     const id = { A: staff.admin, L: staff.librarian, S: staff.supervisor }[who];
@@ -107,7 +120,9 @@ describe("session-cookie-flags", () => {
   it("missing, malformed, tampered, expired, foreign-secret or wrong-alg cookies → 401", async () => {
     const good = await sign({ sub: staff.librarian });
     const [h, p, s] = good.split(".") as [string, string, string];
-    const tamperedPayload = Buffer.from(JSON.stringify({ sub: staff.admin, exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url");
+    const tamperedPayload = Buffer.from(
+      JSON.stringify({ sub: staff.admin, exp: Math.floor(Date.now() / 1000) + 3600 }),
+    ).toString("base64url");
     const bad = [
       "not-a-jwt",
       `${h}.${tamperedPayload}.${s}`, // payload swapped to the admin, old signature
@@ -127,7 +142,10 @@ describe("session-cookie-flags", () => {
     const token = await sign({ sub: staff.supervisor });
     const res = await me(token);
     expect(((await res.json()) as { role: string }).role).toBe("SUPERVISOR");
-    const del = await testApp().request(`/api/books/${NO_SUCH_ID}`, { method: "DELETE", headers: { cookie: `${SESSION_COOKIE}=${token}`, origin: ORIGIN } });
+    const del = await testApp().request(`/api/books/${NO_SUCH_ID}`, {
+      method: "DELETE",
+      headers: { cookie: `${SESSION_COOKIE}=${token}`, origin: ORIGIN },
+    });
     expect(del.status).toBe(403);
   });
 });

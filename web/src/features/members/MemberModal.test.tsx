@@ -7,12 +7,23 @@ import { renderWithProviders } from "../../test/render";
 import { MemberModal } from "./MemberModal";
 
 const existing: MemberDto = {
-  id: "m1", memberNumber: "M-000042", fullName: "Sara Haddad", email: "sara@example.org", phone: "+20 100 123 4567", status: "ACTIVE",
-  registeredAt: "2026-01-01T00:00:00.000Z", activeLoans: 1, overdueLoans: 0, version: 3,
+  id: "m1",
+  memberNumber: "M-000042",
+  fullName: "Sara Haddad",
+  email: "sara@example.org",
+  phone: "+20 100 123 4567",
+  status: "ACTIVE",
+  registeredAt: "2026-01-01T00:00:00.000Z",
+  activeLoans: 1,
+  overdueLoans: 0,
+  version: 3,
 };
 
 const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": status >= 400 ? "application/problem+json" : "application/json" } });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": status >= 400 ? "application/problem+json" : "application/json" },
+  });
 const problem = (status: number, code: string, extra: Record<string, unknown> = {}) =>
   json(status, { type: "about:blank", title: code, status, code, ...extra });
 
@@ -113,7 +124,11 @@ describe("MemberModal server errors", () => {
   });
 
   it("maps 400 VALIDATION_FAILED errors to their fields", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(problem(400, "VALIDATION_FAILED", { errors: [{ field: "fullName", message: "Keep the name under 200 characters." }] }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      problem(400, "VALIDATION_FAILED", {
+        errors: [{ field: "fullName", message: "Keep the name under 200 characters." }],
+      }),
+    );
     const { user } = await setup({ fetch: fetchMock });
     await user.type(field("fullName"), "Sara");
     await user.type(field("email"), "sara@example.org");
@@ -128,7 +143,9 @@ describe("MemberModal server errors", () => {
     await user.type(field("fullName"), "Sara");
     await user.type(field("email"), "sara@example.org");
     await user.click(save());
-    expect(await screen.findByTestId("form-error")).toHaveTextContent("Couldn't save the member. Nothing was saved. Try again.");
+    expect(await screen.findByTestId("form-error")).toHaveTextContent(
+      "Couldn't save the member. Nothing was saved. Try again.",
+    );
   });
 });
 
@@ -151,7 +168,13 @@ describe("MemberModal edit", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/members/m1");
     expect(fetchMock.mock.calls[0]![1].method).toBe("PUT");
-    expect(sentBody(fetchMock)).toEqual({ fullName: "Sara H.", email: "sara@example.org", phone: "+20 100 123 4567", status: "ACTIVE", version: 3 });
+    expect(sentBody(fetchMock)).toEqual({
+      fullName: "Sara H.",
+      email: "sara@example.org",
+      phone: "+20 100 123 4567",
+      status: "ACTIVE",
+      version: 3,
+    });
     expect(await screen.findByTestId("toast")).toHaveTextContent("Changes saved.");
   });
 
@@ -190,14 +213,17 @@ describe("MemberModal edit", () => {
 
   it("an edit conflict shows the notice, disables Save, and Reload loads the latest version", async () => {
     const latest = { ...existing, fullName: "Sara Haddad-Nasser", version: 4 };
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(problem(409, "STALE_VERSION"))
       .mockResolvedValueOnce(json(200, latest));
     const { user } = await setup({ member: existing, fetch: fetchMock });
     await user.clear(field("fullName"));
     await user.type(field("fullName"), "Mine");
     await user.click(save());
-    expect(await screen.findByTestId("stale-notice")).toHaveTextContent("Someone else changed this member while you were editing.");
+    expect(await screen.findByTestId("stale-notice")).toHaveTextContent(
+      "Someone else changed this member while you were editing.",
+    );
     expect(save()).toBeDisabled();
     await user.click(screen.getByTestId("reload-member"));
     await waitFor(() => expect(field("fullName")).toHaveValue("Sara Haddad-Nasser"));

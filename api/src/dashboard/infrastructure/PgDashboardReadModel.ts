@@ -16,7 +16,10 @@ const isoOrNull = (v: unknown) => (v ? iso(v) : null);
  * Archived books are excluded from counts, popular and recently added; loan history keeps them.
  */
 export class PgDashboardReadModel implements DashboardReadModel {
-  constructor(private readonly db: Db, private readonly clock: Clock) {}
+  constructor(
+    private readonly db: Db,
+    private readonly clock: Clock,
+  ) {}
 
   async summary(): Promise<DashboardSummary> {
     const now = this.clock();
@@ -40,7 +43,8 @@ export class PgDashboardReadModel implements DashboardReadModel {
         JOIN books b ON b.id = pop.book_id AND b.archived_at IS NULL
         LEFT JOIN LATERAL (SELECT min(due_at) AS next_due_at FROM loans WHERE book_id = b.id AND returned_at IS NULL) nd ON true
         ORDER BY pop.loans_30d DESC, lower(b.title) ASC, b.id ASC LIMIT 5`),
-      this.db.execute(sql`SELECT b.id, b.title, b.author, b.cover_image_url, b.total_copies, b.available_copies, b.created_at,
+      this.db
+        .execute(sql`SELECT b.id, b.title, b.author, b.cover_image_url, b.total_copies, b.available_copies, b.created_at,
           nd.next_due_at
         FROM books b
         LEFT JOIN LATERAL (SELECT min(due_at) AS next_due_at FROM loans WHERE book_id = b.id AND returned_at IS NULL) nd ON true
@@ -53,23 +57,38 @@ export class PgDashboardReadModel implements DashboardReadModel {
     const total = Number(k.total);
     const available = Number(k.available);
     const bookOf = (r: Row) => ({
-      id: r.id as string, title: r.title as string, author: r.author as string,
+      id: r.id as string,
+      title: r.title as string,
+      author: r.author as string,
       coverImageUrl: (r.cover_image_url as string | null) ?? null,
-      totalCopies: Number(r.total_copies), availableCopies: Number(r.available_copies), nextDueAt: isoOrNull(r.next_due_at),
+      totalCopies: Number(r.total_copies),
+      availableCopies: Number(r.available_copies),
+      nextDueAt: isoOrNull(r.next_due_at),
     });
 
     return {
       kpis: {
-        totalTitles: Number(k.titles), totalCopies: total, availableCopies: available, borrowedCopies: total - available,
-        activeMembers: Number(mem.active), inactiveMembers: Number(mem.inactive),
-        activeLoans: Number(ln.active), overdueLoans: Number(ln.overdue),
+        totalTitles: Number(k.titles),
+        totalCopies: total,
+        availableCopies: available,
+        borrowedCopies: total - available,
+        activeMembers: Number(mem.active),
+        inactiveMembers: Number(mem.inactive),
+        activeLoans: Number(ln.active),
+        overdueLoans: Number(ln.overdue),
       },
       recentBorrowings: recent.rows.map((r) => {
         return {
-          id: r.id as string, status: r.status as LoanStatus,
+          id: r.id as string,
+          status: r.status as LoanStatus,
           book: { id: r.book_id as string, title: r.title as string, author: r.author as string },
-          member: { id: r.member_id as string, memberNumber: r.member_number as string, fullName: r.full_name as string },
-          borrowedAt: iso(r.borrowed_at), dueAt: iso(r.due_at),
+          member: {
+            id: r.member_id as string,
+            memberNumber: r.member_number as string,
+            fullName: r.full_name as string,
+          },
+          borrowedAt: iso(r.borrowed_at),
+          dueAt: iso(r.due_at),
         };
       }),
       popularBooks: popular.rows.map((r) => ({ ...bookOf(r), loansLast30Days: Number(r.loans_30d) })),

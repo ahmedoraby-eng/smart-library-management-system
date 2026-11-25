@@ -40,15 +40,23 @@ export class OpenLibraryIsbnLookup implements IsbnLookup {
     const timer = setTimeout(() => ctl.abort(), this.timeoutMs);
     try {
       const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbn)}&format=json&jscmd=data`;
-      const res = await this.fetchFn(url, { signal: ctl.signal, headers: { "user-agent": "SmartLibrary/1.0", accept: "application/json" } });
+      const res = await this.fetchFn(url, {
+        signal: ctl.signal,
+        headers: { "user-agent": "SmartLibrary/1.0", accept: "application/json" },
+      });
       if (!res.ok) return { found: false, reason: "unavailable" };
       const json = (await res.json()) as Record<string, OpenLibraryData> | null;
       const data = json?.[`ISBN:${isbn}`];
       if (!data || typeof data !== "object") return { found: false, reason: "not_found" };
       const book = mapOpenLibrary(data);
-      return Object.values(book).every((v) => v === null) ? { found: false, reason: "not_found" } : { found: true, book };
+      return Object.values(book).every((v) => v === null)
+        ? { found: false, reason: "not_found" }
+        : { found: true, book };
     } catch (e) {
-      return { found: false, reason: ctl.signal.aborted || (e as { name?: string })?.name === "AbortError" ? "timeout" : "unavailable" };
+      return {
+        found: false,
+        reason: ctl.signal.aborted || (e as { name?: string })?.name === "AbortError" ? "timeout" : "unavailable",
+      };
     } finally {
       clearTimeout(timer);
     }

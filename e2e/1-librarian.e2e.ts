@@ -20,9 +20,15 @@ test("librarian adds a book, borrows it for a member, returns it", async ({ page
   await page.getByRole("link", { name: "Circulation" }).click();
   await page.getByTestId("tab-borrow").click();
   await page.getByTestId("member-combobox").getByRole("combobox").fill("Nour Hassan");
-  await page.getByRole("option", { name: /Nour Hassan/ }).first().click();
+  await page
+    .getByRole("option", { name: /Nour Hassan/ })
+    .first()
+    .click();
   await page.getByTestId("book-combobox").getByRole("combobox").fill(title);
-  await page.getByRole("option", { name: new RegExp(title) }).first().click();
+  await page
+    .getByRole("option", { name: new RegExp(title) })
+    .first()
+    .click();
   await page.getByTestId("confirm-borrow").click();
   await expect(page.getByTestId("borrow-success")).toBeVisible();
 

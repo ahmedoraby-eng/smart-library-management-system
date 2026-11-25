@@ -21,19 +21,28 @@ const arrayLiteral = (v: number[]) => `{${v.join(",")}}`;
  * Reads `books` by name for live text and availability (the read-model exception, as for retrieval).
  */
 export class PgChunkStore implements ChunkStore {
-  constructor(private readonly db: Db, private readonly dimensions = PGVECTOR_DIMENSIONS) {}
+  constructor(
+    private readonly db: Db,
+    private readonly dimensions = PGVECTOR_DIMENSIONS,
+  ) {}
 
   async usesPgvector(): Promise<boolean> {
     if (!pgvectorColumn) {
       const asked = this.db
-        .execute(sql`SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'`)
+        .execute(
+          sql`SELECT 1 FROM information_schema.columns WHERE table_name = 'book_chunks' AND column_name = 'embedding_v'`,
+        )
         .then((r) => {
           const yes = r.rows.length > 0;
-          console.info(JSON.stringify({ level: "info", event: "vector_search_path", path: yes ? "hnsw" : "brute-force" })); // once per isolate
+          console.info(
+            JSON.stringify({ level: "info", event: "vector_search_path", path: yes ? "hnsw" : "brute-force" }),
+          ); // once per isolate
           return yes;
         });
       pgvectorColumn = asked;
-      asked.catch(() => { if (pgvectorColumn === asked) pgvectorColumn = null; }); // a failed check is asked again
+      asked.catch(() => {
+        if (pgvectorColumn === asked) pgvectorColumn = null;
+      }); // a failed check is asked again
     }
     return (await pgvectorColumn) && this.dimensions === PGVECTOR_DIMENSIONS;
   }
@@ -41,27 +50,48 @@ export class PgChunkStore implements ChunkStore {
   async liveBooks(ids?: string[]): Promise<IndexableBook[]> {
     const only = ids ? ids.filter((i) => UUID.test(i)) : null;
     if (only && only.length === 0) return [];
-    const filter = only ? sql`AND id IN (${sql.join(only.map((i) => sql`${i}::uuid`), sql`, `)})` : sql``;
-    const { rows } = await this.db.execute(sql`SELECT id, title, author, category, description FROM books WHERE archived_at IS NULL ${filter} ORDER BY id`);
+    const filter = only
+      ? sql`AND id IN (${sql.join(
+          only.map((i) => sql`${i}::uuid`),
+          sql`, `,
+        )})`
+      : sql``;
+    const { rows } = await this.db.execute(
+      sql`SELECT id, title, author, category, description FROM books WHERE archived_at IS NULL ${filter} ORDER BY id`,
+    );
     return rows.map((r) => ({
-      id: r.id as string, title: r.title as string, author: r.author as string, category: r.category as string,
+      id: r.id as string,
+      title: r.title as string,
+      author: r.author as string,
+      category: r.category as string,
       description: (r.description as string | null) ?? null,
     }));
   }
 
   async indexedHashes(model: string): Promise<Map<string, string>> {
-    const { rows } = await this.db.execute(sql`SELECT DISTINCT ON (book_id) book_id, source_hash FROM book_chunks WHERE model = ${model} ORDER BY book_id, chunk_index`);
+    const { rows } = await this.db.execute(
+      sql`SELECT DISTINCT ON (book_id) book_id, source_hash FROM book_chunks WHERE model = ${model} ORDER BY book_id, chunk_index`,
+    );
     return new Map(rows.map((r) => [r.book_id as string, r.source_hash as string]));
   }
 
   async knownHashes(hashes: string[], model: string): Promise<Set<string>> {
     if (hashes.length === 0) return new Set();
     const { rows } = await this.db.execute(sql`SELECT DISTINCT source_hash FROM book_chunks
-      WHERE model = ${model} AND source_hash IN (${sql.join(hashes.map((h) => sql`${h}`), sql`, `)})`);
+      WHERE model = ${model} AND source_hash IN (${sql.join(
+        hashes.map((h) => sql`${h}`),
+        sql`, `,
+      )})`);
     return new Set(rows.map((r) => r.source_hash as string));
   }
 
-  async apply(model: string, change: { embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>; copied: Array<{ bookId: string; hash: string }> }): Promise<number> {
+  async apply(
+    model: string,
+    change: {
+      embedded: Array<{ bookId: string; hash: string; rows: ChunkRow[] }>;
+      copied: Array<{ bookId: string; hash: string }>;
+    },
+  ): Promise<number> {
     const pgvector = await this.usesPgvector();
     const cols = pgvector
       ? sql`(book_id, chunk_index, content, source_hash, model, embedding, embedding_v)`
@@ -81,9 +111,11 @@ export class PgChunkStore implements ChunkStore {
         await tx.execute(sql`DELETE FROM book_chunks WHERE book_id = ${e.bookId}::uuid`);
         if (e.rows.length === 0) continue;
         // One representation only (less CPU): the vector column with pgvector, the array without.
-        const values = e.rows.map((c) => pgvector
-          ? sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, NULL, ${vectorLiteral(c.embedding)}::vector)`
-          : sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[])`);
+        const values = e.rows.map((c) =>
+          pgvector
+            ? sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, NULL, ${vectorLiteral(c.embedding)}::vector)`
+            : sql`(${e.bookId}::uuid, ${c.index}, ${c.content}, ${e.hash}, ${model}, ${arrayLiteral(c.embedding)}::real[])`,
+        );
         await tx.execute(sql`INSERT INTO book_chunks ${cols} VALUES ${sql.join(values, sql`, `)}
           ON CONFLICT (book_id, chunk_index, model) DO NOTHING`);
       }
@@ -94,7 +126,10 @@ export class PgChunkStore implements ChunkStore {
     });
   }
 
-  async nearest(query: number[], opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean }): Promise<VectorHit[]> {
+  async nearest(
+    query: number[],
+    opts: { model: string; limit: number; minSimilarity: number; availableOnly: boolean },
+  ): Promise<VectorHit[]> {
     const avail = opts.availableOnly ? sql`AND b.available_copies > 0` : sql``;
     if (await this.usesPgvector()) {
       // HNSW finds the nearest chunks; then best chunk per live book. Similarity = 1 − cosine distance.

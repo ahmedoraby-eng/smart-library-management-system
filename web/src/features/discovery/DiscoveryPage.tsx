@@ -2,7 +2,17 @@ import type { DiscoveryItem, DiscoveryRequest, DiscoveryResponse, MemberDto } fr
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
-  AvailabilityBadge, Badge, Button, buttonClasses, Card, Combobox, EmptyState, InlineAlert, SearchIcon, Skeleton, Textarea,
+  AvailabilityBadge,
+  Badge,
+  Button,
+  buttonClasses,
+  Card,
+  Combobox,
+  EmptyState,
+  InlineAlert,
+  SearchIcon,
+  Skeleton,
+  Textarea,
 } from "../../components/ui";
 import { ApiError } from "../../lib/apiClient";
 import { initials } from "../../lib/format";
@@ -41,12 +51,24 @@ export function DiscoveryPage() {
   }, [cooldown]);
 
   const trimmed = query.trim();
-  const problem = touched ? (trimmed.length === 0 ? "Describe what the member needs." : trimmed.length < 3 ? "Describe what the member needs (at least 3 characters)." : query.length > MAX ? "Keep it under 500 characters." : null) : null;
+  const problem = touched
+    ? trimmed.length === 0
+      ? "Describe what the member needs."
+      : trimmed.length < 3
+        ? "Describe what the member needs (at least 3 characters)."
+        : query.length > MAX
+          ? "Keep it under 500 characters."
+          : null
+    : null;
 
   const run = () => {
     setTouched(true);
     if (trimmed.length < 3 || trimmed.length > MAX || cooldown > 0 || discover.isPending) return;
-    const body: DiscoveryRequest = { query: trimmed, ...(availableOnly ? { availableOnly: true } : {}), ...(member ? { memberId: member.id } : {}) };
+    const body: DiscoveryRequest = {
+      query: trimmed,
+      ...(availableOnly ? { availableOnly: true } : {}),
+      ...(member ? { memberId: member.id } : {}),
+    };
     discover.mutate(body, {
       onError: (e) => {
         if (e instanceof ApiError && e.status === 429) setCooldown(e.retryAfter ?? 10);
@@ -71,7 +93,9 @@ export function DiscoveryPage() {
     <>
       <header className="page-head mb-6">
         <h1 className="font-book text-title plain:tracking-tight">Book discovery</h1>
-        <p className="mt-1 text-neutral-600">Describe what the member is looking for. Results come only from your catalog.</p>
+        <p className="mt-1 text-neutral-600">
+          Describe what the member is looking for. Results come only from your catalog.
+        </p>
       </header>
 
       {/* Reading Room: the reference desk, marked by a brass top edge. */}
@@ -79,7 +103,14 @@ export function DiscoveryPage() {
         <form onSubmit={onSubmit} noValidate data-testid="discovery-form">
           <Textarea
             label="What does the member need?"
-            labelAside={<span className={`text-sm tabular-nums ${query.length > MAX ? "text-danger-700" : "text-neutral-600"}`} data-testid="char-count">{query.length} / {MAX}</span>}
+            labelAside={
+              <span
+                className={`text-sm tabular-nums ${query.length > MAX ? "text-danger-700" : "text-neutral-600"}`}
+                data-testid="char-count"
+              >
+                {query.length} / {MAX}
+              </span>
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
@@ -96,39 +127,63 @@ export function DiscoveryPage() {
                 <div data-testid="discovery-member">
                   <span className="mb-1 block text-sm font-medium text-neutral-700">For member (optional)</span>
                   <div className="flex items-center gap-3 rounded-md border border-border bg-neutral-25 px-3 py-2">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{initials(member.fullName)}</span>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                      {initials(member.fullName)}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{member.fullName}</div>
                       <div className="truncate text-sm text-neutral-600">{member.memberNumber}</div>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => { setMember(null); setMemberText(""); }} data-testid="clear-member">Clear</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setMember(null);
+                        setMemberText("");
+                      }}
+                      data-testid="clear-member"
+                    >
+                      Clear
+                    </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                <span className="mb-1 block text-sm font-medium text-neutral-700" aria-hidden="true">For member (optional)</span>
-                <Combobox
-                  label="For member (optional)"
-                  placeholder="Search name, member number or email"
-                  value={memberText}
-                  onValueChange={setMemberText}
-                  options={memberQ ? members.data?.items : undefined}
-                  loading={members.isFetching && Boolean(memberQ)}
-                  getKey={(m) => m.id}
-                  onSelect={(m) => { setMember(m); setMemberText(""); }}
-                  testId="discovery-member-combobox"
-                  emptyText="No members match. Check the spelling or the member number."
-                  hint="Helps the AI skip books they have just read."
-                  renderOption={(m) => (
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-700">{initials(m.fullName)}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 font-medium">{m.fullName}<MemberStatusBadge status={m.status} /></div>
-                        <div className="truncate text-sm text-neutral-600">{m.memberNumber} · {m.email}</div>
+                  <span className="mb-1 block text-sm font-medium text-neutral-700" aria-hidden="true">
+                    For member (optional)
+                  </span>
+                  <Combobox
+                    label="For member (optional)"
+                    placeholder="Search name, member number or email"
+                    value={memberText}
+                    onValueChange={setMemberText}
+                    options={memberQ ? members.data?.items : undefined}
+                    loading={members.isFetching && Boolean(memberQ)}
+                    getKey={(m) => m.id}
+                    onSelect={(m) => {
+                      setMember(m);
+                      setMemberText("");
+                    }}
+                    testId="discovery-member-combobox"
+                    emptyText="No members match. Check the spelling or the member number."
+                    hint="Helps the AI skip books they have just read."
+                    renderOption={(m) => (
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-700">
+                          {initials(m.fullName)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 font-medium">
+                            {m.fullName}
+                            <MemberStatusBadge status={m.status} />
+                          </div>
+                          <div className="truncate text-sm text-neutral-600">
+                            {m.memberNumber} · {m.email}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                />
+                    )}
+                  />
                 </>
               )}
             </div>
@@ -140,7 +195,10 @@ export function DiscoveryPage() {
                 <button
                   key={ex}
                   type="button"
-                  onClick={() => { setQuery(ex); setTouched(false); }}
+                  onClick={() => {
+                    setQuery(ex);
+                    setTouched(false);
+                  }}
                   className="rounded-xs border border-border-strong bg-surface px-3 py-1 font-display text-sm text-neutral-700 book-italic hover:bg-neutral-50"
                   data-testid="example-chip"
                 >
@@ -150,10 +208,23 @@ export function DiscoveryPage() {
             </div>
             <div className="ml-auto flex items-center gap-4">
               <label className="flex items-center gap-2 text-base text-neutral-700">
-                <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} className="h-4 w-4 accent-brand-600" data-testid="available-only" />
+                <input
+                  type="checkbox"
+                  checked={availableOnly}
+                  onChange={(e) => setAvailableOnly(e.target.checked)}
+                  className="h-4 w-4 accent-brand-600"
+                  data-testid="available-only"
+                />
                 Available only
               </label>
-              <Button type="submit" variant="primary" icon={<SearchIcon size={16} />} loading={discover.isPending} disabled={cooldown > 0} data-testid="discovery-submit">
+              <Button
+                type="submit"
+                variant="primary"
+                icon={<SearchIcon size={16} />}
+                loading={discover.isPending}
+                disabled={cooldown > 0}
+                data-testid="discovery-submit"
+              >
                 {cooldown > 0 ? `Try again in ${cooldown}s` : "Find books"}
               </Button>
             </div>
@@ -166,9 +237,19 @@ export function DiscoveryPage() {
         {discover.isPending ? (
           <Loading />
         ) : rateLimited ? (
-          <InlineAlert variant="warning" testId="discovery-rate-limited">Too many searches in a minute. Try again in a few seconds.</InlineAlert>
+          <InlineAlert variant="warning" testId="discovery-rate-limited">
+            Too many searches in a minute. Try again in a few seconds.
+          </InlineAlert>
         ) : err ? (
-          <InlineAlert variant="danger" testId="discovery-error" action={<Button size="sm" onClick={run}>Try again</Button>}>
+          <InlineAlert
+            variant="danger"
+            testId="discovery-error"
+            action={
+              <Button size="sm" onClick={run}>
+                Try again
+              </Button>
+            }
+          >
             Couldn't search the catalog. Try again.
           </InlineAlert>
         ) : discover.data ? (
@@ -180,7 +261,13 @@ export function DiscoveryPage() {
 }
 
 /** SLM-16 cost tiers, visible: what's left today, and a red note once the user's AI-assisted searches are used up. */
-function QuotaLine({ quota, last }: { quota: { left: number; limit: number } | undefined; last: DiscoveryResponse | undefined }) {
+function QuotaLine({
+  quota,
+  last,
+}: {
+  quota: { left: number; limit: number } | undefined;
+  last: DiscoveryResponse | undefined;
+}) {
   if (!quota) return null;
   // The note describes the answer on screen (its tier), not just the counter: a cached AI-ranked answer or
   // "no matching books" gets no note even at 0 left. Before the first search, 0 left warns up front.
@@ -191,9 +278,13 @@ function QuotaLine({ quota, last }: { quota: { left: number; limit: number } | u
       {out ? (
         <p className="text-sm font-medium text-danger-700" role="status" data-testid="ai-quota-note">
           You've used today's {quota.limit} AI-assisted searches.{" "}
-          {keywordsOnly ? "Results are matched by keywords only right now, without AI ranking or reasons." : "Results are still matched by meaning, without AI ranking or reasons."}
+          {keywordsOnly
+            ? "Results are matched by keywords only right now, without AI ranking or reasons."
+            : "Results are still matched by meaning, without AI ranking or reasons."}
         </p>
-      ) : <span />}
+      ) : (
+        <span />
+      )}
       <span className="ml-auto text-sm text-neutral-600 tabular-nums" data-testid="ai-searches-left">
         {quota.left} of {quota.limit} AI-assisted searches left today
       </span>
@@ -209,7 +300,11 @@ function Loading() {
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex gap-4 border-b border-border p-4 last:border-b-0">
             <Skeleton className="h-16 w-12" />
-            <div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-3 w-1/4" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           </div>
         ))}
       </Card>
@@ -217,7 +312,15 @@ function Loading() {
   );
 }
 
-function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBorrow: boolean; memberId: string | undefined }) {
+function Results({
+  data,
+  canBorrow,
+  memberId,
+}: {
+  data: DiscoveryResponse;
+  canBorrow: boolean;
+  memberId: string | undefined;
+}) {
   if (data.items.length === 0) {
     return (
       <Card>
@@ -226,7 +329,11 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
           icon={<SearchIcon size={40} />}
           title="No matching books in the catalog"
           text="Try broader words, or browse Books."
-          action={<Link to="/books" search={{ page: 1, size: 20 }} className={buttonClasses({ variant: "secondary" })}>Browse books</Link>}
+          action={
+            <Link to="/books" search={{ page: 1, size: 20 }} className={buttonClasses({ variant: "secondary" })}>
+              Browse books
+            </Link>
+          }
         />
       </Card>
     );
@@ -234,27 +341,52 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
   const n = data.items.length;
   return (
     <>
-      {data.mode === "FALLBACK" && data.note && (
+      {data.mode === "FALLBACK" &&
+        data.note &&
         // A single match is not a failure (the model is skipped on purpose to save cost): info, not warning.
         // Quota used up with hybrid results: the red note under the search box says it all. If retrieval fell back
         // to keywords too, show the server's note (it says keywords). Budget used up or a single match: calm info.
         (data.fallbackReason !== "QUOTA_EXCEEDED" || data.retrieval === "lexical") && (
-          <InlineAlert variant={data.fallbackReason === "SINGLE_CANDIDATE" || data.fallbackReason === "BUDGET_EXHAUSTED" ? "info" : "warning"} className="mb-4" testId="discovery-fallback-notice">{data.note}</InlineAlert>
-        )
-      )}
-      <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
-        <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">{n} {n === 1 ? "book" : "books"} from your catalog</h2>
-        {data.mode === "AI" ? (
-          <Badge variant="brass" dot={false} data-testid="mode-badge" data-mode="AI">AI-ranked</Badge>
-        ) : (
-          <Badge variant="neutral" dot={false} data-testid="mode-badge" data-mode="FALLBACK">Keyword match</Badge>
+          <InlineAlert
+            variant={
+              data.fallbackReason === "SINGLE_CANDIDATE" || data.fallbackReason === "BUDGET_EXHAUSTED"
+                ? "info"
+                : "warning"
+            }
+            className="mb-4"
+            testId="discovery-fallback-notice"
+          >
+            {data.note}
+          </InlineAlert>
         )}
-        <span className="ml-auto text-sm text-neutral-600">Availability is live from the catalog, not from the AI.</span>
+      <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2 plain:border-b-0 plain:pb-0">
+        <h2 className="font-book text-[20px] leading-7 plain:text-md" data-testid="results-title">
+          {n} {n === 1 ? "book" : "books"} from your catalog
+        </h2>
+        {data.mode === "AI" ? (
+          <Badge variant="brass" dot={false} data-testid="mode-badge" data-mode="AI">
+            AI-ranked
+          </Badge>
+        ) : (
+          <Badge variant="neutral" dot={false} data-testid="mode-badge" data-mode="FALLBACK">
+            Keyword match
+          </Badge>
+        )}
+        <span className="ml-auto text-sm text-neutral-600">
+          Availability is live from the catalog, not from the AI.
+        </span>
       </div>
       <Card>
         <ol>
           {data.items.map((item, i) => (
-            <ResultRow key={item.book.id} item={item} rank={i + 1} canBorrow={canBorrow} mode={data.mode} memberId={memberId} />
+            <ResultRow
+              key={item.book.id}
+              item={item}
+              rank={i + 1}
+              canBorrow={canBorrow}
+              mode={data.mode}
+              memberId={memberId}
+            />
           ))}
         </ol>
       </Card>
@@ -262,32 +394,72 @@ function Results({ data, canBorrow, memberId }: { data: DiscoveryResponse; canBo
   );
 }
 
-function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryItem; rank: number; canBorrow: boolean; mode: DiscoveryResponse["mode"]; memberId: string | undefined }) {
+function ResultRow({
+  item,
+  rank,
+  canBorrow,
+  mode,
+  memberId,
+}: {
+  item: DiscoveryItem;
+  rank: number;
+  canBorrow: boolean;
+  mode: DiscoveryResponse["mode"];
+  memberId: string | undefined;
+}) {
   const { book } = item;
   const [open, setOpen] = useState(false);
   const long = item.reason.length > 180;
   const meta = [book.author, book.category, book.publicationYear].filter(Boolean).join(" · ");
   return (
-    <li className="flex gap-4 border-b border-border p-4 last:border-b-0" data-testid="discovery-item" data-book-id={book.id}>
-      <span className="w-11 shrink-0 text-right font-book text-[30px] leading-8 text-brass-500 tabular-nums book-italic plain:w-4 plain:pt-1 plain:text-left plain:text-sm plain:leading-[18px] plain:font-normal plain:text-neutral-600">{rank}</span>
+    <li
+      className="flex gap-4 border-b border-border p-4 last:border-b-0"
+      data-testid="discovery-item"
+      data-book-id={book.id}
+    >
+      <span className="w-11 shrink-0 text-right font-book text-[30px] leading-8 text-brass-500 tabular-nums book-italic plain:w-4 plain:pt-1 plain:text-left plain:text-sm plain:leading-[18px] plain:font-normal plain:text-neutral-600">
+        {rank}
+      </span>
       <BookCover title={book.title} url={book.coverImageUrl} size="md" />
       <div className="min-w-0 flex-1">
-        <Link to="/books/$bookId" params={{ bookId: book.id }} className="font-book text-[19px] leading-6 text-neutral-900 no-underline hover:underline plain:text-md">{book.title}</Link>
+        <Link
+          to="/books/$bookId"
+          params={{ bookId: book.id }}
+          className="font-book text-[19px] leading-6 text-neutral-900 no-underline hover:underline plain:text-md"
+        >
+          {book.title}
+        </Link>
         <p className="text-sm text-neutral-600">
           {meta}
           {/* SLM-16: vector search found it although none of the request's words are in its text. */}
-          {item.foundBy === "semantic" && <span className="text-brass-700" data-testid="found-by-meaning"> · Found by meaning</span>}
+          {item.foundBy === "semantic" && (
+            <span className="text-brass-700" data-testid="found-by-meaning">
+              {" "}
+              · Found by meaning
+            </span>
+          )}
         </p>
         {/* Reading Room: a librarian's note in italic serif under a brass hairline; plain: the tinted box with an inline label. */}
         <div
           className="mt-2.5 max-w-[72ch] border-l-2 border-brass-200 pl-3.5 plain:max-w-none plain:rounded-md plain:border-brand-200 plain:bg-neutral-25 plain:px-3 plain:py-2 plain:text-base"
           data-testid="reason"
         >
-          {mode === "AI" && <><span className="eyebrow mb-1 block rr:text-brass-700 plain:inline plain:text-base plain:font-semibold plain:text-neutral-900">Why this book</span>{" "}</>}
+          {mode === "AI" && (
+            <>
+              <span className="eyebrow mb-1 block rr:text-brass-700 plain:inline plain:text-base plain:font-semibold plain:text-neutral-900">
+                Why this book
+              </span>{" "}
+            </>
+          )}
           <span className="block font-display text-[16px] leading-[23px] text-neutral-700 book-italic plain:inline plain:text-base plain:text-neutral-900">
             <span className={long && !open ? "line-clamp-3" : undefined}>{item.reason}</span>
             {long && (
-              <button type="button" className="ml-1 font-sans text-sm font-medium text-brand-700 not-italic" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+              <button
+                type="button"
+                className="ml-1 font-sans text-sm font-medium text-brand-700 not-italic"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+              >
                 {open ? "less" : "more"}
               </button>
             )}
@@ -297,9 +469,22 @@ function ResultRow({ item, rank, canBorrow, mode, memberId }: { item: DiscoveryI
       <div className="flex shrink-0 flex-col items-end gap-2">
         <AvailabilityBadge book={book} showNextDue />
         <div className="flex gap-2">
-          <Link to="/books/$bookId" params={{ bookId: book.id }} className={buttonClasses({ variant: "secondary", size: "sm" })}>View</Link>
+          <Link
+            to="/books/$bookId"
+            params={{ bookId: book.id }}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            View
+          </Link>
           {canBorrow && book.availableCopies > 0 && (
-            <Link to={BORROW_TO} search={{ book: book.id, ...(memberId ? { member: memberId } : {}) } as never} className={buttonClasses({ variant: "primary", size: "sm" })} data-testid="borrow-from-result">Borrow</Link>
+            <Link
+              to={BORROW_TO}
+              search={{ book: book.id, ...(memberId ? { member: memberId } : {}) } as never}
+              className={buttonClasses({ variant: "primary", size: "sm" })}
+              data-testid="borrow-from-result"
+            >
+              Borrow
+            </Link>
           )}
         </div>
       </div>

@@ -10,7 +10,15 @@ import { useDeleteBook } from "./api";
  * The three delete outcomes of ux.md §3.4 / scope D3, chosen from the BookDto before any call:
  * open loans → blocked, past loans only → archive, never borrowed → permanent delete.
  */
-export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onClose: () => void; onDone?: () => void }) {
+export function DeleteBookDialog({
+  book,
+  onClose,
+  onDone,
+}: {
+  book: BookDto;
+  onClose: () => void;
+  onDone?: () => void;
+}) {
   const navigate = useNavigate();
   const toast = useToast();
   const del = useDeleteBook();
@@ -38,7 +46,11 @@ export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onC
       onError: (err) => {
         onClose();
         if (err instanceof ApiError && err.code === "BOOK_HAS_ACTIVE_LOANS") {
-          toast.error(<>Can't remove <em>{book.title}</em>: copies are on loan. Record their returns first.</>);
+          toast.error(
+            <>
+              Can't remove <em>{book.title}</em>: copies are on loan. Record their returns first.
+            </>,
+          );
         } else if (!(err instanceof ApiError) || err.status >= 500) {
           toast.error("Couldn't remove the book. Nothing was changed. Try again.");
         }
@@ -56,7 +68,8 @@ export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onC
       testId="delete-dialog-archive"
     >
       <p>
-        It has {pastCount === undefined ? "past loans" : `${pastCount} past ${pastCount === 1 ? "loan" : "loans"}`}, so it will be <strong>archived</strong>: hidden from Books and search, still shown in Loan history.
+        It has {pastCount === undefined ? "past loans" : `${pastCount} past ${pastCount === 1 ? "loan" : "loans"}`}, so
+        it will be <strong>archived</strong>: hidden from Books and search, still shown in Loan history.
       </p>
     </ConfirmDialog>
   ) : (
@@ -74,7 +87,15 @@ export function DeleteBookDialog({ book, onClose, onDone }: { book: BookDto; onC
   );
 }
 
-function BlockedDialog({ book, onClose, closeRef }: { book: BookDto; onClose: () => void; closeRef: React.RefObject<HTMLButtonElement | null> }) {
+function BlockedDialog({
+  book,
+  onClose,
+  closeRef,
+}: {
+  book: BookDto;
+  onClose: () => void;
+  closeRef: React.RefObject<HTMLButtonElement | null>;
+}) {
   const navigate = useNavigate();
   return (
     <Modal
@@ -100,7 +121,8 @@ function BlockedDialog({ book, onClose, closeRef }: { book: BookDto; onClose: ()
       }
     >
       <p>
-        {book.activeLoans === 1 ? "1 copy is" : `${book.activeLoans} copies are`} on loan. Record {book.activeLoans === 1 ? "its return" : "their returns"} first.
+        {book.activeLoans === 1 ? "1 copy is" : `${book.activeLoans} copies are`} on loan. Record{" "}
+        {book.activeLoans === 1 ? "its return" : "their returns"} first.
       </p>
     </Modal>
   );

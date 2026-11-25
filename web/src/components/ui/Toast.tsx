@@ -65,7 +65,11 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: numbe
         isError ? "border-danger-200" : "border-border",
       )}
     >
-      {isError ? <AlertIcon className="mt-0.5 text-danger-600" /> : <CheckCircleIcon className="mt-0.5 text-success-500" />}
+      {isError ? (
+        <AlertIcon className="mt-0.5 text-danger-600" />
+      ) : (
+        <CheckCircleIcon className="mt-0.5 text-success-500" />
+      )}
       <div className="min-w-0 flex-1 text-neutral-800">{item.message}</div>
       <button
         type="button"

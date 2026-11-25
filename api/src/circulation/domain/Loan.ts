@@ -33,7 +33,12 @@ export interface LoanPolicy {
 const DAY_MS = 86_400_000;
 /** The UI computes dueAt = now + N days when it submits; allow for the trip to the server. */
 const SKEW_MS = 60 * 60_000;
-const dayMonthYear = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const dayMonthYear = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 /** Due date rule (architecture §3.3, SL-04 AC2): default now + loanDays; a custom one must be 1–60 days ahead. */
 export function resolveDueAt(now: Date, requested: Date | undefined, policy: Pick<LoanPolicy, "loanDays">): Date {
@@ -62,10 +67,20 @@ export interface OpenLoanOfTitle {
  * Borrow rules on the locked member (architecture §3.3): ACTIVE; not already holding this title;
  * under the loan limit. Stock is checked next, by catalog's guarded statement.
  */
-export function checkBorrow(state: { member: MemberForLoan; openLoans: number; sameTitle: OpenLoanOfTitle | null; policy: Pick<LoanPolicy, "maxActiveLoans"> }): void {
+export function checkBorrow(state: {
+  member: MemberForLoan;
+  openLoans: number;
+  sameTitle: OpenLoanOfTitle | null;
+  policy: Pick<LoanPolicy, "maxActiveLoans">;
+}): void {
   const { member, openLoans, sameTitle, policy } = state;
   if (member.status !== "ACTIVE") {
-    throw new ConflictError("MEMBER_INACTIVE", "Member inactive", `${member.fullName} is inactive. Reactivate them on the member page first.`, { memberId: member.id });
+    throw new ConflictError(
+      "MEMBER_INACTIVE",
+      "Member inactive",
+      `${member.fullName} is inactive. Reactivate them on the member page first.`,
+      { memberId: member.id },
+    );
   }
   if (sameTitle) throw alreadyBorrowed(member.fullName, sameTitle);
   if (openLoans >= policy.maxActiveLoans) {
@@ -79,7 +94,8 @@ export function checkBorrow(state: { member: MemberForLoan; openLoans: number; s
 }
 
 export function alreadyBorrowed(memberName: string | null, loan: OpenLoanOfTitle | null): ConflictError {
-  if (!loan) return new ConflictError("ALREADY_BORROWED", "Already borrowed", "This member already has this book on loan.");
+  if (!loan)
+    return new ConflictError("ALREADY_BORROWED", "Already borrowed", "This member already has this book on loan.");
   return new ConflictError(
     "ALREADY_BORROWED",
     "Already borrowed",

@@ -21,8 +21,14 @@ export type Permission = z.infer<typeof Permission>;
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: Permission.options,
   LIBRARIAN: [
-    "BOOK_READ", "BOOK_WRITE", "MEMBER_READ", "MEMBER_WRITE",
-    "LOAN_READ", "LOAN_PROCESS", "REPORT_READ", "AI_DISCOVER",
+    "BOOK_READ",
+    "BOOK_WRITE",
+    "MEMBER_READ",
+    "MEMBER_WRITE",
+    "LOAN_READ",
+    "LOAN_PROCESS",
+    "REPORT_READ",
+    "AI_DISCOVER",
   ],
   SUPERVISOR: ["BOOK_READ", "MEMBER_READ", "LOAN_READ", "REPORT_READ", "AI_DISCOVER"],
 };

@@ -7,7 +7,11 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
   constructor(private readonly db: DbOrTx) {}
 
   async findByEmail(email: string): Promise<StaffUser | null> {
-    const rows = await this.db.select().from(staffUsers).where(sql`lower(${staffUsers.email}) = ${email.toLowerCase()}`).limit(1);
+    const rows = await this.db
+      .select()
+      .from(staffUsers)
+      .where(sql`lower(${staffUsers.email}) = ${email.toLowerCase()}`)
+      .limit(1);
     return rows[0] ?? null;
   }
 
@@ -23,14 +27,26 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
   }
 
   async bindGoogleSub(id: string, sub: string): Promise<boolean> {
-    const r = await this.db.execute(sql`UPDATE staff_users SET google_sub = ${sub} WHERE id = ${id} AND google_sub IS NULL`);
+    const r = await this.db.execute(
+      sql`UPDATE staff_users SET google_sub = ${sub} WHERE id = ${id} AND google_sub IS NULL`,
+    );
     return (r.rowCount ?? 0) === 1;
   }
 
-  async provision(input: { email: string; fullName: string; role: StaffUser["role"]; googleSub: string }): Promise<StaffUser> {
+  async provision(input: {
+    email: string;
+    fullName: string;
+    role: StaffUser["role"];
+    googleSub: string;
+  }): Promise<StaffUser> {
     await this.db
       .insert(staffUsers)
-      .values({ email: input.email.toLowerCase(), fullName: input.fullName, role: input.role, googleSub: input.googleSub })
+      .values({
+        email: input.email.toLowerCase(),
+        fullName: input.fullName,
+        role: input.role,
+        googleSub: input.googleSub,
+      })
       .onConflictDoNothing();
     const row = await this.findByEmail(input.email);
     if (!row) throw new Error("provision: row missing after insert");
@@ -53,7 +69,10 @@ export class PgStaffUserRepository implements StaffUserRepository, StaffAccessSt
     return this.db.select().from(staffUsers).orderBy(asc(staffUsers.fullName));
   }
 
-  async update(id: string, change: { role: StaffUser["role"]; status: StaffUser["status"] }): Promise<StaffUser | null> {
+  async update(
+    id: string,
+    change: { role: StaffUser["role"]; status: StaffUser["status"] },
+  ): Promise<StaffUser | null> {
     const rows = await this.db.update(staffUsers).set(change).where(eq(staffUsers.id, id)).returning();
     return rows[0] ?? null;
   }

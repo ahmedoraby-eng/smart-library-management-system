@@ -30,8 +30,14 @@ export function ForbiddenPage() {
       <EmptyState
         testId="forbidden"
         title="You don't have access to this page"
-        text={me?.role === "SUPERVISOR" ? "Your role (Supervisor) is read-only." : "Your role doesn't include this page."}
-        action={<Link to="/dashboard" className={buttonClasses({ variant: "secondary" })}>Back to Dashboard</Link>}
+        text={
+          me?.role === "SUPERVISOR" ? "Your role (Supervisor) is read-only." : "Your role doesn't include this page."
+        }
+        action={
+          <Link to="/dashboard" className={buttonClasses({ variant: "secondary" })}>
+            Back to Dashboard
+          </Link>
+        }
       />
     </Card>
   );
@@ -44,7 +50,11 @@ export function NotFoundPage() {
         testId="not-found"
         title="Page not found"
         text="This page doesn't exist or was moved."
-        action={<Link to="/dashboard" className={buttonClasses({ variant: "secondary" })}>Back to Dashboard</Link>}
+        action={
+          <Link to="/dashboard" className={buttonClasses({ variant: "secondary" })}>
+            Back to Dashboard
+          </Link>
+        }
       />
     </Card>
   );

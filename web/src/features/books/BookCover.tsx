@@ -11,7 +11,15 @@ const SIZES = { sm: "h-11 w-8 text-[11px]", md: "h-16.5 w-12 text-sm", lg: "h-33
  * Cover image, or a book spine with initials when there is no URL or it fails to load (a flat initials
  * tile in the plain theme). Decorative: the title is always next to it.
  */
-export function BookCover({ title, url, size = "sm" }: { title: string; url: string | null; size?: keyof typeof SIZES }) {
+export function BookCover({
+  title,
+  url,
+  size = "sm",
+}: {
+  title: string;
+  url: string | null;
+  size?: keyof typeof SIZES;
+}) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const show = url && failedUrl !== url;
   return (
@@ -25,10 +33,20 @@ export function BookCover({ title, url, size = "sm" }: { title: string; url: str
       )}
     >
       {show ? (
-        <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedUrl(url)} />
+        <img
+          src={url}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(url)}
+        />
       ) : (
         <>
-          <span aria-hidden="true" className="absolute top-[7px] right-1 left-1.5 h-px bg-[#f0dcaa]/65 shadow-[0_2px_0_rgb(240_220_170/.35)] plain:hidden" />
+          <span
+            aria-hidden="true"
+            className="absolute top-[7px] right-1 left-1.5 h-px bg-[#f0dcaa]/65 shadow-[0_2px_0_rgb(240_220_170/.35)] plain:hidden"
+          />
           <span aria-hidden="true">{initials(title)}</span>
         </>
       )}

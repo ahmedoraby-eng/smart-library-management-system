@@ -23,7 +23,11 @@ export class PgBookStock implements BookStock {
         FROM books b WHERE b.id = ${bookId}`);
     const b = why.rows[0];
     if (!b || b.archived_at) return { kind: "not_found" };
-    return { kind: "unavailable", title: b.title as string, nextDueAt: b.next_due_at ? new Date(b.next_due_at as string | Date) : null };
+    return {
+      kind: "unavailable",
+      title: b.title as string,
+      nextDueAt: b.next_due_at ? new Date(b.next_due_at as string | Date) : null,
+    };
   }
 
   async returnCopy(bookId: string): Promise<void> {

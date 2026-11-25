@@ -28,7 +28,11 @@ export interface StaffUserRepository {
   update(id: string, change: { role: Role; status: StaffStatus }): Promise<StaffUser | null>;
 }
 
-export interface StaffListParams { q?: string; page: number; size: number }
+export interface StaffListParams {
+  q?: string;
+  page: number;
+  size: number;
+}
 
 /** Role/status change under row locks: the target and every ACTIVE ADMIN are locked, then `decide` runs. */
 export interface StaffAccessStore {

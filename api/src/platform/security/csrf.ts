@@ -9,7 +9,8 @@ export const sameOriginWrites = createMiddleware(async (c, next) => {
   const method = c.req.method;
   if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
     const origin = c.req.header("origin");
-    if (!origin || origin !== new URL(c.req.url).origin) throw new ForbiddenError("FORBIDDEN", "Cross-origin request refused.");
+    if (!origin || origin !== new URL(c.req.url).origin)
+      throw new ForbiddenError("FORBIDDEN", "Cross-origin request refused.");
     const type = c.req.header("content-type") ?? "";
     const length = c.req.header("content-length");
     const hasBody = (length !== undefined && length !== "0") || c.req.header("transfer-encoding") !== undefined;

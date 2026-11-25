@@ -3,7 +3,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { AvailabilityBadge, availabilityLevel } from "./Badge";
 
-const copies = (availableCopies: number, totalCopies = 5, nextDueAt: string | null = null) => ({ availableCopies, totalCopies, nextDueAt });
+const copies = (availableCopies: number, totalCopies = 5, nextDueAt: string | null = null) => ({
+  availableCopies,
+  totalCopies,
+  nextDueAt,
+});
 
 describe("availability status mapping (ux.md §2, U9)", () => {
   it("Available ≥ 2, Low = exactly 1, Unavailable = 0", () => {

@@ -37,14 +37,24 @@ export const RESPONSE_SCHEMA = {
 /** Cloudflare Workers AI through the `AI` binding: no key in code, JSON-schema output, model id from config. */
 export class WorkersAiProvider implements AiProvider {
   readonly name = "workers-ai";
-  constructor(private readonly ai: AiBinding, private readonly model: string) {}
+  constructor(
+    private readonly ai: AiBinding,
+    private readonly model: string,
+  ) {}
 
   async rank({ query, candidates, memberRecentTitles, signal, onUsage }: RankRequest): Promise<unknown> {
     // Book text and the query go in as JSON data, in the user turn; the system turn holds the rules only.
     const payload = {
       request: query,
       alreadyRead: memberRecentTitles,
-      candidates: candidates.map((c) => ({ id: c.id, title: c.title, author: c.author, category: c.category, year: c.publicationYear, description: c.description })),
+      candidates: candidates.map((c) => ({
+        id: c.id,
+        title: c.title,
+        author: c.author,
+        category: c.category,
+        year: c.publicationYear,
+        description: c.description,
+      })),
     };
     const call = this.ai.run(this.model, {
       messages: [
@@ -59,15 +69,28 @@ export class WorkersAiProvider implements AiProvider {
       if (signal.aborted) reject(new Error("aborted"));
       signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
     });
-    const result = (await Promise.race([call, aborted])) as { response?: unknown; usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } } | null;
+    const result = (await Promise.race([call, aborted])) as {
+      response?: unknown;
+      usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
+    } | null;
     // Cost: the model's own token count when it reports one, else an estimate from the text sizes.
     const reported = result && typeof result === "object" ? result.usage : undefined;
     const answer = result && typeof result === "object" && "response" in result ? result.response : result;
     if (reported && typeof reported.prompt_tokens === "number" && typeof reported.completion_tokens === "number") {
-      onUsage?.({ model: this.model, inputTokens: reported.prompt_tokens, outputTokens: reported.completion_tokens, estimated: false });
+      onUsage?.({
+        model: this.model,
+        inputTokens: reported.prompt_tokens,
+        outputTokens: reported.completion_tokens,
+        estimated: false,
+      });
     } else {
       const out = typeof answer === "string" ? answer : JSON.stringify(answer ?? "");
-      onUsage?.({ model: this.model, inputTokens: estimateTokens(SYSTEM_PROMPT + JSON.stringify(payload)), outputTokens: estimateTokens(out), estimated: true });
+      onUsage?.({
+        model: this.model,
+        inputTokens: estimateTokens(SYSTEM_PROMPT + JSON.stringify(payload)),
+        outputTokens: estimateTokens(out),
+        estimated: true,
+      });
     }
     // JSON mode returns the parsed object (or a string); the validator handles both.
     return answer;

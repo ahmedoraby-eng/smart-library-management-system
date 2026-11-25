@@ -3,7 +3,10 @@ import { as, pool, resetDb, seedStaff, testApp } from "./support";
 
 afterAll(() => pool.end());
 let staff: Awaited<ReturnType<typeof seedStaff>>;
-beforeEach(async () => { await resetDb(); staff = await seedStaff(); });
+beforeEach(async () => {
+  await resetDb();
+  staff = await seedStaff();
+});
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- test convenience
 const DAY = 86_400_000;
@@ -18,7 +21,9 @@ async function book(totalCopies = 3, title = `Book ${Math.random().toString(36).
 }
 async function member(status: "ACTIVE" | "INACTIVE" = "ACTIVE", fullName = "Sara Haddad"): Promise<string> {
   const r = await pool.query("INSERT INTO members (full_name, email, status) VALUES ($1, $2, $3) RETURNING id", [
-    fullName, `m-${crypto.randomUUID()}@example.org`, status,
+    fullName,
+    `m-${crypto.randomUUID()}@example.org`,
+    status,
   ]);
   return r.rows[0].id;
 }
@@ -33,8 +38,17 @@ async function stock(bookId: string): Promise<{ total: number; available: number
 }
 const loanCount = async () => (await pool.query("SELECT count(*)::int n FROM loans")).rows[0].n as number;
 
-async function borrow(app: ReturnType<typeof testApp>, bookId: string, memberId: string, extra: Json = {}, by = staff.librarian) {
-  const res = await app.request("/api/loans/borrow", await as(by, { method: "POST", body: { bookId, memberId, ...extra } }));
+async function borrow(
+  app: ReturnType<typeof testApp>,
+  bookId: string,
+  memberId: string,
+  extra: Json = {},
+  by = staff.librarian,
+) {
+  const res = await app.request(
+    "/api/loans/borrow",
+    await as(by, { method: "POST", body: { bookId, memberId, ...extra } }),
+  );
   return { res, json: (await res.json()) as Json };
 }
 async function giveBack(app: ReturnType<typeof testApp>, loanId: string, by = staff.librarian) {
@@ -55,7 +69,9 @@ async function expectInventoryInvariant() {
   }
 }
 // Every test in this file ends with the invariant holding.
-afterEach(async () => { await expectInventoryInvariant(); });
+afterEach(async () => {
+  await expectInventoryInvariant();
+});
 
 describe("SLM-4 borrow", () => {
   it("SLM-4 AC1 happy borrow → 201 ACTIVE loan, processedBy = the staff user, stock −1 in the same transaction", async () => {
@@ -65,7 +81,9 @@ describe("SLM-4 borrow", () => {
     expect(res.status).toBe(201);
     expect(res.headers.get("location")).toBe(`/api/loans/${json.id}`);
     expect(json).toMatchObject({
-      status: "ACTIVE", returnedAt: null, returnedBy: null,
+      status: "ACTIVE",
+      returnedAt: null,
+      returnedBy: null,
       book: { id: b, title: "Clean Code", author: "Author" },
       member: { id: m, fullName: "Sara Haddad" },
       processedBy: { id: staff.librarian, name: "Layla Librarian" },
@@ -153,7 +171,10 @@ describe("SLM-4 borrow", () => {
     const b = await book(2);
     const { res, json } = await borrow(app, b, await member("INACTIVE", "Omar Nasser"));
     expect(res.status).toBe(409);
-    expect(json).toMatchObject({ code: "MEMBER_INACTIVE", detail: "Omar Nasser is inactive. Reactivate them on the member page first." });
+    expect(json).toMatchObject({
+      code: "MEMBER_INACTIVE",
+      detail: "Omar Nasser is inactive. Reactivate them on the member page first.",
+    });
     expect(await loanCount()).toBe(0);
     expect(await stock(b)).toMatchObject({ available: 2 });
   });
@@ -207,10 +228,11 @@ describe("SLM-4 borrow", () => {
     // through the API; prove the SQLSTATE mapping on the real constraints instead.
     const { circulationErrorFrom } = await import("../src/circulation/infrastructure/pgErrors");
     const [b, m] = [await book(2), await member()];
-    const insert = () => pool.query(
-      "INSERT INTO loans (book_id, member_id, processed_by, due_at) VALUES ($1, $2, $3, now() + interval '1 day')",
-      [b, m, staff.librarian],
-    );
+    const insert = () =>
+      pool.query(
+        "INSERT INTO loans (book_id, member_id, processed_by, due_at) VALUES ($1, $2, $3, now() + interval '1 day')",
+        [b, m, staff.librarian],
+      );
     await insert();
     const err = await insert().catch((e) => e);
     expect(circulationErrorFrom(err)).toMatchObject({ status: 409, code: "ALREADY_BORROWED" });
@@ -227,7 +249,12 @@ describe("SLM-4 return", () => {
     const loan = (await borrow(app, b, await member())).json;
     const { res, json } = await giveBack(app, loan.id, staff.admin);
     expect(res.status).toBe(200);
-    expect(json).toMatchObject({ id: loan.id, status: "RETURNED", returnedBy: { id: staff.admin, name: "Amira Admin" }, processedBy: { id: staff.librarian } });
+    expect(json).toMatchObject({
+      id: loan.id,
+      status: "RETURNED",
+      returnedBy: { id: staff.admin, name: "Amira Admin" },
+      processedBy: { id: staff.librarian },
+    });
     expect(Date.parse(json.returnedAt)).not.toBeNaN();
     expect(await stock(b)).toMatchObject({ available: 2, open: 0 });
   });
@@ -239,7 +266,10 @@ describe("SLM-4 return", () => {
     const first = (await giveBack(app, loan.id)).json;
     const { res, json } = await giveBack(app, loan.id, staff.admin);
     expect(res.status).toBe(409);
-    expect(json).toMatchObject({ code: "LOAN_ALREADY_RETURNED", context: { returnedAt: first.returnedAt, returnedBy: "Layla Librarian" } });
+    expect(json).toMatchObject({
+      code: "LOAN_ALREADY_RETURNED",
+      context: { returnedAt: first.returnedAt, returnedBy: "Layla Librarian" },
+    });
     expect(await stock(b)).toMatchObject({ available: 2, open: 0 });
     const row = (await pool.query("SELECT returned_at, returned_by FROM loans WHERE id = $1", [loan.id])).rows[0];
     expect(row.returned_at.toISOString()).toBe(first.returnedAt);
@@ -315,7 +345,10 @@ describe("SLM-4 concurrency (real Postgres, parallel requests)", () => {
     const results = await Promise.all(books.map((b) => borrow(app, b, m)));
     expect(results.filter((r) => r.res.status === 201)).toHaveLength(5);
     expect(results.filter((r) => r.json.code === "LOAN_LIMIT_REACHED")).toHaveLength(3);
-    expect((await pool.query("SELECT count(*)::int n FROM loans WHERE member_id = $1 AND returned_at IS NULL", [m])).rows[0].n).toBe(5);
+    expect(
+      (await pool.query("SELECT count(*)::int n FROM loans WHERE member_id = $1 AND returned_at IS NULL", [m])).rows[0]
+        .n,
+    ).toBe(5);
   });
 
   it("SLM-4 concurrency: borrow and return of the last copy at once both settle; invariant holds", async () => {
@@ -345,9 +378,13 @@ describe("SLM-4 concurrency (real Postgres, parallel requests)", () => {
     // Edit total through the catalog API while loans are open: available follows (total − out).
     const b0 = (await app.request(`/api/books/${books[1]}`, await as(staff.librarian))).json() as Promise<Json>;
     const cur = await b0;
-    const put = await app.request(`/api/books/${books[1]}`, await as(staff.librarian, {
-      method: "PUT", body: { title: cur.title, author: cur.author, category: cur.category, totalCopies: 6, version: cur.version },
-    }));
+    const put = await app.request(
+      `/api/books/${books[1]}`,
+      await as(staff.librarian, {
+        method: "PUT",
+        body: { title: cur.title, author: cur.author, category: cur.category, totalCopies: 6, version: cur.version },
+      }),
+    );
     expect(put.status).toBe(200);
     await expectInventoryInvariant();
   });
@@ -427,7 +464,11 @@ describe("SLM-4 RBAC (rbac-matrix.md: LOAN_PROCESS = Admin, Librarian)", () => {
     expect(loan.res.status).toBe(201);
     expect((await app.request("/api/loans", await as(staff.supervisor))).status).toBe(200);
     expect((await app.request(`/api/loans/${loan.json.id}`, await as(staff.supervisor))).status).toBe(200);
-    const anon = await app.request("/api/loans/borrow", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json" }, body: "{}" });
+    const anon = await app.request("/api/loans/borrow", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: "{}",
+    });
     expect(anon.status).toBe(401);
     expect((await app.request("/api/loans")).status).toBe(401);
   });
@@ -438,12 +479,25 @@ describe("SLM-4 AC9 Return screen list (GET /api/loans)", () => {
     const now = new Date();
     const app = testApp({ clock: () => now });
     const b = await book(5, "Clean Code");
-    const [m1, m2, m3, m4] = [await member("ACTIVE", "Ann"), await member("ACTIVE", "Ben"), await member("ACTIVE", "Cat"), await member("ACTIVE", "Dan")];
+    const [m1, m2, m3, m4] = [
+      await member("ACTIVE", "Ann"),
+      await member("ACTIVE", "Ben"),
+      await member("ACTIVE", "Cat"),
+      await member("ACTIVE", "Dan"),
+    ];
     const ins = async (m: string, dueOffsetDays: number, returned = false) => {
       await pool.query(
         `INSERT INTO loans (book_id, member_id, processed_by, borrowed_at, due_at, returned_at, returned_by)
          VALUES ($1, $2, $3, $4::timestamptz - interval '30 days', $4::timestamptz + ($5 || ' days')::interval, $6, $7)`,
-        [b, m, staff.librarian, now.toISOString(), String(dueOffsetDays), returned ? now : null, returned ? staff.librarian : null],
+        [
+          b,
+          m,
+          staff.librarian,
+          now.toISOString(),
+          String(dueOffsetDays),
+          returned ? now : null,
+          returned ? staff.librarian : null,
+        ],
       );
       if (!returned) await pool.query("UPDATE books SET available_copies = available_copies - 1 WHERE id = $1", [b]);
     };
@@ -454,14 +508,22 @@ describe("SLM-4 AC9 Return screen list (GET /api/loans)", () => {
     const res = await app.request("/api/loans?status=ACTIVE", await as(staff.librarian));
     const page = (await res.json()) as Json;
     expect(page.total).toBe(3);
-    expect(page.items.map((l: Json) => [l.member.fullName, l.status])).toEqual([["Ben", "OVERDUE"], ["Cat", "ACTIVE"], ["Ann", "ACTIVE"]]);
+    expect(page.items.map((l: Json) => [l.member.fullName, l.status])).toEqual([
+      ["Ben", "OVERDUE"],
+      ["Cat", "ACTIVE"],
+      ["Ann", "ACTIVE"],
+    ]);
 
     const overdue = (await (await app.request("/api/loans?status=OVERDUE", await as(staff.librarian))).json()) as Json;
     expect(overdue.items.map((l: Json) => l.member.fullName)).toEqual(["Ben"]);
 
-    const byName = (await (await app.request("/api/loans?status=ACTIVE&q=ann", await as(staff.librarian))).json()) as Json;
+    const byName = (await (
+      await app.request("/api/loans?status=ACTIVE&q=ann", await as(staff.librarian))
+    ).json()) as Json;
     expect(byName.items.map((l: Json) => l.member.fullName)).toEqual(["Ann"]);
-    const byTitle = (await (await app.request("/api/loans?status=ACTIVE&q=clean", await as(staff.librarian))).json()) as Json;
+    const byTitle = (await (
+      await app.request("/api/loans?status=ACTIVE&q=clean", await as(staff.librarian))
+    ).json()) as Json;
     expect(byTitle.total).toBe(3);
     const special = await app.request(`/api/loans?q=${encodeURIComponent("%';--")}`, await as(staff.librarian));
     expect(special.status).toBe(200);

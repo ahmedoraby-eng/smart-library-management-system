@@ -38,7 +38,10 @@ export function useSaveMember(id?: string, version?: number) {
     mutationFn: (input: MemberSaveInput) =>
       id
         ? api<MemberDto>(`/members/${encodeURIComponent(id)}`, { method: "PUT", body: { ...input, version } })
-        : api<MemberDto>("/members", { method: "POST", body: { fullName: input.fullName, email: input.email, phone: input.phone } }),
+        : api<MemberDto>("/members", {
+            method: "POST",
+            body: { fullName: input.fullName, email: input.email, phone: input.phone },
+          }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: membersKey }),
   });
 }

@@ -24,17 +24,28 @@
     "db:setup": "npm run db:migrate && npm run seed",
     "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs",
     "demo:local": "tsx scripts/demo-local.ts",
-    "e2e": "tsx e2e/run.ts"
+    "e2e": "tsx e2e/run.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:coverage": "bash scripts/ci-test.sh",
+    "check": "npm run typecheck && npm run lint:deps && npm run lint && npm run format:check && npm run build"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261124.1",
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "1.62.1",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.23.1",
+    "@vitest/coverage-v8": "^5.1.1",
     "dependency-cruiser": "^18.9.0",
     "embedded-postgres": "16.16.0-beta.19",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8.74.0",
     "vitest": "^5.1.1",
     "wrangler": "^4.168.0"
   }

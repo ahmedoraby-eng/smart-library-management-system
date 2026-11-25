@@ -35,7 +35,11 @@ const rootRoute = createRootRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/signin",
-  validateSearch: z.object({ next: z.string().optional(), error: z.string().optional(), expired: z.string().optional() }),
+  validateSearch: z.object({
+    next: z.string().optional(),
+    error: z.string().optional(),
+    expired: z.string().optional(),
+  }),
   component: SignInPage,
 });
 
@@ -58,8 +62,16 @@ const booksRoute = createRoute({
   component: BooksPage,
 });
 const bookNewRoute = createRoute({ getParentRoute: () => appRoute, path: "/books/new", component: BookNewPage });
-const bookDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/books/$bookId", component: BookDetailPage });
-const bookEditRoute = createRoute({ getParentRoute: () => appRoute, path: "/books/$bookId/edit", component: BookEditPage });
+const bookDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/books/$bookId",
+  component: BookDetailPage,
+});
+const bookEditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/books/$bookId/edit",
+  component: BookEditPage,
+});
 
 const membersRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -67,11 +79,19 @@ const membersRoute = createRoute({
   validateSearch: MemberListQuerySchema,
   component: MembersPage,
 });
-const memberDetailRoute = createRoute({ getParentRoute: () => appRoute, path: "/members/$memberId", component: MemberDetailPage });
+const memberDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/members/$memberId",
+  component: MemberDetailPage,
+});
 
 // Sidebar targets built in later stories (staff SLM-8).
 // Circulation (SLM-4): two tabs; /circulation → borrow.
-const circulationRoute = createRoute({ getParentRoute: () => appRoute, path: "/circulation", component: CirculationLayout });
+const circulationRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/circulation",
+  component: CirculationLayout,
+});
 const circulationIndexRoute = createRoute({
   getParentRoute: () => circulationRoute,
   path: "/",
@@ -79,9 +99,24 @@ const circulationIndexRoute = createRoute({
     throw redirect({ to: "/circulation/borrow" });
   },
 });
-const borrowRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/borrow", validateSearch: BorrowSearchSchema, component: BorrowPage });
-const returnRoute = createRoute({ getParentRoute: () => circulationRoute, path: "/return", validateSearch: ReturnSearchSchema, component: ReturnPage });
-const loansRoute = createRoute({ getParentRoute: () => appRoute, path: "/loans", validateSearch: LoanHistorySearchSchema, component: LoanHistoryPage });
+const borrowRoute = createRoute({
+  getParentRoute: () => circulationRoute,
+  path: "/borrow",
+  validateSearch: BorrowSearchSchema,
+  component: BorrowPage,
+});
+const returnRoute = createRoute({
+  getParentRoute: () => circulationRoute,
+  path: "/return",
+  validateSearch: ReturnSearchSchema,
+  component: ReturnPage,
+});
+const loansRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/loans",
+  validateSearch: LoanHistorySearchSchema,
+  component: LoanHistoryPage,
+});
 const discoverRoute = createRoute({ getParentRoute: () => appRoute, path: "/discover", component: DiscoveryPage });
 // Staff users (ux §3.7, SLM-8). A role without STAFF_MANAGE that deep-links here gets /403 (Haya pass 1, S7).
 const staffRoute = createRoute({
@@ -139,16 +174,23 @@ declare module "@tanstack/react-router" {
 }
 
 // Session and permission failures from any query or mutation (ux.md §1).
-setApiErrorHandler((err: ApiError) => {
+setApiErrorHandler((err: ApiError, queryKey?: readonly unknown[]) => {
   const here = router.state.location;
   if (err.status === 401) {
     if (here.pathname.startsWith("/signin")) return;
     // `expired` only when we had a session before; a first visit just goes to sign-in.
     const hadSession = queryClient.getQueryData(meQueryKey) !== undefined;
     queryClient.removeQueries({ queryKey: meQueryKey });
-    void router.navigate({ to: "/signin", search: { next: here.href, ...(hadSession ? { expired: "1" } : {}) }, replace: true });
+    void router.navigate({
+      to: "/signin",
+      search: { next: here.href, ...(hadSession ? { expired: "1" } : {}) },
+      replace: true,
+    });
   } else if (err.code === "USER_DISABLED") {
-    void queryClient.invalidateQueries({ queryKey: meQueryKey }); // the shell then shows "Your account is disabled"
+    // The shell then shows "Your account is disabled". Not when /me itself failed: its error is already the news,
+    // and invalidating it again would re-request /me without end.
+    const isMe = JSON.stringify(queryKey) === JSON.stringify(meQueryKey);
+    if (!isMe) void queryClient.invalidateQueries({ queryKey: meQueryKey });
   } else if (err.code === "FORBIDDEN") {
     if (here.pathname !== "/403") void router.navigate({ to: "/403", replace: true });
   }

@@ -1,4 +1,11 @@
-import { BookInputSchema, BookListQuerySchema, BookUpdateSchema, IsbnLookupQuerySchema, normalizeIsbn, type BookDto } from "@slm/contracts";
+import {
+  BookInputSchema,
+  BookListQuerySchema,
+  BookUpdateSchema,
+  IsbnLookupQuerySchema,
+  normalizeIsbn,
+  type BookDto,
+} from "@slm/contracts";
 import { Hono } from "hono";
 import type { AppEnv } from "../../platform/appEnv";
 import { parseOr400 } from "../../platform/http";
@@ -7,11 +14,24 @@ import type { BookView } from "../domain/Book";
 
 export function toBookDto(b: BookView): BookDto {
   return {
-    id: b.id, title: b.title, author: b.author, isbn: b.isbn, description: b.description, category: b.category,
-    publisher: b.publisher, publicationYear: b.publicationYear, coverImageUrl: b.coverImageUrl,
-    totalCopies: b.totalCopies, availableCopies: b.availableCopies, activeLoans: b.activeLoans,
-    nextDueAt: b.nextDueAt?.toISOString() ?? null, hasLoanHistory: b.hasLoanHistory, archived: b.archivedAt !== null,
-    version: b.version, createdAt: b.createdAt.toISOString(), updatedAt: b.updatedAt.toISOString(),
+    id: b.id,
+    title: b.title,
+    author: b.author,
+    isbn: b.isbn,
+    description: b.description,
+    category: b.category,
+    publisher: b.publisher,
+    publicationYear: b.publicationYear,
+    coverImageUrl: b.coverImageUrl,
+    totalCopies: b.totalCopies,
+    availableCopies: b.availableCopies,
+    activeLoans: b.activeLoans,
+    nextDueAt: b.nextDueAt?.toISOString() ?? null,
+    hasLoanHistory: b.hasLoanHistory,
+    archived: b.archivedAt !== null,
+    version: b.version,
+    createdAt: b.createdAt.toISOString(),
+    updatedAt: b.updatedAt.toISOString(),
   };
 }
 
@@ -28,7 +48,8 @@ export function bookRoutes() {
   });
 
   r.get("/categories", requirePermission("BOOK_READ"), async (c) =>
-    c.json({ items: await c.var.container.books.categories() }));
+    c.json({ items: await c.var.container.books.categories() }),
+  );
 
   // SLM-13: registered before /:id so "isbn-lookup" isn't read as an id. Always 200 for a valid ISBN.
   r.get("/isbn-lookup", requirePermission("BOOK_WRITE"), async (c) => {
@@ -37,7 +58,8 @@ export function bookRoutes() {
   });
 
   r.get("/:id", requirePermission("BOOK_READ"), async (c) =>
-    c.json(toBookDto(await c.var.container.books.get(c.req.param("id")))));
+    c.json(toBookDto(await c.var.container.books.get(c.req.param("id")))),
+  );
 
   r.post("/", requirePermission("BOOK_WRITE"), async (c) => {
     const input = parseOr400(BookInputSchema, await body(c));

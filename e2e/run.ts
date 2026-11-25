@@ -40,9 +40,17 @@ async function cleanup(): Promise<void> {
   stopped = true;
   if (wrangler?.pid && wrangler.exitCode === null) {
     // The whole process group: npx -> wrangler -> workerd.
-    try { process.kill(-wrangler.pid, "SIGTERM"); } catch { /* already gone */ }
+    try {
+      process.kill(-wrangler.pid, "SIGTERM");
+    } catch {
+      /* already gone */
+    }
     await new Promise((r) => setTimeout(r, 1000));
-    try { process.kill(-wrangler.pid, "SIGKILL"); } catch { /* already gone */ }
+    try {
+      process.kill(-wrangler.pid, "SIGKILL");
+    } catch {
+      /* already gone */
+    }
   }
   await pg?.stop().catch(() => undefined);
   rmSync(tmp, { recursive: true, force: true });
@@ -55,7 +63,9 @@ async function waitForHealth(url: string): Promise<void> {
     if (wrangler?.exitCode !== null) throw new Error("wrangler dev exited before it was ready");
     try {
       if ((await fetch(`${url}/api/health`)).status === 200) return;
-    } catch { /* not up yet */ }
+    } catch {
+      /* not up yet */
+    }
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error("Timed out waiting for /api/health");
@@ -65,7 +75,9 @@ async function main(): Promise<number> {
   // A run that crashed hard may have left the developer's file aside: put it back first, never overwrite it.
   if (existsSync(devVarsAside)) {
     if (existsSync(devVars)) {
-      throw new Error(`Both .dev.vars and ${devVarsAside} exist (left by an interrupted e2e run). Keep the right one, delete the other, then rerun.`);
+      throw new Error(
+        `Both .dev.vars and ${devVarsAside} exist (left by an interrupted e2e run). Keep the right one, delete the other, then rerun.`,
+      );
     }
     renameSync(devVarsAside, devVars);
     console.log("note: restored .dev.vars left aside by an interrupted e2e run.");
@@ -79,7 +91,14 @@ async function main(): Promise<number> {
   const appPort = await freePort(8860);
   const databaseUrl = `postgres://library:library@localhost:${pgPort}/library`;
 
-  pg = new EmbeddedPostgres({ databaseDir: join(tmp, "pgdata"), user: "library", password: "library", port: pgPort, persistent: false, onLog: () => {} });
+  pg = new EmbeddedPostgres({
+    databaseDir: join(tmp, "pgdata"),
+    user: "library",
+    password: "library",
+    port: pgPort,
+    persistent: false,
+    onLog: () => {},
+  });
   await pg.initialise();
   await pg.start();
   await pg.createDatabase("library");
@@ -99,19 +118,32 @@ async function main(): Promise<number> {
     DATABASE_URL: databaseUrl,
   };
   const envFile = join(tmp, "worker.env");
-  writeFileSync(envFile, Object.entries(vars).map(([k, v]) => `${k}=${v}`).join("\n") + "\n", { mode: 0o600 });
+  writeFileSync(
+    envFile,
+    Object.entries(vars)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n") + "\n",
+    { mode: 0o600 },
+  );
 
   execFileSync("npm", ["run", "build", "-w", "web"], { cwd: root, stdio: "ignore" });
-  wrangler = spawn("npx", ["wrangler", "dev", "--port", String(appPort), "--env-file", envFile, "--persist-to", join(tmp, "wrangler-state")], {
-    cwd: root, stdio: "ignore", detached: true,
-    env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
-  });
+  wrangler = spawn(
+    "npx",
+    ["wrangler", "dev", "--port", String(appPort), "--env-file", envFile, "--persist-to", join(tmp, "wrangler-state")],
+    {
+      cwd: root,
+      stdio: "ignore",
+      detached: true,
+      env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
+    },
+  );
   const baseUrl = `http://localhost:${appPort}`;
   await waitForHealth(baseUrl);
   console.log(`e2e stack up: app ${baseUrl}, postgres :${pgPort}`);
 
   const pw = spawn("npx", ["playwright", "test", "-c", "e2e/playwright.config.ts"], {
-    cwd: root, stdio: "inherit",
+    cwd: root,
+    stdio: "inherit",
     env: {
       ...process.env,
       E2E_BASE_URL: baseUrl,

@@ -55,7 +55,14 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.notFound((c) =>
     c.json(
-      { type: "about:blank", title: "Not found", status: 404, code: "NOT_FOUND", detail: "No such endpoint.", requestId: c.var.requestId },
+      {
+        type: "about:blank",
+        title: "Not found",
+        status: 404,
+        code: "NOT_FOUND",
+        detail: "No such endpoint.",
+        requestId: c.var.requestId,
+      },
       404,
       { "content-type": "application/problem+json" },
     ),
@@ -78,7 +85,11 @@ export function createApp(openContainer: ContainerFactory) {
     } finally {
       if (close) {
         const closing = close().catch(() => undefined);
-        try { c.executionCtx.waitUntil(closing); } catch { await closing; } // no ExecutionContext in tests
+        try {
+          c.executionCtx.waitUntil(closing);
+        } catch {
+          await closing;
+        } // no ExecutionContext in tests
       }
     }
   });
@@ -92,11 +103,14 @@ export function createApp(openContainer: ContainerFactory) {
     return c.json({ status: "ok", db: "ok", vector: vector ?? "off" });
   });
 
-  app.route("/auth", authRoutes(
-    (c) => limiterFor(c.env, "DEMO_LOGIN_LIMITER", demoLoginFallback, 60),
-    (c) => limiterFor(c.env, "GOOGLE_START_LIMITER", googleStartFallback, 60),
-    (c) => limiterFor(c.env, "GOOGLE_CALLBACK_LIMITER", googleCallbackFallback, 60),
-  ));
+  app.route(
+    "/auth",
+    authRoutes(
+      (c) => limiterFor(c.env, "DEMO_LOGIN_LIMITER", demoLoginFallback, 60),
+      (c) => limiterFor(c.env, "GOOGLE_START_LIMITER", googleStartFallback, 60),
+      (c) => limiterFor(c.env, "GOOGLE_CALLBACK_LIMITER", googleCallbackFallback, 60),
+    ),
+  );
 
   // Everything below needs a valid session; the role is read from the database on every request.
   app.use(
@@ -112,11 +126,17 @@ export function createApp(openContainer: ContainerFactory) {
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
   app.route("/loans", loanRoutes());
-  app.route("/ai", discoveryRoutes((c) => limiterFor(c.env, "DISCOVERY_LIMITER", discoveryFallback, 60)));
+  app.route(
+    "/ai",
+    discoveryRoutes((c) => limiterFor(c.env, "DISCOVERY_LIMITER", discoveryFallback, 60)),
+  );
   app.route("/dashboard", dashboardRoutes());
   app.route("/members", memberRoutes());
   app.route("/admin", adminRoutes());
-  app.route("/admin/discovery", discoveryAdminRoutes((c) => limiterFor(c.env, "REINDEX_LIMITER", reindexFallback, 60)));
+  app.route(
+    "/admin/discovery",
+    discoveryAdminRoutes((c) => limiterFor(c.env, "REINDEX_LIMITER", reindexFallback, 60)),
+  );
   app.route("/staff-users", staffRoutes());
 
   return app;

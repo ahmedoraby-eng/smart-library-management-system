@@ -9,7 +9,12 @@ export class FakeAiProvider implements AiProvider {
     const already = new Set(memberRecentTitles.map((t) => t.toLowerCase()));
     const picks = candidates.filter((c) => !already.has(c.title.toLowerCase())).slice(0, 5);
     // Priced like the real ranking model, so the budget behaves the same in tests and local runs.
-    onUsage?.({ model: "@cf/meta/llama-3.2-3b-instruct", inputTokens: 800 + estimateTokens(query + JSON.stringify(candidates)), outputTokens: 60 * picks.length, estimated: true });
+    onUsage?.({
+      model: "@cf/meta/llama-3.2-3b-instruct",
+      inputTokens: 800 + estimateTokens(query + JSON.stringify(candidates)),
+      outputTokens: 60 * picks.length,
+      estimated: true,
+    });
     return {
       recommendations: picks.map((c, i) => ({
         bookId: c.id,

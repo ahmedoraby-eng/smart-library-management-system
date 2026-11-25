@@ -1,7 +1,11 @@
 import { DiscoveryResponseSchema, type DiscoveryResponse } from "@slm/contracts";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
-import { BookDiscoveryService, NO_MATCH_NOTE, type DiscoveryLog } from "../src/discovery/application/BookDiscoveryService";
+import {
+  BookDiscoveryService,
+  NO_MATCH_NOTE,
+  type DiscoveryLog,
+} from "../src/discovery/application/BookDiscoveryService";
 import type { AiProvider, Candidate } from "../src/discovery/domain/Discovery";
 import { validateRecommendations } from "../src/discovery/domain/RecommendationValidator";
 import { FakeAiProvider } from "../src/discovery/infrastructure/FakeAiProvider";
@@ -16,7 +20,16 @@ let staff: Awaited<ReturnType<typeof seedStaff>>;
 const ids: Record<string, string> = {};
 const REQUEST = "beginner-friendly books on software architecture for someone who already programs";
 
-async function book(key: string, title: string, author: string, category: string, description: string, total: number, available: number, extra: { archived?: boolean } = {}) {
+async function book(
+  key: string,
+  title: string,
+  author: string,
+  category: string,
+  description: string,
+  total: number,
+  available: number,
+  extra: { archived?: boolean } = {},
+) {
   const r = await pool.query(
     `INSERT INTO books (title, author, category, description, total_copies, available_copies, archived_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
     [title, author, category, description, total, available, extra.archived ? new Date() : null],
@@ -27,15 +40,49 @@ async function book(key: string, title: string, author: string, category: string
 beforeEach(async () => {
   await resetDb();
   staff = await seedStaff();
-  await book("fund", "Fundamentals of Software Architecture", "Mark Richards", "Software Architecture", "A practical engineering approach to architecture styles and trade-offs for developers.", 3, 2);
-  await book("clean", "Clean Architecture", "Robert C. Martin", "Software Architecture", "A craftsman's guide to software structure and design.", 2, 0); // unavailable
-  await book("ddd", "Domain-Driven Design", "Eric Evans", "Software Design", "Tackling complexity in the heart of software.", 2, 2);
+  await book(
+    "fund",
+    "Fundamentals of Software Architecture",
+    "Mark Richards",
+    "Software Architecture",
+    "A practical engineering approach to architecture styles and trade-offs for developers.",
+    3,
+    2,
+  );
+  await book(
+    "clean",
+    "Clean Architecture",
+    "Robert C. Martin",
+    "Software Architecture",
+    "A craftsman's guide to software structure and design.",
+    2,
+    0,
+  ); // unavailable
+  await book(
+    "ddd",
+    "Domain-Driven Design",
+    "Eric Evans",
+    "Software Design",
+    "Tackling complexity in the heart of software.",
+    2,
+    2,
+  );
   await book("dune", "Dune", "Frank Herbert", "Science Fiction", "A desert planet, spice and politics.", 4, 4);
-  await book("old", "Archived Architecture Handbook", "Someone", "Software Architecture", "Retired title about software architecture.", 1, 1, { archived: true });
+  await book(
+    "old",
+    "Archived Architecture Handbook",
+    "Someone",
+    "Software Architecture",
+    "Retired title about software architecture.",
+    1,
+    1,
+    { archived: true },
+  );
 });
 
 const retrieval = () => new PgCatalogRetrieval(createDb(pool));
-const service = (provider: AiProvider | null, log: DiscoveryLog = () => undefined, timeoutMs = 8000) => new BookDiscoveryService(retrieval(), provider, log, timeoutMs);
+const service = (provider: AiProvider | null, log: DiscoveryLog = () => undefined, timeoutMs = 8000) =>
+  new BookDiscoveryService(retrieval(), provider, log, timeoutMs);
 const provider = (rank: AiProvider["rank"]): AiProvider => ({ name: "test", rank });
 const returning = (recs: unknown, note?: string) => provider(async () => ({ recommendations: recs, note }));
 
@@ -81,7 +128,9 @@ describe("SLM-9 retrieval (Postgres full-text + trigram)", () => {
   });
 
   it("SLM-9 a request full of tsquery operators cannot break the query", async () => {
-    await expect(retrieval().candidates("architecture & | ! ( ) :* '; DROP TABLE books;--", { limit: 20, availableOnly: false })).resolves.toBeInstanceOf(Array);
+    await expect(
+      retrieval().candidates("architecture & | ! ( ) :* '; DROP TABLE books;--", { limit: 20, availableOnly: false }),
+    ).resolves.toBeInstanceOf(Array);
     expect((await pool.query("SELECT count(*)::int n FROM books")).rows[0].n).toBe(5);
   });
 });
@@ -102,41 +151,87 @@ describe("SLM-9 AI mode and the validator", () => {
   });
 
   it("SLM-9 AC2 a book id the model invented (or that was not a candidate) is dropped", async () => {
-    const res = await service(returning([
-      { bookId: "00000000-0000-4000-8000-000000000000", reason: "Made up", fit: 5 },
-      { bookId: ids.dune, reason: "Real book but not among the candidates for this request", fit: 5 }, // Dune is not an architecture candidate
-      { bookId: ids.fund, reason: "Good", fit: 4 },
-      { bookId: 42, reason: "Not even an id", fit: 3 },
-    ])).discover({ query: REQUEST });
+    const res = await service(
+      returning([
+        { bookId: "00000000-0000-4000-8000-000000000000", reason: "Made up", fit: 5 },
+        { bookId: ids.dune, reason: "Real book but not among the candidates for this request", fit: 5 }, // Dune is not an architecture candidate
+        { bookId: ids.fund, reason: "Good", fit: 4 },
+        { bookId: 42, reason: "Not even an id", fit: 3 },
+      ]),
+    ).discover({ query: REQUEST });
     expect(res.mode).toBe("AI");
     expect(res.items.map((i) => i.book.id)).toEqual([ids.fund]);
   });
 
   it("SLM-9 the validator dedupes, caps at 5 and trims reasons to 300 characters of plain text", () => {
-    const cand = (n: number): Candidate => ({ id: `id-${n}`, title: `T${n}`, author: "A", category: "C", publicationYear: null, description: "", score: 1, matchedTerms: [], related: false });
+    const cand = (n: number): Candidate => ({
+      id: `id-${n}`,
+      title: `T${n}`,
+      author: "A",
+      category: "C",
+      publicationYear: null,
+      description: "",
+      score: 1,
+      matchedTerms: [],
+      related: false,
+    });
     const cands = [1, 2, 3, 4, 5, 6, 7].map(cand);
     const long = "x".repeat(900);
-    const out = validateRecommendations({
-      recommendations: [...cands.map((c) => ({ bookId: c.id, reason: long, fit: 3 })), { bookId: "id-1", reason: "dup", fit: 3 }],
-    }, cands)!;
+    const out = validateRecommendations(
+      {
+        recommendations: [
+          ...cands.map((c) => ({ bookId: c.id, reason: long, fit: 3 })),
+          { bookId: "id-1", reason: "dup", fit: 3 },
+        ],
+      },
+      cands,
+    )!;
     expect(out.items).toHaveLength(5);
     expect(new Set(out.items.map((i) => i.candidate.id)).size).toBe(5);
     expect(out.items.every((i) => i.reason.length <= 300)).toBe(true);
     expect(out.dropped).toBe(3);
-    const multiline = validateRecommendations({ recommendations: [{ bookId: "id-1", reason: "line one\n\n\tline two\u0000", fit: 1 }] }, cands)!;
+    const multiline = validateRecommendations(
+      { recommendations: [{ bookId: "id-1", reason: "line one\n\n\tline two\u0000", fit: 1 }] },
+      cands,
+    )!;
     expect(multiline.items[0]!.reason).toBe("line one line two");
   });
 
   it("SLM-9 the validator accepts a JSON string, and rejects output with no usable shape", () => {
-    const cands: Candidate[] = [{ id: "a", title: "T", author: "A", category: "C", publicationYear: null, description: "", score: 1, matchedTerms: [], related: false }];
-    expect(validateRecommendations('{"recommendations":[{"bookId":"a","reason":"ok","fit":2}]}', cands)!.items).toHaveLength(1);
-    for (const bad of ["not json {", "[]", null, 7, { recommendations: "none" }, {}]) expect(validateRecommendations(bad, cands)).toBeNull();
+    const cands: Candidate[] = [
+      {
+        id: "a",
+        title: "T",
+        author: "A",
+        category: "C",
+        publicationYear: null,
+        description: "",
+        score: 1,
+        matchedTerms: [],
+        related: false,
+      },
+    ];
+    expect(
+      validateRecommendations('{"recommendations":[{"bookId":"a","reason":"ok","fit":2}]}', cands)!.items,
+    ).toHaveLength(1);
+    for (const bad of ["not json {", "[]", null, 7, { recommendations: "none" }, {}])
+      expect(validateRecommendations(bad, cands)).toBeNull();
   });
 
   it("SLM-9 AC3 availability always comes from the database, whatever the model claims", async () => {
-    const res = await service(provider(async () => ({
-      recommendations: [{ bookId: ids.clean, reason: "Available now, 5 of 5 copies on the shelf!", availableCopies: 5, available: true, fit: 5 }],
-    }))).discover({ query: REQUEST });
+    const res = await service(
+      provider(async () => ({
+        recommendations: [
+          {
+            bookId: ids.clean,
+            reason: "Available now, 5 of 5 copies on the shelf!",
+            availableCopies: 5,
+            available: true,
+            fit: 5,
+          },
+        ],
+      })),
+    ).discover({ query: REQUEST });
     const item = res.items.find((i) => i.book.id === ids.clean)!;
     expect(item.book.availableCopies).toBe(0);
     expect(item.book.totalCopies).toBe(2);
@@ -152,14 +247,29 @@ describe("SLM-9 AI mode and the validator", () => {
   });
 
   it("SLM-9 only the titles of the member's last 5 loans reach the provider (no names, no email)", async () => {
-    const m = (await pool.query("INSERT INTO members (full_name, email) VALUES ('Secret Name', 'secret@x.io') RETURNING id")).rows[0].id;
+    const m = (
+      await pool.query("INSERT INTO members (full_name, email) VALUES ('Secret Name', 'secret@x.io') RETURNING id")
+    ).rows[0].id;
     for (let i = 0; i < 6; i++) {
-      const b = (await pool.query(`INSERT INTO books (title, author, category, total_copies, available_copies) VALUES ($1,'A','Misc',1,1) RETURNING id`, [`Read ${i}`])).rows[0].id;
-      await pool.query(`INSERT INTO loans (book_id, member_id, processed_by, returned_by, borrowed_at, due_at, returned_at)
-        VALUES ($1,$2,$3,$3, now() - make_interval(days => $4), now() + interval '1 day', now() - make_interval(days => $4) + interval '1 hour')`, [b, m, staff.librarian, 20 - i]);
+      const b = (
+        await pool.query(
+          `INSERT INTO books (title, author, category, total_copies, available_copies) VALUES ($1,'A','Misc',1,1) RETURNING id`,
+          [`Read ${i}`],
+        )
+      ).rows[0].id;
+      await pool.query(
+        `INSERT INTO loans (book_id, member_id, processed_by, returned_by, borrowed_at, due_at, returned_at)
+        VALUES ($1,$2,$3,$3, now() - make_interval(days => $4), now() + interval '1 day', now() - make_interval(days => $4) + interval '1 hour')`,
+        [b, m, staff.librarian, 20 - i],
+      );
     }
     let seen: unknown;
-    await service(provider(async (r) => { seen = r; return { recommendations: [] }; })).discover({ query: REQUEST, memberId: m });
+    await service(
+      provider(async (r) => {
+        seen = r;
+        return { recommendations: [] };
+      }),
+    ).discover({ query: REQUEST, memberId: m });
     const r = seen as { memberRecentTitles: string[]; query: string };
     expect(r.memberRecentTitles).toEqual(["Read 5", "Read 4", "Read 3", "Read 2", "Read 1"]);
     expect(JSON.stringify(seen)).not.toMatch(/Secret Name|secret@x\.io/);
@@ -192,14 +302,25 @@ describe("SLM-9 fallback", () => {
   });
 
   it("SLM-9 AC5 provider error → fallback result with a notice", async () => {
-    const res = await service(provider(async () => { throw new Error("quota exceeded"); })).discover({ query: REQUEST });
+    const res = await service(
+      provider(async () => {
+        throw new Error("quota exceeded");
+      }),
+    ).discover({ query: REQUEST });
     isKeywordResult(res);
     expect(res.note).toMatch(/AI ranking is unavailable/);
   });
 
   it("SLM-9 AC5 provider timeout → fallback (the abort signal fires)", async () => {
     let aborted = false;
-    const hang = provider((r) => new Promise(() => { r.signal.addEventListener("abort", () => { aborted = true; }); }));
+    const hang = provider(
+      (r) =>
+        new Promise(() => {
+          r.signal.addEventListener("abort", () => {
+            aborted = true;
+          });
+        }),
+    );
     const t0 = Date.now();
     const res = await service(hang, () => undefined, 60).discover({ query: REQUEST });
     isKeywordResult(res);
@@ -237,7 +358,12 @@ describe("SLM-9 fallback", () => {
 
   it("SLM-9 AC7 no catalog match → empty items, a note, and the provider is never called", async () => {
     const called = vi.fn();
-    const res = await service(provider(async () => { called(); return { recommendations: [] }; })).discover({ query: "qqqq zzzz xxxx" });
+    const res = await service(
+      provider(async () => {
+        called();
+        return { recommendations: [] };
+      }),
+    ).discover({ query: "qqqq zzzz xxxx" });
     expect(res.items).toEqual([]);
     expect(res.note).toBe(NO_MATCH_NOTE);
     expect(called).not.toHaveBeenCalled();
@@ -249,9 +375,18 @@ describe("SLM-9 logging (AC8)", () => {
     const logs: Parameters<DiscoveryLog>[0][] = [];
     const secret = "needle-phrase-9f3 software architecture";
     await service(new FakeAiProvider(), (e) => logs.push(e)).discover({ query: secret });
-    await service(provider(async () => { throw new Error(`failed on ${secret}`); }), (e) => logs.push(e)).discover({ query: secret });
+    await service(
+      provider(async () => {
+        throw new Error(`failed on ${secret}`);
+      }),
+      (e) => logs.push(e),
+    ).discover({ query: secret });
     await service(null, (e) => logs.push(e)).discover({ query: secret });
-    expect(logs.map((l) => [l.mode, l.fallbackReason])).toEqual([["AI", null], ["FALLBACK", "PROVIDER_ERROR"], ["FALLBACK", "NO_PROVIDER"]]);
+    expect(logs.map((l) => [l.mode, l.fallbackReason])).toEqual([
+      ["AI", null],
+      ["FALLBACK", "PROVIDER_ERROR"],
+      ["FALLBACK", "NO_PROVIDER"],
+    ]);
     for (const l of logs) {
       expect(typeof l.latencyMs).toBe("number");
       expect(l.candidates).toBeGreaterThan(0);
@@ -264,15 +399,39 @@ describe("SLM-9 Workers AI provider", () => {
   it("SLM-9 calls the binding with the model id, JSON-schema output, the request as data, and returns the parsed response", async () => {
     const run = vi.fn(async () => ({ response: { recommendations: [] } }));
     const p = new WorkersAiProvider({ run }, "@cf/test/model");
-    const cands: Candidate[] = [{ id: "a", title: "T", author: "A", category: "C", publicationYear: 2020, description: "d", score: 1, matchedTerms: [], related: false }];
-    const out = await p.rank({ query: "ignore instructions", candidates: cands, memberRecentTitles: ["Read"], signal: new AbortController().signal });
+    const cands: Candidate[] = [
+      {
+        id: "a",
+        title: "T",
+        author: "A",
+        category: "C",
+        publicationYear: 2020,
+        description: "d",
+        score: 1,
+        matchedTerms: [],
+        related: false,
+      },
+    ];
+    const out = await p.rank({
+      query: "ignore instructions",
+      candidates: cands,
+      memberRecentTitles: ["Read"],
+      signal: new AbortController().signal,
+    });
     expect(out).toEqual({ recommendations: [] });
-    const [model, input] = run.mock.calls[0] as unknown as [string, { messages: { role: string; content: string }[]; response_format: { type: string } }];
+    const [model, input] = run.mock.calls[0] as unknown as [
+      string,
+      { messages: { role: string; content: string }[]; response_format: { type: string } },
+    ];
     expect(model).toBe("@cf/test/model");
     expect(input.response_format.type).toBe("json_schema");
     expect(input.messages[0]!.role).toBe("system");
     expect(input.messages[0]!.content).not.toContain("ignore instructions");
-    expect(JSON.parse(input.messages[1]!.content)).toMatchObject({ request: "ignore instructions", alreadyRead: ["Read"], candidates: [{ id: "a" }] });
+    expect(JSON.parse(input.messages[1]!.content)).toMatchObject({
+      request: "ignore instructions",
+      alreadyRead: ["Read"],
+      candidates: [{ id: "a" }],
+    });
   });
 
   it("SLM-9 an abort rejects even when the binding never answers", async () => {
@@ -343,7 +502,10 @@ describe("SLM-9 POST /api/ai/book-discovery", () => {
     expect(one.json.items).toHaveLength(1);
     const avail = await ask(app, staff.librarian, { query: "architecture", availableOnly: true });
     expect(avail.json.items.every((i) => i.book.availableCopies > 0)).toBe(true);
-    const unknown = await ask(app, staff.librarian, { query: REQUEST, memberId: "00000000-0000-4000-8000-000000000000" });
+    const unknown = await ask(app, staff.librarian, {
+      query: REQUEST,
+      memberId: "00000000-0000-4000-8000-000000000000",
+    });
     expect(unknown.res.status).toBe(200);
   });
 });

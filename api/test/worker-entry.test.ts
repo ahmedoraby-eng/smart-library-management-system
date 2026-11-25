@@ -41,13 +41,18 @@ describe("SL-08 demo-login rate limit through the Worker entry", () => {
   it("closes the per-request DB connection via waitUntil", async () => {
     const c = ctx();
     const res = await (worker.fetch as (r: Request, e: unknown, c: ExecutionContext) => Promise<Response>)(
-      new Request(`${ORIGIN}/api/health?deep=1`), env(), c);
+      new Request(`${ORIGIN}/api/health?deep=1`),
+      env(),
+      c,
+    );
     expect(await res.json()).toEqual({ status: "ok", db: "ok", vector: "off" }); // SLM-16: no embedder in this env
     expect(c.waitUntil).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an unsafe x-request-id and generates one", async () => {
-    const res = await call(new Request(`${ORIGIN}/api/health`, { headers: { "x-request-id": "bad id <script>;" + "x".repeat(80) } }));
+    const res = await call(
+      new Request(`${ORIGIN}/api/health`, { headers: { "x-request-id": "bad id <script>;" + "x".repeat(80) } }),
+    );
     expect(res.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
     const ok = await call(new Request(`${ORIGIN}/api/health`, { headers: { "x-request-id": "trace_123-abc" } }));
     expect(ok.headers.get("x-request-id")).toBe("trace_123-abc");
@@ -61,13 +66,25 @@ describe("SLM-16 scheduled handlers through the Worker entry", () => {
 
   it("the hourly index trigger only tops up the discovery index; it never resets the demo data", async () => {
     await pool.query("TRUNCATE loans, members, books, book_chunks CASCADE");
-    const r = await pool.query("INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ('Index Me', 'A. Writer', 'Science', 'A short text about stars.', 1, 1) RETURNING id");
+    const r = await pool.query(
+      "INSERT INTO books (title, author, category, description, total_copies, available_copies) VALUES ('Index Me', 'A. Writer', 'Science', 'A short text about stars.', 1, 1) RETURNING id",
+    );
     const pending: Promise<unknown>[] = [];
-    const c = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException: vi.fn(), props: {} } as unknown as ExecutionContext;
-    await (worker.scheduled as (ctl: unknown, e: unknown, ctx: ExecutionContext) => Promise<void>)({ cron: "5 * * * *", scheduledTime: Date.now() }, env({ AI_FAKE: "true" }), c);
+    const c = {
+      waitUntil: (p: Promise<unknown>) => pending.push(p),
+      passThroughOnException: vi.fn(),
+      props: {},
+    } as unknown as ExecutionContext;
+    await (worker.scheduled as (ctl: unknown, e: unknown, ctx: ExecutionContext) => Promise<void>)(
+      { cron: "5 * * * *", scheduledTime: Date.now() },
+      env({ AI_FAKE: "true" }),
+      c,
+    );
     await Promise.all(pending);
     const books = await pool.query("SELECT id FROM books");
     expect(books.rows.map((b) => b.id)).toEqual([r.rows[0].id]); // not replaced by the seed
-    expect(Number((await pool.query("SELECT count(*) FROM book_chunks WHERE book_id = $1", [r.rows[0].id])).rows[0].count)).toBe(1);
+    expect(
+      Number((await pool.query("SELECT count(*) FROM book_chunks WHERE book_id = $1", [r.rows[0].id])).rows[0].count),
+    ).toBe(1);
   });
 });

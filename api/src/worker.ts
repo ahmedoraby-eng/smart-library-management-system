@@ -38,26 +38,35 @@ export default {
   fetch: (request, env, ctx) => app.fetch(request, env, ctx),
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil((async () => {
-      let close: (() => Promise<void>) | undefined;
-      try {
-        const opened = await openContainer(env);
-        close = opened.close;
-        if (controller.cron !== NIGHTLY_RESET_CRON) {
-          // SLM-16 index top-up: one batch (Workers Free: 10 ms CPU), only when something is missing or stale.
-          await opened.container.bookIndex.syncAllSafely(opened.container.config.indexBatchBooks);
-          return;
+    ctx.waitUntil(
+      (async () => {
+        let close: (() => Promise<void>) | undefined;
+        try {
+          const opened = await openContainer(env);
+          close = opened.close;
+          if (controller.cron !== NIGHTLY_RESET_CRON) {
+            // SLM-16 index top-up: one batch (Workers Free: 10 ms CPU), only when something is missing or stale.
+            await opened.container.bookIndex.syncAllSafely(opened.container.config.indexBatchBooks);
+            return;
+          }
+          await opened.container.demoData.reset();
+          console.log(JSON.stringify({ level: "info", message: "demo data reset (cron)" }));
+          await opened.container.bookIndex.syncAllSafely(opened.container.config.indexBatchBooks); // SLM-16: same texts → vectors copied, 0 Neurons
+          await opened.container.aiCache.purgeExpired().catch(() => undefined);
+        } catch (e) {
+          console.error(
+            JSON.stringify({
+              level: "error",
+              message: "demo reset failed (cron)",
+              error: String(e),
+              stack: (e as Error)?.stack,
+            }),
+          );
+          throw e;
+        } finally {
+          await close?.().catch(() => undefined);
         }
-        await opened.container.demoData.reset();
-        console.log(JSON.stringify({ level: "info", message: "demo data reset (cron)" }));
-        await opened.container.bookIndex.syncAllSafely(opened.container.config.indexBatchBooks); // SLM-16: same texts → vectors copied, 0 Neurons
-        await opened.container.aiCache.purgeExpired().catch(() => undefined);
-      } catch (e) {
-        console.error(JSON.stringify({ level: "error", message: "demo reset failed (cron)", error: String(e), stack: (e as Error)?.stack }));
-        throw e;
-      } finally {
-        await close?.().catch(() => undefined);
-      }
-    })());
+      })(),
+    );
   },
 } satisfies ExportedHandler<Env>;

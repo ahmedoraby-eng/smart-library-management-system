@@ -14,7 +14,9 @@ export function discoveryRoutes(limiter: (c: Context<AppEnv>) => Limiter) {
     return c.json(await c.var.container.discovery.discover(input, { userId: c.var.principal.id }));
   });
   // SLM-16: the counter next to the search box ("49 of 50 AI-assisted searches left today"). Read-only, no limiter.
-  r.get("/quota", requirePermission("AI_DISCOVER"), async (c) => c.json(await c.var.container.discovery.quota(c.var.principal.id)));
+  r.get("/quota", requirePermission("AI_DISCOVER"), async (c) =>
+    c.json(await c.var.container.discovery.quota(c.var.principal.id)),
+  );
   return r;
 }
 
@@ -29,7 +31,18 @@ export function discoveryAdminRoutes(reindexLimiter: (c: Context<AppEnv>) => Lim
   r.post("/reindex", requirePermission("STAFF_MANAGE"), async (c) => {
     await reindexLimiter(c).check(`reindex:${c.var.principal.id}`); // 2/min: it can spend Neurons
     const index = c.var.container.bookIndex;
-    if (!index.enabled) return c.json({ result: "disabled", embeddedBooks: 0, chunks: 0, reusedBooks: 0, upToDate: 0, removed: 0, neurons: 0, remaining: 0, total: 0 });
+    if (!index.enabled)
+      return c.json({
+        result: "disabled",
+        embeddedBooks: 0,
+        chunks: 0,
+        reusedBooks: 0,
+        upToDate: 0,
+        removed: 0,
+        neurons: 0,
+        remaining: 0,
+        total: 0,
+      });
     // One batch per call (Workers Free: 10 ms CPU). Call again while `remaining` > 0.
     const asked = Number(c.req.query("limit"));
     const batch = Number.isInteger(asked) && asked > 0 ? Math.min(asked, 100) : c.var.container.config.indexBatchBooks;

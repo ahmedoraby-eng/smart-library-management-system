@@ -17,8 +17,12 @@ async function supervisorCookie(): Promise<string> {
       `INSERT INTO staff_users (email, full_name, role) VALUES ('supervisor@e2e.test', 'E2E Supervisor', 'SUPERVISOR')
        ON CONFLICT (lower(email)) DO UPDATE SET role = 'SUPERVISOR', status = 'ACTIVE' RETURNING id`,
     );
-    return await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).setSubject(rows[0]!.id)
-      .setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(env("E2E_SESSION_SECRET")));
+    return await new SignJWT({})
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject(rows[0]!.id)
+      .setIssuedAt()
+      .setExpirationTime("1h")
+      .sign(new TextEncoder().encode(env("E2E_SESSION_SECRET")));
   } finally {
     await client.end();
   }

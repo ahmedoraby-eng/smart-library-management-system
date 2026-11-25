@@ -1,9 +1,24 @@
 import { MAX_ITEMS, MAX_REASON_LENGTH, type Candidate } from "./Discovery";
 
-export interface ValidRecommendation { candidate: Candidate; reason: string }
-export interface ValidatedOutput { items: ValidRecommendation[]; note: string | null; dropped: number }
+export interface ValidRecommendation {
+  candidate: Candidate;
+  reason: string;
+}
+export interface ValidatedOutput {
+  items: ValidRecommendation[];
+  note: string | null;
+  dropped: number;
+}
 
-const clean = (s: string, max: number) => s.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max).trim();
+// Control characters are stripped on purpose: model output must not reach the UI with them.
+const clean = (s: string, max: number) =>
+  s
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+    .trim();
 
 /**
  * The real guard against a wrong or manipulated model (architecture §6): only candidate ids survive,
@@ -11,7 +26,11 @@ const clean = (s: string, max: number) => s.replace(/[\u0000-\u001f\u007f]+/g, "
  * Availability is never taken from the output; the caller re-reads it from the database.
  * Returns null when the output has no usable shape at all (the caller falls back).
  */
-export function validateRecommendations(raw: unknown, candidates: Candidate[], limit: number = MAX_ITEMS): ValidatedOutput | null {
+export function validateRecommendations(
+  raw: unknown,
+  candidates: Candidate[],
+  limit: number = MAX_ITEMS,
+): ValidatedOutput | null {
   let data: unknown = raw;
   if (typeof data === "string") {
     try {
@@ -43,7 +62,8 @@ export function validateRecommendations(raw: unknown, candidates: Candidate[], l
     items.push({ candidate, reason: reason || templateReason(candidate) });
   }
   const noteRaw = (data as { note?: unknown }).note;
-  const note = typeof noteRaw === "string" && clean(noteRaw, MAX_REASON_LENGTH) ? clean(noteRaw, MAX_REASON_LENGTH) : null;
+  const note =
+    typeof noteRaw === "string" && clean(noteRaw, MAX_REASON_LENGTH) ? clean(noteRaw, MAX_REASON_LENGTH) : null;
   return { items, note, dropped };
 }
 

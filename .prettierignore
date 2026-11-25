@@ -1,0 +1,11 @@
+**/dist/
+coverage/
+**/coverage/
+package-lock.json
+# Prose, data and workflow files are reviewed by hand, not reformatted.
+*.md
+.github/
+migrations/
+seed/
+test-results/
+playwright-report/

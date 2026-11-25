@@ -16,7 +16,13 @@ const styles: Record<BadgeVariant, { pill: string; dot: string }> = {
 };
 
 /** 22 px stamp (a pill in the plain theme): dot + text, so status is never colour alone (ux.md U8). */
-export function Badge({ variant = "neutral", dot = true, children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & {
+export function Badge({
+  variant = "neutral",
+  dot = true,
+  children,
+  className,
+  ...rest
+}: HTMLAttributes<HTMLSpanElement> & {
   variant?: BadgeVariant;
   dot?: boolean;
   children: ReactNode;
@@ -24,7 +30,11 @@ export function Badge({ variant = "neutral", dot = true, children, className, ..
   const s = styles[variant];
   return (
     <span
-      className={cn("inline-flex h-5.5 items-center gap-1.5 rounded-xs border px-2 text-xs font-medium whitespace-nowrap tabular-nums", s.pill, className)}
+      className={cn(
+        "inline-flex h-5.5 items-center gap-1.5 rounded-xs border px-2 text-xs font-medium whitespace-nowrap tabular-nums",
+        s.pill,
+        className,
+      )}
       {...rest}
     >
       {dot && <span className={cn("h-1.5 w-1.5 rounded-xs", s.dot)} aria-hidden="true" />}
@@ -42,14 +52,22 @@ export function availabilityLevel(availableCopies: number): AvailabilityLevel {
   return "unavailable";
 }
 
-const levelVariant: Record<AvailabilityLevel, BadgeVariant> = { available: "success", low: "warning", unavailable: "danger" };
+const levelVariant: Record<AvailabilityLevel, BadgeVariant> = {
+  available: "success",
+  low: "warning",
+  unavailable: "danger",
+};
 const levelName: Record<AvailabilityLevel, string> = { available: "Available", low: "Low", unavailable: "Unavailable" };
 
 /**
  * "3 of 5 available" (compact: "3 of 5"). When nothing is available, `showNextDue` adds
  * "Next copy due back 28 Nov" from `nextDueAt`.
  */
-export function AvailabilityBadge({ book, compact = false, showNextDue = false }: {
+export function AvailabilityBadge({
+  book,
+  compact = false,
+  showNextDue = false,
+}: {
   book: Pick<BookDto, "availableCopies" | "totalCopies" | "nextDueAt">;
   compact?: boolean;
   showNextDue?: boolean;

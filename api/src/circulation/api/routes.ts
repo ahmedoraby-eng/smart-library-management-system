@@ -8,8 +8,15 @@ import type { LoanView } from "../domain/Loan";
 
 export function toLoanDto(l: LoanView): LoanDto {
   return {
-    id: l.id, status: l.status, book: l.book, member: l.member, processedBy: l.processedBy, returnedBy: l.returnedBy,
-    borrowedAt: l.borrowedAt.toISOString(), dueAt: l.dueAt.toISOString(), returnedAt: l.returnedAt?.toISOString() ?? null,
+    id: l.id,
+    status: l.status,
+    book: l.book,
+    member: l.member,
+    processedBy: l.processedBy,
+    returnedBy: l.returnedBy,
+    borrowedAt: l.borrowedAt.toISOString(),
+    dueAt: l.dueAt.toISOString(),
+    returnedAt: l.returnedAt?.toISOString() ?? null,
   };
 }
 

@@ -1,6 +1,9 @@
 import type { ErrorCode, Problem } from "@slm/contracts";
 
-export interface FieldError { field: string; message: string }
+export interface FieldError {
+  field: string;
+  message: string;
+}
 
 /** Base of every expected failure. Mapped to RFC 9457 Problem Details at the HTTP edge. */
 export class AppError extends Error {
@@ -22,15 +25,22 @@ export class ValidationError extends AppError {
   }
 }
 export class UnauthenticatedError extends AppError {
-  constructor(detail = "Sign in is required.") { super(401, "UNAUTHENTICATED", "Not authenticated", detail); }
+  constructor(detail = "Sign in is required.") {
+    super(401, "UNAUTHENTICATED", "Not authenticated", detail);
+  }
 }
 export class ForbiddenError extends AppError {
-  constructor(code: "FORBIDDEN" | "NOT_PROVISIONED" | "USER_DISABLED" = "FORBIDDEN", detail = "You don't have permission to do this.") {
+  constructor(
+    code: "FORBIDDEN" | "NOT_PROVISIONED" | "USER_DISABLED" = "FORBIDDEN",
+    detail = "You don't have permission to do this.",
+  ) {
     super(403, code, "Forbidden", detail);
   }
 }
 export class NotFoundError extends AppError {
-  constructor(what: string) { super(404, "NOT_FOUND", "Not found", `${what} was not found.`); }
+  constructor(what: string) {
+    super(404, "NOT_FOUND", "Not found", `${what} was not found.`);
+  }
 }
 /** Business-rule conflicts (409): unavailable book, loan limit, stale version… */
 export class ConflictError extends AppError {

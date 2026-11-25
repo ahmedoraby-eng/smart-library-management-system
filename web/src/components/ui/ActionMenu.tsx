@@ -92,7 +92,12 @@ export function ActionMenu({ label, items, testId }: { label: string; items: Act
             role="menu"
             aria-label={label}
             onKeyDown={onKeyDown}
-            style={{ position: "fixed", top: pos?.top ?? 0, right: pos?.right ?? 0, visibility: pos ? "visible" : "hidden" }}
+            style={{
+              position: "fixed",
+              top: pos?.top ?? 0,
+              right: pos?.right ?? 0,
+              visibility: pos ? "visible" : "hidden",
+            }}
             className="z-50 min-w-40 rounded-lg border border-border bg-surface p-1 shadow-pop"
           >
             {items.map((it) => (

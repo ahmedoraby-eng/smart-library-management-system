@@ -46,11 +46,20 @@ export class BookService {
   async update(id: string, version: number, input: BookInput): Promise<BookView> {
     const r = await this.books.update(id, version, input);
     switch (r.kind) {
-      case "ok": return r.book;
-      case "not_found": throw new NotFoundError("This book");
-      case "stale": throw new ConflictError("STALE_VERSION", "Changed by someone else", "Someone else changed this book while you were editing. Reload to see their version.");
-      case "below_loaned": throw totalBelowLoaned(r.onLoan);
-      case "duplicate_isbn": throw duplicateIsbn(r.other);
+      case "ok":
+        return r.book;
+      case "not_found":
+        throw new NotFoundError("This book");
+      case "stale":
+        throw new ConflictError(
+          "STALE_VERSION",
+          "Changed by someone else",
+          "Someone else changed this book while you were editing. Reload to see their version.",
+        );
+      case "below_loaned":
+        throw totalBelowLoaned(r.onLoan);
+      case "duplicate_isbn":
+        throw duplicateIsbn(r.other);
     }
   }
 
