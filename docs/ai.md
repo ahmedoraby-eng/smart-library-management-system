@@ -209,8 +209,8 @@ The token `usage` the model returns is used when present; otherwise text length 
 | Event | Neurons |
 |---|---|
 | One AI search | ≈ 16 typical, ≤ 26 at worst, plus ≈ 0.1 for the query embedding (0 on a cache hit) |
-| One book saved | ≈ 1 (its chunk) |
-| Full reindex of the seed | ≈ 70 the first time; 0 after a reset |
+| One book saved | ≈ 2.5 (2–3 chunks of about 165 tokens each) |
+| Full reindex of the seed | ≈ 160 the first time (64 books → 161 chunks, ≈ 26,600 tokens at bge-base's 6,058 per million, counted as the app counts them: text length ÷ 4); 0 after a reset |
 | Daily ceiling | 8,000 ≈ 300+ AI-assisted searches at worst |
 
 **Visibility.** Every discovery log line has `neurons` (embedding + ranking), `cacheHit`, `neuronsToday`, the retrieval mode and the fallback reason, never the request text. The retrieval log adds `embeddingCacheHit` and `topSimilarity`. Admins see one line on the dashboard ("AI usage today: N / 8,000 Neurons · M AI-assisted searches") from `GET /api/admin/discovery/usage`.
