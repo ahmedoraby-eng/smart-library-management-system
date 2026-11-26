@@ -384,6 +384,8 @@ describe("AppLayout: top bar", () => {
     await waitFor(() => expect(document.title).toBe("Members · Smart Library"));
     expect(within(bar).getByTestId("overdue-bell-slot")).toBeInTheDocument();
     expect(within(bar).getByTestId("theme-toggle")).toBeInTheDocument();
+    // The shortcut hint follows the platform, as the sidebar trigger does (jsdom is not a Mac).
+    expect(within(bar).getByTestId("top-search")).toHaveTextContent("Ctrl K");
 
     await userEvent.click(within(bar).getByTestId("top-search"));
     expect(await screen.findByTestId("command-palette")).toBeInTheDocument();

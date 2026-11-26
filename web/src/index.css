@@ -492,10 +492,20 @@ html:active-view-transition-type(shallower) {
     animation-name: slm-vt-in-left;
   }
 }
-/* The rest of the screen (sidebar, its sliding tab) swaps without a cross-fade. */
+/* The theme switch (an untyped view transition) cross-fades the whole screen. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 200ms;
+}
+/*
+ * On a page change the rest of the screen (sidebar, top bar) swaps without a cross-fade: the new state shows at
+ * once and live, so the sidebar tab is seen sliding and never two tabs or two breadcrumbs at the same time.
+ */
+html:active-view-transition-type(forward, backward, deeper, shallower, tab) {
+  &::view-transition-old(root),
+  &::view-transition-new(root) {
+    animation: none;
+  }
 }
 @keyframes slm-vt-out-up {
   to {

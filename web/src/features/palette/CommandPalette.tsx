@@ -136,7 +136,7 @@ export function openCommandPalette(): void {
   document.dispatchEvent(new Event(OPEN_EVENT));
 }
 
-const isMac = () =>
+export const isMac = () =>
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 /**

@@ -7,7 +7,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { booksKey } from "../features/books/api";
 import { OverdueBell } from "../features/circulation/OverdueBell";
 import { membersKey } from "../features/members/api";
-import { openCommandPalette } from "../features/palette/CommandPalette";
+import { isMac, openCommandPalette } from "../features/palette/CommandPalette";
 
 type SectionTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
 
@@ -64,6 +64,7 @@ export function useBreadcrumb(pathname: string): Crumb[] {
 export function TopBar({ pathname, showBell }: { pathname: string; showBell: boolean }) {
   const crumbs = useBreadcrumb(pathname);
   const current = crumbs[crumbs.length - 1]!.label;
+  const shortcut = isMac() ? "⌘K" : "Ctrl K";
 
   useEffect(() => {
     document.title = `${current} · Smart Library`;
@@ -108,12 +109,13 @@ export function TopBar({ pathname, showBell }: { pathname: string; showBell: boo
         onClick={openCommandPalette}
         data-testid="top-search"
         aria-haspopup="dialog"
+        aria-keyshortcuts="Meta+K Control+K"
         className="flex h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm text-neutral-500 shadow-card transition-[border-color,box-shadow,color] duration-150 hover:border-border-strong hover:text-neutral-700 max-lg:w-44"
       >
         <SearchIcon size={15} />
         <span className="truncate">Search books, members…</span>
         <kbd className="ml-auto rounded-xs border border-border px-1 font-mono text-[11px] leading-4 text-neutral-500">
-          ⌘K
+          {shortcut}
         </kbd>
       </button>
 
