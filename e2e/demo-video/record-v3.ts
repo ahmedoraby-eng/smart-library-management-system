@@ -128,14 +128,14 @@ function finish(work: string, googleClip: string | undefined): void {
   if (!assemble) return log("swiftc not available: kept the .webm only");
   const final = join(outDir, "smart-library-demo-v3.mp4");
   // Ahmed's silent Google clip, in two parts (google-clip.swift output, emails blurred): part 2 covers scene 2 from
-  // its row 2 (the Google sign-in) to the end; part 3 covers scene 3 up to its row 4. Row times come from the voice cues.
+  // its row 2 (the Google sign-in) to the end; part 3 covers scene 3 up to its row 3. Row times come from the voice cues.
   const part = (n: number) => arg(`--google-${n}`);
   const c2 = cues["2"] ?? {};
   const from2 = c2.r2 ?? (10 / DEFAULT_S[1]!) * clips[1]!;
-  const to3 = (cues["3"] ?? {}).r4 ?? (16 / DEFAULT_S[2]!) * clips[2]!;
+  const to3 = (cues["3"] ?? {}).r3 ?? (16 / DEFAULT_S[2]!) * clips[2]!;
   const insert = [
     ...(part(2) ? ["--insert", `2:${part(2)}`, "--line-at", String(from2)] : []),
-    // part 3 runs to row 4; the 403 after it is filmed live with the demo librarian (same page, no Google account)
+    // part 3 runs to row 3 ("Can I open the admin page?"); the 403 after it is filmed live with the demo librarian (same page, no Google account)
     ...(part(3) ? ["--insert", `3:${part(3)}`, "--line-at", "0", "--line-end", String(to3)] : []),
     ...(googleClip && !part(2) ? ["--insert", `2:${googleClip}`, "--line-at", String(from2)] : []),
   ];
@@ -406,11 +406,13 @@ async function main(): Promise<void> {
       await row(1, 5);
       await show(page, page.getByTestId("role-select").last(), 1800, 1.3);
       await switchTo(librarian);
-      await row(4, 16);
+      await row(3, 16);
       await page.goto(`${LIVE}/admin/users`);
       await page.waitForURL(/\/403/);
-      await row(5, 19);
+      await row(4, 19);
       await show(page, page.getByText("You don't have access to this page"), 2400, 1.35);
+      await row(5, 22);
+      await glide(page, page.getByText("You don't have access to this page"));
       await holdUntil(0.97);
     },
 
