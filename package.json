@@ -25,6 +25,8 @@
     "lint:deps": "depcruise api/src web/src contracts/src --config .dependency-cruiser.cjs",
     "demo:local": "tsx scripts/demo-local.ts",
     "e2e": "tsx e2e/run.ts",
+    "demo:video": "tsx e2e/demo-video/record.ts",
+    "demo:video:live": "tsx e2e/demo-video/record-live.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
