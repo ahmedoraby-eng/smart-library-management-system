@@ -788,11 +788,23 @@ async function main(): Promise<void> {
     },
   };
 
+  // One scene that trips (a slow page, a changed label) must not cost the whole run: it is logged with a screenshot,
+  // keeps its slot (as filmed so far) and the run goes on.
+  const failed: number[] = [];
   for (const n of ORDER) {
     const body = scenes[n];
     if (!body) throw new Error(`no scene ${n} in this recorder`);
-    await scene(n, body);
+    await scene(n, async () => {
+      try {
+        return await body();
+      } catch (e) {
+        failed.push(n);
+        log(`  scene ${n} FAILED: ${redact((e instanceof Error ? e.message : String(e)).split("\n")[0]!)}`);
+        await page.screenshot({ path: join(outDir, `failure-scene-${n}.png`) }).catch(() => undefined);
+      }
+    });
   }
+  if (failed.length) log(`scenes that failed (see failure-scene-N.png): ${failed.join(", ")}`);
 
   await context.close();
   const webm = readdirSync(rawDir).find((f) => f.endsWith(".webm"));
