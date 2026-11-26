@@ -60,7 +60,7 @@ What the full run covered on live, among others: wrong password refused with no 
 | O-4 | Requirements | «Complete a working product using any language, framework, or development tool (including AI tools).» | SLM-6, SLM-7 | R-G1, R-G2 | **Done** |
 | O-5 | Requirements | «Provide your source code and a brief README explaining how to run it.» | SLM-6 | R-G3, R-G4 | **Done** |
 | O-6 | Bonus | «Deploy the app and provide a URL for live testing.» | SLM-10, SLM-11 | R-X1–X3 | **Done** |
-| O-7 | Bonus | «Use Loom or other video software to record a demo of the app.» | SLM-11, SLM-17 | R-X4, R-X5 | **Partial**: recorded on the live site; the link goes into the README once the final cut is uploaded |
+| O-7 | Bonus | «Use Loom or other video software to record a demo of the app.» | SLM-11, SLM-17 | R-X4, R-X5 | **Done** |
 | O-8 | Bonus | «Add an authentication system with SSO, preferably with different user roles and permissions.» | SLM-8 | R-X6–X9 | **Done** |
 | O-9 | Bonus | «Implement any AI features you can think of.» | SLM-9, SLM-16 | R-X10 | **Done** |
 | O-10 | Bonus | «Add extra features as you see fit, to demonstrate your creativity.» | SLM-12, SLM-13, SLM-18, SLM-19, SLM-20 | R-X11–X14 | **Done** |
@@ -136,8 +136,8 @@ What the full run covered on live, among others: wrong password refused with no 
 | R-X1 | Deploy the application | SLM-10 | [#24][pr24], [#25][pr25] | every merge to `main` deploys through Cloudflare Workers Builds (`wrangler.toml`); live `GET /api/health?deep=1` → ok (25/11 14:33 UTC) | live | **Done** |
 | R-X2 | Provide a public URL | SLM-10, SLM-11 | [#24][pr24], [#39][pr39] | https://smart-library.ahmedoraby.workers.dev answers 200; README «Live demo» links to it | live | **Done** |
 | R-X3 | Verify the deployed app works | SLM-10, SLM-11 | [#24][pr24], [#51][pr51], [#52][pr52] | public live checks pass; QA live regression on 26/11: **11 of 11 areas pass** (sign-in, search, Borrow Book, Return Book and the rest; see «Live E2E regression» above) | live | **Done** |
-| R-X4 | Demo recording | SLM-11, SLM-17 | [#38][pr38] | the demo is recorded on the live site with the pipeline in `e2e/demo-video/` (`npm run demo:video:live`, narration per scene); the final cut is being uploaded | — | **Partial** |
-| R-X5 | Recording URL provided | SLM-11 | — | README «Demo video» still shows `<VIDEO_URL>`; it changes to the link of the final cut | — | **Not done** |
+| R-X4 | Demo recording | SLM-11, SLM-17 | [#38][pr38] | the 6:14 demo was recorded on the live site with the pipeline in `e2e/demo-video/` (`npm run demo:video:live`, narration per scene) and published: [demo video](https://drive.google.com/file/d/1jXu0H11htHGphXL9EOXlRxrW9IgLX8IK/view?usp=sharing); a 2:56 ad cut is extra: [ad](https://drive.google.com/file/d/1K8ku46NTX82Uj5hfpc-z78CAYsPbVe27/view?usp=sharing) | live | **Done** |
+| R-X5 | Recording URL provided | SLM-11 | this PR | README «Demo video» links to the published demo (and the ad); both links open without signing in | — | **Done** |
 | R-X6 | Authentication | SLM-8, SLM-6 | [#1][pr1], [#12][pr12], [#15][pr15] | `skeleton.test.ts` «SL-08 demo accounts» (HttpOnly cookie, same 401 for wrong password and unknown email, 6th attempt → 429, logout), «no header or flag signs anyone in (no bypass)», «writes from another origin are refused (CSRF)»; `rbac-matrix.test.ts` «session-cookie-flags: missing, malformed, tampered, expired, foreign-secret or wrong-alg cookies → 401»; `e2e/*` sign in as each role | ci, e2e | **Done** |
 | R-X7 | SSO (Google) | SLM-8 | [#12][pr12], [#15][pr15], [#43][pr43], [#44][pr44] | `google-auth.test.ts` (OIDC with PKCE S256, state, nonce, ID-token verification with a local key pair, unverified email refused, open-redirect guard, demo emails refused, `sub` binding, rate limits); `SignInPage.test.tsx` «shows Google + divider when configured…». **Live:** production Google client merged in [#43][pr43]; live checks above and QA on the live site passed; a real Google sign-in on the live site worked (25/11). the public privacy page for the Google consent screen is live (`GET /privacy` → 200; `router.cov.test.tsx` «/privacy is public: no session needed, outside the shell, and linked from the sign-in footer (SLM-8)», «a direct visit to /privacy stays there without a session») | ci, live | **Done** |
 | R-X8 | Different roles and permissions | SLM-8 | [#1][pr1], [#12][pr12], [#15][pr15] | Admin, Librarian, Supervisor ([ADR-0172](adr/0172-rbac-matrix-test-covers-every-role-every.md)); `rbac-matrix.test.ts` «every registered route has a row, and every row a route», one case per role × route; `staff-users.test.ts` role change, disable, last Admin, demo rows protected; `e2e/2-supervisor.e2e.ts` «supervisor is read-only» | ci, e2e | **Done** |
@@ -162,13 +162,12 @@ What the full run covered on live, among others: wrong password refused with no 
 
 | | Done | Partial | Not done | Descoped | Total |
 |---|---|---|---|---|---|
-| Part 1 (assessment lines) | 12 | 2 (O-7, O-14) | 0 | 0 | 14 |
-| Part 2 (derived rows) | 54 | 2 (R-X4, R-E4) | 1 (R-X5) | 0 | 57 |
+| Part 1 (assessment lines) | 13 | 1 (O-14) | 0 | 0 | 14 |
+| Part 2 (derived rows) | 56 | 1 (R-E4) | 0 | 0 | 57 |
 
-Every minimum feature (O-1 to O-5) is Done, and the deployed app passes the live regression. What is left:
+Every minimum feature (O-1 to O-5) and every bonus item (O-6 to O-10) is Done; the deployed app passes the live regression and the demo is published. What is left:
 
-1. **Demo video link** (R-X4, R-X5): the README «Demo video» line gets the link to the final cut; then both rows are Done.
-2. **Accessibility check** (R-E4): an automated axe pass in CI, or a recorded manual pass, for SLM-7 AC5.
+1. **Accessibility check** (R-E4): an automated axe pass in CI, or a recorded manual pass, for SLM-7 AC5.
 
 This file is updated when any of these lands.
 

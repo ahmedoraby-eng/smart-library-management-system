@@ -3,7 +3,7 @@
 A staff-facing library operations app: catalogue, members, **Borrow Book** / **Return Book**, loan history, search, a dashboard, and AI-assisted book discovery. Admins, Librarians and Supervisors sign in. Members are records and never sign in.
 
 **Live demo:** <https://smart-library.ahmedoraby.workers.dev>
-**Demo video:** `<VIDEO_URL>`
+**Demo video:** <https://drive.google.com/file/d/1jXu0H11htHGphXL9EOXlRxrW9IgLX8IK/view?usp=sharing> (6:14) · **Ad (extra):** <https://drive.google.com/file/d/1K8ku46NTX82Uj5hfpc-z78CAYsPbVe27/view?usp=sharing> (2:56)
 
 > **Our interpretation.** The assessment doesn't say whether the app is staff-facing or customer-facing. We chose staff-facing because every required feature is an operator action.
 >
