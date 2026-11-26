@@ -139,6 +139,26 @@ function finish(work: string, googleClip: string | undefined): void {
     ...(part(3) ? ["--insert", `3:${part(3)}`, "--line-at", "0", "--line-end", String(to3)] : []),
     ...(googleClip && !part(2) ? ["--insert", `2:${googleClip}`, "--line-at", String(from2)] : []),
   ];
+  // Row sync: every logged event (events.json, footage time) is pinned to its key word (cue k_<name>, narration
+  // time) minus 0.15 s, so it lands just before the word. Scenes 2 and 3 carry Ahmed's Google clip: not re-timed.
+  const evFile = join(outDir, "events.json");
+  const anchorArgs: string[] = [];
+  if (existsSync(evFile)) {
+    const evList = JSON.parse(readFileSync(evFile, "utf8")) as { scene: number; name: string; t: number }[];
+    const starts = new Map(
+      (JSON.parse(readFileSync(marksFile, "utf8")) as { scene: number; start: number }[]).map((m) => [
+        m.scene,
+        m.start,
+      ]),
+    );
+    for (const n of new Set(evList.map((e) => e.scene))) {
+      if (n === 2 || n === 3 || process.env.NO_ROW_SYNC === "1") continue;
+      const pairs = evList
+        .filter((e) => e.scene === n && cues[String(n)]?.[`k_${e.name}`] !== undefined)
+        .map((e) => `${(e.t - starts.get(n)!).toFixed(2)}=${(cues[String(n)]![`k_${e.name}`]! - 0.15).toFixed(2)}`);
+      if (pairs.length) anchorArgs.push("--anchors", `${n}:${pairs.join(",")}`);
+    }
+  }
   // Scene 9's numbers caption, drawn in post on the voice cue (the live run can fall behind the voice there)
   const r7 = (cues["9"] ?? {}).r7 ?? (30 / DEFAULT_S[8]!) * clips[8]!;
   const overlays = [
@@ -152,7 +172,9 @@ function finish(work: string, googleClip: string | undefined): void {
   const voiced = (_n: number) => true; // v3: every scene is in the cut; one without its clip yet stays silent
   const mainMarks = join(work, "main-scenes.json");
   writeFileSync(mainMarks, JSON.stringify(all.filter((m) => voiced(m.scene))));
-  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays], { stdio: "inherit" });
+  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays, ...anchorArgs], {
+    stdio: "inherit",
+  });
   const pending = all.filter((m) => !voiced(m.scene));
   if (pending.length) {
     const extrasMarks = join(work, "extras-scenes.json");
@@ -315,6 +337,15 @@ async function main(): Promise<void> {
   const LEN = DEFAULT_S;
   /** Waits for row `i` of the current scene: its voice cue, else `sec` seconds into the scene (Time column). */
   const row = (i: number, sec: number) => holdFor(`r${i}`, sec / LEN[sceneNo - 1]!);
+  // Row sync (Ahmed 26/11: the picture ran ahead of / behind the words): each visible action waits for its KEY WORD
+  // (cue k_<name> from the voice edit) instead of only its row start, and logs when it became visible (events.json);
+  // the assembly then lines every logged event up with its word (assemble --anchors).
+  const evs: { scene: number; name: string; t: number }[] = [];
+  const ev = (name: string, off = 0) => evs.push({ scene: sceneNo, name, t: (Date.now() - t0) / 1000 + off });
+  const key = (name: string, lead = 0.35) => {
+    const c = cueAt(`k_${name}`);
+    return c === undefined ? Promise.resolve() : holdUntil(Math.max(0, c - lead) / (sceneMs / 1000));
+  };
   /** Waits up to `ms` for `loc` to show (isVisible() does not wait). */
   const appears = (loc: Locator, ms: number) =>
     loc
@@ -326,6 +357,18 @@ async function main(): Promise<void> {
     const shown = loc.filter({ visible: true }).first(); // lists render a hidden mobile copy of each row too
     if (!(await appears(shown, 6000))) return log(`  scene ${sceneNo}: nothing to point at (${String(loc)})`);
     await spotlight(p, shown, { ms, zoom });
+  };
+  /** show() on the key word of `name`: the ring lands with the word; logged. */
+  const showK = async (p: Page, loc: Locator, name: string, ms = 2000, zoom = 1.3) => {
+    await key(name, 0.55);
+    ev(name, 0.5);
+    await show(p, loc, ms, zoom);
+  };
+  /** click() on the key word of `name`; logged when it lands. */
+  const clickK = async (p: Page, loc: Locator, name: string) => {
+    await key(name, 0.45);
+    await click(p, loc);
+    ev(name);
   };
   /** v3 keeps the screen clean: captions only where the script asks (scenes 9 and 11). */
   const caption = (t: string, s = "") => say(page, t, s, "");
@@ -358,10 +401,11 @@ async function main(): Promise<void> {
    * Look up, retried: Open Library sometimes answers after the app's 3-second limit ("No details found…"). After four
    * tries the form is filled by hand (the same title, author and cover), so the scene and the save still work.
    */
-  const lookUp = async () => {
+  const lookUp = async (evName?: string) => {
     const hint = page.getByTestId("isbn-lookup-hint");
     for (let k = 0; k < 4; k++) {
       await click(page, page.getByTestId("isbn-lookup"));
+      if (k === 0 && evName) ev(evName);
       await hint.waitFor({ timeout: 15_000 }).catch(() => undefined);
       await sleep(400);
       if (/Filled from Open Library/i.test((await hint.innerText().catch(() => "")) ?? "")) return true;
@@ -390,18 +434,20 @@ async function main(): Promise<void> {
     1: async () => {
       await caption("");
       await row(0, 0.6);
-      await click(page, page.getByTestId("theme-toggle"));
+      await clickK(page, page.getByTestId("theme-toggle"), "theme");
       await row(1, 6);
       for (const n of ["Books", "Members", "Circulation"]) {
         await glide(page, nav(n));
         await sleep(900);
       }
       await row(2, 10);
-      await show(page, nav(/Book discovery/), 1800);
+      await showK(page, nav(/Book discovery/), "ai", 1800);
       await row(3, 14);
-      await show(page, page.getByTestId("kpi-active-loans"), 1600);
-      await show(page, page.getByTestId("kpi-overdue"), 1600);
+      await showK(page, page.getByTestId("kpi-active-loans"), "out", 1600);
+      await showK(page, page.getByTestId("kpi-overdue"), "late", 1600);
       await row(4, 18);
+      await key("live", 0.2);
+      ev("live");
       await caption("Live on Cloudflare", LIVE.replace(/^https:\/\//, ""));
       await holdUntil(0.97);
       await clearCaption();
@@ -412,9 +458,9 @@ async function main(): Promise<void> {
       await context.clearCookies();
       await page.goto(`${LIVE}/signin`);
       await row(0, 0.3);
-      await show(page, page.getByTestId("google-signin"), 2200, 1.25);
+      await showK(page, page.getByTestId("google-signin"), "google", 2200, 1.25);
       await row(1, 4);
-      await click(page, page.getByTestId("signin-privacy"));
+      await clickK(page, page.getByTestId("signin-privacy"), "privacy");
       await page.getByTestId("privacy").waitFor();
       await sleep(900);
       await scrollBy(page, 90, 18, 180);
@@ -441,7 +487,7 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/admin/users`);
       await page.waitForURL(/\/403/);
       await row(4, 19);
-      await show(page, page.getByText("You don't have access to this page"), 2400, 1.35);
+      await showK(page, page.getByText("You don't have access to this page"), "nope", 2400, 1.35);
       await row(5, 22);
       await glide(page, page.getByText("You don't have access to this page"));
       await holdUntil(0.97);
@@ -453,11 +499,17 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/books`);
       await row(0, 0.3);
       await click(page, page.getByTestId("book-search"));
+      await key("hobbit", 0.9);
       await search("hobbit");
+      ev("hobbit", -1.2);
       await row(1, 4);
+      await key("tolkein", 1.0);
       await search("Tolkein");
+      ev("tolkein", -1.2);
       await row(2, 9);
+      await key("isbn", 1.4);
       await search("9780132350884");
+      ev("isbn", -1.2);
       await row(3, 12);
       await click(
         page,
@@ -467,7 +519,7 @@ async function main(): Promise<void> {
           .first(),
       );
       await page.getByTestId("book-detail-title").waitFor();
-      await show(page, page.getByText(/ISBN 978/), 3000, 1.4);
+      await showK(page, page.getByText(/ISBN 978/), "isbnline", 3000, 1.4);
       await holdUntil(0.97);
     },
 
@@ -477,17 +529,21 @@ async function main(): Promise<void> {
       await row(0, 0.3);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await row(1, 6);
-      const filled = await lookUp();
+      await key("lookup", 0.45);
+      const filled = await lookUp("lookup");
+      ev("fill");
       await row(2, 9);
       await show(page, page.getByTestId("field-title"), 1500, 1.2);
-      await show(page, page.getByTestId("cover-preview"), 1500, 1.2);
+      await showK(page, page.getByTestId("cover-preview"), "cover", 1500, 1.2);
       await row(3, 15);
-      if (filled) await show(page, page.getByTestId("isbn-lookup-hint"), 2200, 1.4);
+      if (filled) await showK(page, page.getByTestId("isbn-lookup-hint"), "hint", 2200, 1.4);
       await row(4, 20);
+      await key("type", 0.2);
+      ev("type");
       await typeInto(page, page.getByTestId("field-category"), "Fiction");
       await row(5, 25);
       await typeInto(page, page.getByTestId("field-totalCopies"), "1");
-      await show(page, page.getByTestId("field-totalCopies"), 1500, 1.3);
+      await showK(page, page.getByTestId("field-totalCopies"), "one", 1500, 1.3);
       await click(page, page.getByTestId("save-book"));
       if (!(await appears(page.getByTestId("book-detail-title"), 15_000))) {
         // keep the form's error for diagnosis (edit-v3/out/), then the run goes on
@@ -507,14 +563,17 @@ async function main(): Promise<void> {
       await row(0, 0.3);
       await click(page, page.getByTestId("edit-book"));
       await typeInto(page, page.getByTestId("field-category"), "Fantasy");
-      await click(page, page.getByTestId("save-book"));
+      await clickK(page, page.getByTestId("save-book"), "saved");
       await page.getByTestId("book-detail-title").waitFor();
       await row(1, 5);
+      await key("again", 0.3);
+      ev("again", 0.4);
       await page.goto(`${LIVE}/books/new`);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await lookUp();
       await typeInto(page, page.getByTestId("field-category"), "Fantasy"); // required; Look up never fills it
       await typeInto(page, page.getByTestId("field-totalCopies"), "1");
+      await key("dup", 0.9);
       await click(page, page.getByTestId("save-book"));
       await row(2, 10);
       const dup = page.getByText(/already uses this ISBN/i);
@@ -525,6 +584,7 @@ async function main(): Promise<void> {
             fullPage: true,
           })
           .catch(() => undefined);
+      if (await appears(dup.first(), 3000)) ev("dup", 0.2);
       await show(page, dup, 2600, 1.4);
       await click(page, page.getByTestId("cancel-book"));
       const discard = page.getByRole("button", { name: /discard|leave/i });
@@ -537,28 +597,32 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/circulation/borrow`);
       await row(0, 0.3);
       await typeInto(page, page.getByTestId("member-combobox").getByRole("combobox"), "nour");
-      await click(page, page.getByRole("option", { name: /Nour Hassan/ }).first());
+      await clickK(page, page.getByRole("option", { name: /Nour Hassan/ }).first(), "nour");
       await row(1, 5);
       await typeInto(page, page.getByTestId("book-combobox").getByRole("combobox"), "clean");
       await click(page, page.getByRole("option", { name: /Clean Code/ }).first());
-      await show(page, page.getByTestId("copies-change"), 1800, 1.3);
+      await showK(page, page.getByTestId("copies-change"), "number", 1800, 1.3);
       await row(2, 9);
-      await click(page, page.getByTestId("confirm-borrow"));
+      await clickK(page, page.getByTestId("confirm-borrow"), "confirm");
       const done = page.getByTestId("borrow-success-text");
       await done.first().waitFor();
-      await show(page, done, 1800, 1.3);
+      await showK(page, done, "due", 1800, 1.3);
       await row(3, 14);
-      await show(page, done, 1800, 1.3);
+      await showK(page, done, "less", 1800, 1.3);
       await row(4, 17);
       await click(page, page.getByTestId("tab-return"));
       await typeInto(page, page.getByTestId("return-search"), "Clean Code");
       const loan = page.getByTestId("loan-row").filter({ hasText: "Nour Hassan" }).filter({ hasText: "Clean Code" });
       await loan.first().waitFor();
-      await click(page, loan.first().getByTestId("return-button"));
-      await sleep(700);
-      await click(page, page.getByTestId("return-dialog").getByRole("button", { name: "Confirm return" }));
+      await clickK(page, loan.first().getByTestId("return-button"), "return");
+      await sleep(500);
+      await clickK(
+        page,
+        page.getByTestId("return-dialog").getByRole("button", { name: "Confirm return" }),
+        "confirmret",
+      );
       await row(5, 22);
-      await show(page, page.getByTestId("toast"), 2000, 1.25);
+      await showK(page, page.getByTestId("toast"), "shelf", 2000, 1.25);
       await holdUntil(0.97);
     },
 
@@ -568,27 +632,29 @@ async function main(): Promise<void> {
       const renew = page.locator(`[data-testid="renew-button"]:not([disabled])`).first(); // a late loan can't renew
       if (!(await appears(renew, 10_000))) return log("  scene 8: no enabled Renew on the live site");
       await row(0, 0.3);
-      await click(page, renew);
+      await clickK(page, renew, "renew");
       await show(page, page.getByTestId("toast").filter({ hasText: /Renewed/ }), 2000, 1.25);
       await row(1, 5);
       const blocked = page.getByTestId("renew-blocked").filter({ visible: true }).first();
       if (await appears(blocked, 4000)) {
         await blocked.scrollIntoViewIfNeeded();
+        await key("tooltip", 0.5);
         await glide(page, blocked);
+        ev("tooltip");
         // a native title tooltip never reaches the video: draw the same text the browser would show
         await blocked.evaluate((el) => (window as unknown as { __tip?: (e: Element) => void }).__tip?.(el));
         await sleep(2600);
       }
       await row(2, 10);
-      await show(page, page.getByTestId("overdue-count"), 1800, 1.5);
+      await showK(page, page.getByTestId("overdue-count"), "bell", 1800, 1.5);
       await row(3, 14);
-      await click(page, page.getByTestId("overdue-bell"));
+      await clickK(page, page.getByTestId("overdue-bell"), "open");
       await page
         .getByTestId("overdue-popover")
         .waitFor({ timeout: 10_000 })
         .catch(() => undefined);
       await row(4, 18);
-      await show(page, page.getByTestId("overdue-item").first(), 1800, 1.25);
+      await showK(page, page.getByTestId("overdue-item").first(), "verylate", 1800, 1.25);
       await holdUntil(0.97);
       await page.keyboard.press("Escape");
     },
@@ -619,10 +685,14 @@ async function main(): Promise<void> {
       await prep(pL, "Nour Hassan");
       await prep(pR, "Yara Samy");
       await row(2, 10);
+      await key("onecopy", 0.55);
+      ev("onecopy", 0.5);
       await spotlight(pL, pL.getByTestId("copies-change"), { ms: 1500 });
       await spotlight(pR, pR.getByTestId("copies-change"), { ms: 1500 });
       await Promise.all([pL, pR].map((p) => glide(p, p.getByTestId("confirm-borrow"))));
       await row(3, 14);
+      await key("go", 0.2);
+      ev("go", 0.1);
       // left first, the right a moment later: both requests race for the one copy at the same time
       await pL.getByTestId("confirm-borrow").click({ noWaitAfter: true });
       await new Promise((r) => setTimeout(r, 120));
@@ -633,13 +703,19 @@ async function main(): Promise<void> {
       const refused = loseP.getByTestId("book-notice").or(loseP.getByTestId("borrow-error")).first();
       if (await appears(refused, 5000)) await spotlight(loseP, refused, { ms: 1500, zoom: 1.5 });
       await row(4, 17);
+      await key("gets", 0.55);
+      ev("gets", 0.5);
       await spotlight(winP, winP.getByTestId("borrow-success"), { ms: 2000, zoom: 1.45 });
       await row(5, 20);
+      await key("nocopies", 0.55);
+      ev("nocopies", 0.5);
       if (await appears(refused, 3000)) await spotlight(loseP, refused, { ms: 3000, zoom: 1.6 });
       await row(6, 26);
+      await key("minus", 2.2);
       await winP.goto(`${LIVE}/books?q=${encodeURIComponent(lotr)}`);
       await click(winP, winP.getByRole("link", { name: lotrRe }).filter({ visible: true }).first());
       await winP.getByTestId("book-detail-title").waitFor();
+      ev("minus", 0.5);
       await spotlight(winP, winP.getByTestId("copies-available"), { ms: 2400, zoom: 1.6 });
       await row(7, 30);
       await caption("20 at once · 3 copies → 3 win, 17 refused", "The database checks and updates in one step.");
@@ -663,19 +739,23 @@ async function main(): Promise<void> {
       };
       await openBook(lotr, lotrRe);
       await row(0, 0.3);
+      await key("try", 1.0);
       await deleteFromMenu();
       const blocked = page.getByTestId("delete-dialog-blocked");
       await blocked.waitFor();
+      ev("try");
       await row(1, 4);
-      await show(page, blocked.getByText(/on loan/).last(), 2000, 1.3);
+      await showK(page, blocked.getByText(/on loan/).last(), "loan", 2000, 1.3);
       await click(page, page.getByTestId("dialog-cancel"));
       await row(2, 9);
+      await key("before", 2.4);
       await openBook("Refactoring", /Refactoring/);
       await deleteFromMenu();
       const dlg = page.getByTestId("delete-dialog-archive");
       await dlg.waitFor();
+      ev("before");
       await row(3, 13);
-      await click(page, dlg.getByRole("button", { name: "Archive book" }));
+      await clickK(page, dlg.getByRole("button", { name: "Archive book" }), "archive");
       await page.waitForURL(/\/books(\?|$)/);
       await show(page, page.getByTestId("toast"), 1800, 1.25);
       await holdUntil(0.97);
@@ -687,42 +767,49 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/discover`);
       const left = page.getByTestId("ai-searches-left");
       await row(0, 0.3);
-      await show(page, left, 2000, 1.35);
+      await showK(page, left, "discovery", 2000, 1.35);
       await row(1, 4);
+      await key("type", 0.3);
+      ev("type", 0.4);
       await typeInto(
         page,
         page.getByTestId("discovery-query"),
         "a short book about building good habits for a busy student",
       );
       await row(2, 12);
-      await click(page, page.getByTestId("discovery-submit"));
+      await clickK(page, page.getByTestId("discovery-submit"), "think");
       await page.getByTestId("mode-badge").first().waitFor({ timeout: 60_000 });
       log(`discovery mode: ${(await page.getByTestId("mode-badge").first().innerText()).trim()}`);
       await page.getByTestId("discovery-results").evaluate((el) => el.scrollIntoView({ block: "start" }));
       await row(3, 15);
+      await key("ways", 0.2);
+      ev("ways");
       await caption("1 · words + meaning");
       const first = page.getByTestId("discovery-item").first();
       await show(page, first.getByRole("heading").or(first.getByRole("link")).first(), 1400, 1.25);
       await show(page, page.getByTestId("found-by-meaning"), 1400, 1.35);
       await row(4, 21);
+      await key("mixes", 0.2);
+      ev("mixes");
       await caption("2 · one list");
       await scrollBy(page, 110, 10, 200);
       await scrollBy(page, -110, 10, 140);
       await row(5, 27);
       await caption("3 · AI ranks and explains");
       await show(page, page.getByTestId("mode-badge"), 1200, 1.4);
-      await show(page, page.getByTestId("reason"), 3000, 1.3);
+      await showK(page, page.getByTestId("reason"), "why", 3000, 1.3);
       await row(6, 33);
       await caption("4 · only our books");
-      await show(page, first.getByTestId("availability"), 1800, 1.4);
+      await showK(page, first.getByTestId("availability"), "have", 1800, 1.4);
       await row(7, 38);
+      await key("down", 0.4);
       await caption("AI down → keyword search");
-      await show(page, page.getByTestId("mode-badge"), 1800, 1.4);
+      await showK(page, page.getByTestId("mode-badge"), "down", 1800, 1.4);
       await row(8, 43);
       await clearCaption();
       await left.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" })).catch(() => undefined);
       await sleep(600);
-      await show(page, left, 3000, 1.4);
+      await showK(page, left, "49", 3000, 1.4);
       await holdUntil(0.97);
     },
 
@@ -732,20 +819,22 @@ async function main(): Promise<void> {
       const strip = page.getByTestId("similar-books");
       if (!(await appears(strip, 10_000))) return log("  scene 12: no More like this on the live site");
       await row(0, 0.3);
+      await key("friends", 0.6);
       await strip.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }));
+      ev("friends", 0.5);
       await row(1, 5);
       for (const card of (await page.getByTestId("similar-book").all()).slice(0, 4)) {
         await glide(page, card);
         await sleep(350);
       }
-      await click(page, page.getByTestId("similar-book-link").first());
+      await clickK(page, page.getByTestId("similar-book-link").first(), "click");
       await page.getByTestId("book-detail-title").waitFor();
       await row(2, 10);
       const next = page.getByTestId("similar-books");
       await appears(next, 8000);
       await next.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" })).catch(() => undefined);
       await sleep(500);
-      await show(page, next, 1800, 1.1);
+      await showK(page, next, "free", 1800, 1.1);
       await holdUntil(0.97);
     },
 
@@ -754,29 +843,36 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/dashboard`);
       if (!(await appears(page.getByTestId("palette-trigger"), 10_000))) return log("  scene 13: no palette");
       await row(0, 0.3);
+      await key("cmdk", 0.1);
       await page.keyboard.press("Control+k");
+      ev("cmdk", 0.1);
       const input = page.getByTestId("palette-input");
       await input.waitFor();
       await row(1, 3);
       await input.pressSequentially("nour", { delay: 110 / SPEED });
       const opt = page.getByTestId("palette-option").filter({ hasText: /Borrow for Nour Hassan/ });
       await show(page, opt, 1500, 1.25);
+      await key("lend", 0.2);
       await page.keyboard.press("Enter");
       await page.waitForURL(/\/circulation\/borrow/);
+      ev("lend");
       await row(2, 9);
+      await key("late", 1.6);
       await page.keyboard.press("Control+k");
       await input.waitFor();
       await input.pressSequentially("overdue", { delay: 110 / SPEED });
       await sleep(600);
       await page.keyboard.press("Enter");
       await page.waitForURL(/\/loans/);
+      ev("late");
       await row(3, 13);
-      await show(
+      await showK(
         page,
         page
           .getByRole("combobox")
           .filter({ hasText: /Overdue/ })
           .or(page.getByText(/Overdue/)),
+        "role",
         2000,
       );
       await holdUntil(0.97);
@@ -787,23 +883,29 @@ async function main(): Promise<void> {
       await page.goto(REPO);
       await row(0, 0.3);
       const teamHead = page.getByRole("heading", { name: /How it was built/ }).first();
+      await key("build", 0.4);
       await teamHead.scrollIntoViewIfNeeded().catch(() => undefined);
+      ev("build", 0.2);
       await sleep(1500);
       await row(1, 5);
+      await key("agents", 1.0);
       await page.goto(`${REPO}/blob/main/docs/ai-team.md`);
+      ev("agents");
       await sleep(1200);
       await scrollBy(page, 120, 14, 220);
       await row(2, 10);
       const imgs = page.locator("article img");
       const n = await imgs.count().catch(() => 0);
-      if (n > 1) await show(page, imgs.nth(1), 1600, 1.2);
+      if (n > 1) await showK(page, imgs.nth(1), "product", 1600, 1.2);
       await scrollBy(page, 120, 10, 200);
       await row(3, 15);
       const human = page.getByRole("heading", { name: /The human/ }).first();
       await human.scrollIntoViewIfNeeded().catch(() => undefined);
-      await show(page, human, 2000, 1.3);
+      await showK(page, human, "goals", 2000, 1.3);
       await row(4, 19);
+      await key("links", 0.3);
       await page.goto(`${S}/card/close`);
+      ev("links", 0.2);
     },
   };
 
@@ -839,6 +941,7 @@ async function main(): Promise<void> {
   copyFileSync(join(rawDir, webm), webmOut);
   if (!encodeMp4(webmOut, join(outDir, "silent.mp4"), tmp, FPS)) return;
   writeFileSync(join(outDir, "scenes.json"), JSON.stringify(marks, null, 2));
+  writeFileSync(join(outDir, "events.json"), JSON.stringify(evs, null, 2));
   finish(tmp, googleClip);
 }
 

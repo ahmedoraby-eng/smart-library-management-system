@@ -26,6 +26,7 @@ var pos: [String] = []
 // belong to the --insert just before them.
 struct Insert { let scene: Int; let url: URL; var lineAt: Double? = nil; var lineEnd: Double? = nil }
 var inserts: [Insert] = []
+var anchors: [Int: [(Double, Double)]] = [:]
 var overlays: [(scene: Int, from: Double, to: Double?, title: String, sub: String)] = []
 var sceneSpan: [Int: (start: Double, end: Double)] = [:]
 var cropMain: CGSize? = nil  // --crop-main WxH: the recording only fills this top-left area (Playwright pads to the video size)
@@ -35,6 +36,16 @@ while !rest.isEmpty {
   case "--insert":
     guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--insert N:<clip.mp4>") }
     inserts.append(Insert(scene: n, url: URL(fileURLWithPath: String(v[v.index(after: colon)...]))))
+    rest.removeFirst()
+  case "--anchors":
+    // --anchors N:s1=v1,s2=v2,…   row sync (Ahmed 26/11): footage second s (from the scene's start in the recording)
+    // must play at narration second v. Between anchors the picture runs at 0.85–1.2×; a longer stretch (a page load)
+    // is cut in the middle, a shorter one holds its last frame just before the next event. The voice never moves.
+    guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--anchors N:s=v,…") }
+    anchors[n] = v[v.index(after: colon)...].split(separator: ",").compactMap { pair in
+      let kv = pair.split(separator: "=").compactMap { Double($0) }
+      return kv.count == 2 ? (kv[0], kv[1]) : nil
+    }
     rest.removeFirst()
   case "--overlay":
     // --overlay N:from-to|Title|Sub   a caption drawn in post over scene N, from..to seconds into its narration
@@ -79,6 +90,16 @@ func t(_ s: Double) -> CMTime { CMTime(seconds: s, preferredTimescale: ts) }
 /** Where each source starts in the output (for its scale to the render size), and where to dip between shots. */
 var sources: [(at: CMTime, track: AVAssetTrack)] = []
 var cuts: [CMTime] = []
+/** Inserts `range` at `at`, scaled uniformly to `length` (no tail hold): the row-sync pieces. */
+func placeExact(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
+  if sources.last?.track !== src {
+    sources.append((at, src))
+    if at > .zero { cuts.append(at) }
+  }
+  try vOut.insertTimeRange(range, of: src, at: at)
+  if range.duration != length { vOut.scaleTimeRange(CMTimeRange(start: at, duration: range.duration), toDuration: length) }
+}
+
 func place(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
   if sources.last?.track !== src {
     sources.append((at, src))
@@ -203,7 +224,47 @@ for m in marks {
   }
 
   let length = clipLen ?? seg
-  try place(vSrc, CMTimeRange(start: start, duration: seg), at: at, length: length)
+  if let an = anchors[m.scene], !an.isEmpty {
+    // piecewise: (0,0) … anchors … (seg, length), kept only while both sides move forward
+    var pts: [(Double, Double)] = [(0, 0)]
+    for (sx, vx) in an.sorted(by: { $0.0 < $1.0 }) where sx > pts.last!.0 + 0.15 && vx > pts.last!.1 + 0.15
+      && sx < seg.seconds - 0.15 && vx < length.seconds - 0.15 { pts.append((sx, vx)) }
+    pts.append((seg.seconds, length.seconds))
+    var cursor = at
+    var notes: [String] = []
+    for k in 1..<pts.count {
+      let (s0, v0) = pts[k - 1], (s1, v1) = pts[k]
+      let ds = s1 - s0, dv = v1 - v0
+      let r = ds / dv
+      if r > 1.2 {
+        // too much footage (a page load): keep the start and the end, cut the middle, play at 1.2×
+        let keep = dv * 1.2, a = min(0.8, keep * 0.3), b = keep - a
+        try placeExact(vSrc, CMTimeRange(start: start + t(s0), duration: t(a)), at: cursor, length: t(a / 1.2))
+        cursor = cursor + t(a / 1.2)
+        try placeExact(vSrc, CMTimeRange(start: start + t(s1 - b), duration: t(b)), at: cursor, length: t(b / 1.2))
+        cursor = cursor + t(b / 1.2)
+        notes.append(String(format: "cut %.1fs", ds - keep))
+      } else if r < 0.85 {
+        // too little: 0.85× then hold the frame just before the next event
+        let play = ds / 0.85
+        try placeExact(vSrc, CMTimeRange(start: start + t(s0), duration: t(ds)), at: cursor, length: t(play))
+        cursor = cursor + t(play)
+        let hold = dv - play
+        if hold > 0.02 {
+          try placeExact(vSrc, CMTimeRange(start: start + t(max(s0, s1 - 1.0 / 30)), duration: t(1.0 / 30)), at: cursor, length: t(hold))
+          cursor = cursor + t(hold)
+          notes.append(String(format: "hold %.1fs", hold))
+        }
+      } else {
+        try placeExact(vSrc, CMTimeRange(start: start + t(s0), duration: t(ds)), at: cursor, length: t(dv))
+        cursor = cursor + t(dv)
+        if abs(r - 1) > 0.03 { notes.append(String(format: "%.2fx", r)) }
+      }
+    }
+    print(String(format: "scene %d: synced on %d events (%@)", m.scene, pts.count - 2, notes.joined(separator: ", ")))
+  } else {
+    try place(vSrc, CMTimeRange(start: start, duration: seg), at: at, length: length)
+  }
   print(String(format: "scene %d: screen %.1f s → %.1f s", m.scene, seg.seconds, length.seconds))
   at = at + length
   cuts.append(at)
