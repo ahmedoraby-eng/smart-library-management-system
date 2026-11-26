@@ -17,7 +17,7 @@ flowchart LR
   H -->|"AI binding: embeddings, ranking"| AI["Workers AI"]
   C -->|"embeddings"| AI
   H -->|"OIDC code + PKCE"| G["Google sign-in"]
-  H -->|"ISBN lookup, 3 s timeout"| OL["Open Library"]
+  H -->|"ISBN lookup, waits up to 6 s"| OL["Open Library"]
 ```
 
 - Requests to `/api/*` reach the Worker code first (`run_worker_first` in `wrangler.toml`). Everything else is a static asset, with a fallback to the SPA.

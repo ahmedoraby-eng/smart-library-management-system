@@ -82,7 +82,7 @@ Bonus and extras:
 - [x] **Dashboard.** Totals (titles, copies, available, borrowed), members, active and overdue loans, the 8 most recent borrowings, top 5 books by loans in the last 30 days, and the 3 most recently added books.
 - [x] **Staff management** (Admin only): list staff, change role, disable or enable. Rules: an Admin can't change their own access, the last active Admin can't be demoted or disabled, demo accounts are protected, and an Admin who lost that role mid-request is refused.
 - [x] **Due-soon and overdue badges** on loans ("Due in 2 days", "Due today", "Overdue · 3 days"). The due-soon window is 2 days, a constant in `web/src/lib/loanStatus.ts`.
-- [x] **ISBN lookup from Open Library** on the Add/Edit Book form: fills title, author, publisher, year, description and cover when found. If the service is slow or down (3 second timeout), the form still works.
+- [x] **ISBN lookup from Open Library** on the Add/Edit Book form: fills title, author, publisher, year, description and cover when found. If the service is slow or down (waits up to 6 seconds), the form still works.
 - [x] **Nightly demo reset** by a Cloudflare Cron Trigger (00:00 UTC), plus an Admin "Reset demo data" button.
 - [x] **Live URL and demo video:** see the links at the top.
 

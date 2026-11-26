@@ -1,7 +1,7 @@
 import { BookService } from "./catalog/application/BookService";
 import { PgBookRepository } from "./catalog/infrastructure/PgBookRepository";
 import type { IsbnLookup } from "./catalog/domain/IsbnLookup";
-import { OpenLibraryIsbnLookup } from "./catalog/infrastructure/OpenLibraryIsbnLookup";
+import { IsbnLookupCache, OpenLibraryIsbnLookup } from "./catalog/infrastructure/OpenLibraryIsbnLookup";
 import { pgBookStockFor } from "./catalog/infrastructure/PgBookStock";
 import { CirculationService } from "./circulation/application/CirculationService";
 import { PgCirculationStore } from "./circulation/infrastructure/PgCirculationStore";
@@ -30,6 +30,9 @@ import { StaffIdentityService } from "./staff/application/StaffIdentityService";
 import type { OidcProvider } from "./staff/domain/OidcProvider";
 import { GoogleOidcProvider } from "./staff/infrastructure/GoogleOidcProvider";
 import { PgStaffUserRepository } from "./staff/infrastructure/PgStaffUserRepository";
+
+/** SLM-13: the container is built per request, so the lookup cache lives at module level (one per isolate). */
+const isbnLookupCache = new IsbnLookupCache();
 
 /** Manual wiring: env bindings → repositories → services. One place, no DI framework. */
 export function buildContainer(
@@ -61,7 +64,7 @@ export function buildContainer(
       : null,
     staffAdmin: new StaffAdminService(staffRepo),
     demoData: new DemoDataService(new PgDemoDataStore(db), staffIdentity),
-    isbnLookup: overrides.isbnLookup ?? new OpenLibraryIsbnLookup(),
+    isbnLookup: overrides.isbnLookup ?? new OpenLibraryIsbnLookup(undefined, undefined, isbnLookupCache),
     books: new BookService(new PgBookRepository(db)),
     circulation: new CirculationService(
       new PgCirculationStore(db, pgBookStockFor),
