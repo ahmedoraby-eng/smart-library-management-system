@@ -159,6 +159,25 @@ function finish(work: string, googleClip: string | undefined): void {
       if (pairs.length) anchorArgs.push("--anchors", `${n}:${pairs.join(",")}`);
     }
   }
+  // SLM-15's opening splash, found in the footage (edit-v3/splash.swift → --skip-file, "a-b" per line): never shown
+  const skipFile = arg("--skip-file");
+  const skipArgs =
+    skipFile && existsSync(skipFile)
+      ? [
+          "--skip",
+          readFileSync(skipFile, "utf8")
+            .split("\n")
+            .filter((l) => /^[\d.]+-[\d.]+$/.test(l.trim()))
+            .join(","),
+        ]
+      : [];
+  // the end card as a still from the "links" word on (the run can end before the card page is painted)
+  const endCard = arg("--end-card");
+  const kLinks = (cues["14"] ?? {}).k_links;
+  const endArgs =
+    endCard && existsSync(endCard) && kLinks !== undefined
+      ? ["--overlay-image", `14:${kLinks - 0.15}-end|${endCard}`]
+      : [];
   // Scene 9's numbers caption, drawn in post on the voice cue (the live run can fall behind the voice there)
   const r7 = (cues["9"] ?? {}).r7 ?? (30 / DEFAULT_S[8]!) * clips[8]!;
   const overlays = [
@@ -172,9 +191,13 @@ function finish(work: string, googleClip: string | undefined): void {
   const voiced = (_n: number) => true; // v3: every scene is in the cut; one without its clip yet stays silent
   const mainMarks = join(work, "main-scenes.json");
   writeFileSync(mainMarks, JSON.stringify(all.filter((m) => voiced(m.scene))));
-  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays, ...anchorArgs], {
-    stdio: "inherit",
-  });
+  execFileSync(
+    assemble,
+    [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays, ...anchorArgs, ...skipArgs, ...endArgs],
+    {
+      stdio: "inherit",
+    },
+  );
   const pending = all.filter((m) => !voiced(m.scene));
   if (pending.length) {
     const extrasMarks = join(work, "extras-scenes.json");

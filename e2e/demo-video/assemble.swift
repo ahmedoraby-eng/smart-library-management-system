@@ -10,6 +10,7 @@
 // the scene runs up to 3 s past the sentence, then the clip plays faster).
 import AVFoundation
 import CoreText
+import ImageIO
 import QuartzCore
 import Foundation
 
@@ -27,6 +28,8 @@ var pos: [String] = []
 struct Insert { let scene: Int; let url: URL; var lineAt: Double? = nil; var lineEnd: Double? = nil }
 var inserts: [Insert] = []
 var anchors: [Int: [(Double, Double)]] = [:]
+var skips: [(Double, Double)] = []
+var imageOverlays: [(scene: Int, from: Double, to: Double?, file: String)] = []
 var overlays: [(scene: Int, from: Double, to: Double?, title: String, sub: String)] = []
 var sceneSpan: [Int: (start: Double, end: Double)] = [:]
 var cropMain: CGSize? = nil  // --crop-main WxH: the recording only fills this top-left area (Playwright pads to the video size)
@@ -46,6 +49,22 @@ while !rest.isEmpty {
       let kv = pair.split(separator: "=").compactMap { Double($0) }
       return kv.count == 2 ? (kv[0], kv[1]) : nil
     }
+    rest.removeFirst()
+  case "--skip":
+    // --skip a-b,c-d   footage seconds (of the silent recording) never shown: the SLM-15 opening splash; the
+    // footage around them fills the same narration time
+    guard let v = rest.first else { fail("--skip a-b,…") }
+    skips = v.split(separator: ",").compactMap { r in
+      let x = r.split(separator: "-").compactMap { Double($0) }
+      return x.count == 2 ? (x[0], x[1]) : nil
+    }
+    rest.removeFirst()
+  case "--overlay-image":
+    // --overlay-image N:from-to|file.png   a full-frame picture over scene N (e.g. the end card), fading in
+    guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--overlay-image N:from-to|png") }
+    let parts = v[v.index(after: colon)...].split(separator: "|").map(String.init)
+    let r = parts[0].split(separator: "-").map(String.init)
+    imageOverlays.append((n, Double(r[0]) ?? 0, r.count > 1 ? Double(r[1]) : nil, parts.count > 1 ? parts[1] : ""))
     rest.removeFirst()
   case "--overlay":
     // --overlay N:from-to|Title|Sub   a caption drawn in post over scene N, from..to seconds into its narration
@@ -92,6 +111,34 @@ var sources: [(at: CMTime, track: AVAssetTrack)] = []
 var cuts: [CMTime] = []
 /** Inserts `range` at `at`, scaled uniformly to `length` (no tail hold): the row-sync pieces. */
 func placeExact(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
+  // drop --skip ranges (main recording only) and spread the rest over the same length
+  if src === vSrc, !skips.isEmpty {
+    let a = range.start.seconds, b = (range.start + range.duration).seconds
+    var parts: [(Double, Double)] = [(a, b)]
+    for (x, y) in skips {
+      parts = parts.flatMap { (p, q) -> [(Double, Double)] in
+        if y <= p || x >= q { return [(p, q)] }
+        return [(p, max(p, x)), (min(q, y), q)].filter { $0.1 - $0.0 > 0.02 }
+      }
+    }
+    let kept = parts.reduce(0) { $0 + ($1.1 - $1.0) }
+    if parts.count != 1 || abs(kept - (b - a)) > 0.001 {
+      guard kept > 0.04 else {  // all of it was splash: hold the frame just after it
+        try placeExactRaw(src, CMTimeRange(start: t(min(b + 0.05, videoEnd.seconds - 0.1)), duration: t(1.0 / 30)), at: at, length: length)
+        return
+      }
+      var cur = at
+      for (k, (p, q)) in parts.enumerated() {
+        let len = k == parts.count - 1 ? (at + length) - cur : t((q - p) / kept * length.seconds)
+        try placeExactRaw(src, CMTimeRange(start: t(p), duration: t(q - p)), at: cur, length: len)
+        cur = cur + len
+      }
+      return
+    }
+  }
+  try placeExactRaw(src, range, at: at, length: length)
+}
+func placeExactRaw(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
   if sources.last?.track !== src {
     sources.append((at, src))
     if at > .zero { cuts.append(at) }
@@ -101,6 +148,7 @@ func placeExact(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: C
 }
 
 func place(_ src: AVAssetTrack, _ range: CMTimeRange, at: CMTime, length: CMTime) throws {
+  if src === vSrc, !skips.isEmpty { return try placeExact(src, range, at: at, length: length) }  // splash cut out
   if sources.last?.track !== src {
     sources.append((at, src))
     if at > .zero { cuts.append(at) }
@@ -262,6 +310,8 @@ for m in marks {
       }
     }
     print(String(format: "scene %d: synced on %d events (%@)", m.scene, pts.count - 2, notes.joined(separator: ", ")))
+  } else if !skips.isEmpty {
+    try placeExact(vSrc, CMTimeRange(start: start, duration: seg), at: at, length: length)
   } else {
     try place(vSrc, CMTimeRange(start: start, duration: seg), at: at, length: length)
   }
@@ -301,7 +351,7 @@ videoComposition.renderSize = render
 videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
 videoComposition.instructions = [instruction]
 
-if !overlays.isEmpty {
+if !overlays.isEmpty || !imageOverlays.isEmpty {
   let parent = CALayer(), video = CALayer()
   parent.frame = CGRect(origin: .zero, size: render)
   parent.isGeometryFlipped = true  // measured: without it the overlay lands upside down (bottom bar at the top)
@@ -347,6 +397,27 @@ if !overlays.isEmpty {
     if !test { bar.add(anim, forKey: "show") }
     parent.addSublayer(bar)
     print(String(format: "overlay on scene %d: %.1f–%.1f s: %@", o.scene, a0, a1, o.title))
+  }
+  for o in imageOverlays {
+    guard let span = sceneSpan[o.scene],
+          let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: o.file) as CFURL, nil),
+          let img = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
+    let a0 = span.start + o.from, a1 = o.to.map { span.start + $0 } ?? span.end
+    let l = CALayer()
+    l.frame = parent.bounds
+    l.contents = img
+    l.contentsGravity = .resizeAspectFill
+    l.opacity = 0
+    let anim = CAKeyframeAnimation(keyPath: "opacity")
+    anim.values = [0, 0, 1, 1]
+    anim.keyTimes = [0, a0 / total, (a0 + 0.35) / total, 1].map { NSNumber(value: $0) }
+    anim.duration = total
+    anim.beginTime = AVCoreAnimationBeginTimeAtZero
+    anim.isRemovedOnCompletion = false
+    anim.fillMode = .both
+    l.add(anim, forKey: "show")
+    parent.addSublayer(l)
+    print(String(format: "image overlay on scene %d: %.1f s – end of scene", o.scene, a0))
   }
   videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: video, in: parent)
 }
