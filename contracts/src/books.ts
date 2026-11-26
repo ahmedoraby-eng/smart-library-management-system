@@ -131,10 +131,10 @@ export const CategoriesSchema = z.object({ items: z.array(z.string()) });
 
 /**
  * SLM-13: how long the API waits for Open Library. The one place to change it.
- * Open Library answered in up to 6.5 s when busy (measured 26/11/2026), so 3 s made "Look up" fail;
- * 8 s is that worst case plus a 1.5 s buffer.
+ * Open Library answered in 3.3 to 6.5 s when busy (measured 26/11/2026), so 3 s made "Look up" fail;
+ * 6 s covers most of those slow answers; the slowest fall back to manual entry.
  */
-export const ISBN_LOOKUP_TIMEOUT_MS = 8000;
+export const ISBN_LOOKUP_TIMEOUT_MS = 6000;
 /** The browser waits a little longer than the API, so the API's own "timeout" answer arrives first. */
 export const ISBN_LOOKUP_CLIENT_WAIT_MS = ISBN_LOOKUP_TIMEOUT_MS + 2000;
 
