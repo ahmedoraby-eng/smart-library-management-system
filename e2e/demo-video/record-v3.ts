@@ -347,6 +347,30 @@ async function main(): Promise<void> {
   };
   const lotr = "The Lord of the Rings";
   const LOTR_ISBN = "9780544003415";
+  /**
+   * Look up, retried: Open Library sometimes answers after the app's 3-second limit ("No details found…"). After four
+   * tries the form is filled by hand (the same title, author and cover), so the scene and the save still work.
+   */
+  const lookUp = async () => {
+    const hint = page.getByTestId("isbn-lookup-hint");
+    for (let k = 0; k < 4; k++) {
+      await click(page, page.getByTestId("isbn-lookup"));
+      await hint.waitFor({ timeout: 15_000 }).catch(() => undefined);
+      await sleep(400);
+      if (/Filled from Open Library/i.test((await hint.innerText().catch(() => "")) ?? "")) return true;
+      log(`  look up ${k + 1}: Open Library too slow, again`);
+      await sleep(1500);
+    }
+    await typeInto(page, page.getByTestId("field-title"), lotr);
+    await typeInto(page, page.getByTestId("field-author"), "J. R. R. Tolkien");
+    await typeInto(
+      page,
+      page.getByTestId("field-coverImageUrl"),
+      `https://covers.openlibrary.org/b/isbn/${LOTR_ISBN}-L.jpg`,
+    );
+    log("  look up: filled by hand (Open Library did not answer in time)");
+    return false;
+  };
   const scrollBy = async (p: Page, dy: number, n: number, gap = 160) => {
     for (let i = 0; i < n; i++) {
       await p.mouse.wheel(0, dy);
@@ -446,13 +470,12 @@ async function main(): Promise<void> {
       await row(0, 0.3);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await row(1, 6);
-      await click(page, page.getByTestId("isbn-lookup"));
-      await page.getByTestId("isbn-lookup-hint").waitFor({ timeout: 15_000 });
+      const filled = await lookUp();
       await row(2, 9);
       await show(page, page.getByTestId("field-title"), 1500, 1.2);
       await show(page, page.getByTestId("cover-preview"), 1500, 1.2);
       await row(3, 15);
-      await show(page, page.getByTestId("isbn-lookup-hint"), 2200, 1.4);
+      if (filled) await show(page, page.getByTestId("isbn-lookup-hint"), 2200, 1.4);
       await row(4, 20);
       await typeInto(page, page.getByTestId("field-category"), "Fiction");
       await row(5, 25);
@@ -473,8 +496,7 @@ async function main(): Promise<void> {
       await row(1, 5);
       await page.goto(`${LIVE}/books/new`);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
-      await click(page, page.getByTestId("isbn-lookup"));
-      await page.getByTestId("isbn-lookup-hint").waitFor({ timeout: 15_000 });
+      await lookUp();
       await typeInto(page, page.getByTestId("field-totalCopies"), "1");
       await click(page, page.getByTestId("save-book"));
       await row(2, 10);
