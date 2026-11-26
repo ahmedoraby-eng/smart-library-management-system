@@ -61,7 +61,7 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: numbe
       data-testid="toast"
       data-kind={item.kind}
       className={cn(
-        "pointer-events-auto flex items-start gap-3 rounded-lg border bg-surface p-3.5 text-base shadow-pop",
+        "pointer-events-auto flex items-start gap-3 rounded-lg border bg-surface p-3.5 text-base shadow-pop motion-safe:animate-toast-in",
         isError ? "border-danger-200" : "border-border",
       )}
     >
@@ -75,7 +75,7 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: numbe
         type="button"
         aria-label="Dismiss notification"
         onClick={() => onDismiss(item.id)}
-        className="rounded-sm text-neutral-500 hover:text-neutral-800"
+        className="rounded-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-800"
       >
         <CloseIcon size={16} />
       </button>

@@ -25,6 +25,8 @@ export function buttonClasses({
 }: { variant?: ButtonVariant; size?: ButtonSize; block?: boolean } = {}) {
   return cn(
     "inline-flex items-center justify-center gap-2 rounded-md border font-semibold whitespace-nowrap select-none no-underline",
+    // Press feedback: colours ease, the button gives slightly under the pointer (not when disabled).
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out motion-safe:enabled:active:scale-[0.97] motion-safe:[&:is(a)]:active:scale-[0.97]",
     "disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-500 disabled:shadow-none",
     variants[variant],
     sizes[size],

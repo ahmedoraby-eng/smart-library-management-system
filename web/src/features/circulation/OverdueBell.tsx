@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
-import { BellIcon } from "../../components/ui";
+import { BellIcon, Skeleton } from "../../components/ui";
 import { useLoans } from "./api";
 import { overdueDays } from "./loanFormat";
 
@@ -70,14 +70,14 @@ export function OverdueBell() {
         aria-controls={open ? popoverId : undefined}
         onClick={() => setOpen((v) => !v)}
         data-testid="overdue-bell"
-        className="relative grid h-6 w-6 place-items-center rounded-sm text-neutral-600 hover:bg-neutral-100"
+        className="relative grid h-6 w-6 place-items-center rounded-sm text-neutral-600 transition-colors duration-150 hover:bg-neutral-100 aria-expanded:bg-neutral-100"
       >
         <BellIcon size={16} />
         {total !== undefined && total > 0 && (
           <span
             aria-hidden="true"
             data-testid="overdue-count"
-            className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-danger-600 px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums"
+            className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-danger-600 px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums motion-safe:animate-[slm-dialog-in_240ms_var(--ease-out)_backwards]"
           >
             {total > 99 ? "99+" : total}
           </span>
@@ -90,7 +90,7 @@ export function OverdueBell() {
           role="dialog"
           aria-label="Overdue loans"
           data-testid="overdue-popover"
-          className="absolute top-full right-0 z-50 mt-1.5 w-80 rounded-lg border border-border bg-surface p-1 text-left shadow-pop"
+          className="absolute top-full right-0 z-50 mt-1.5 w-80 origin-top-right rounded-lg border border-border bg-surface p-1 text-left shadow-pop motion-safe:animate-pop-in"
         >
           <p className="px-2.5 pt-2 pb-1.5 text-sm font-semibold text-neutral-900">
             Overdue loans{total ? ` (${total})` : ""}
@@ -100,14 +100,18 @@ export function OverdueBell() {
               Couldn't load overdue loans. Try again in a moment.
             </p>
           ) : !overdue.data ? (
-            <p className="px-2.5 pb-2.5 text-sm text-neutral-600">Loading…</p>
+            <div className="space-y-2 px-2.5 pt-1 pb-2.5" data-testid="overdue-loading">
+              <span className="sr-only">Loading…</span>
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
           ) : overdue.data.items.length === 0 ? (
             <p className="px-2.5 pb-2.5 text-sm text-neutral-600" data-testid="overdue-none">
               No overdue loans.
             </p>
           ) : (
             <>
-              <ul>
+              <ul className="slm-stagger">
                 {overdue.data.items.map((loan) => {
                   const days = overdueDays(loan);
                   return (
@@ -124,7 +128,7 @@ export function OverdueBell() {
                         onClick={close}
                         data-bell-item
                         data-testid="overdue-item"
-                        className="block rounded-md px-2.5 py-2 text-neutral-900 no-underline hover:bg-neutral-50"
+                        className="block rounded-md px-2.5 py-2 text-neutral-900 no-underline transition-colors duration-150 hover:bg-neutral-50"
                       >
                         <span className="block truncate font-medium">{loan.member.fullName}</span>
                         <span className="flex justify-between gap-3 text-sm text-neutral-600">

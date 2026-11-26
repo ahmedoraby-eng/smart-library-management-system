@@ -40,7 +40,7 @@ export function SimilarBooks({ bookId }: { bookId: string }) {
     <Card className="mt-4" data-testid="similar-books">
       <CardHeader title={HEADING} action={<span className="text-sm text-neutral-600">Close in meaning</span>} />
       <CardBody>
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ul className="slm-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
             <SimilarBookCard key={item.book.id} item={item} canBorrow={can("LOAN_PROCESS")} />
           ))}

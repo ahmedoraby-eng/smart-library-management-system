@@ -10,9 +10,108 @@
         if (localStorage.getItem("slm-theme") === "plain") document.documentElement.dataset.theme = "plain";
       } catch (e) {}
     </script>
+    <!-- First paint, before the app's script arrives: the same look as src/components/LoadingScreen.tsx.
+         React replaces it on its first render. -->
+    <style>
+      #slm-boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #17352a;
+        font-family: Georgia, serif;
+        animation: slm-boot-in 240ms ease-out 150ms backwards;
+      }
+      #slm-boot .mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #f6efe0;
+        font-size: 24px;
+      }
+      #slm-boot .s {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1.5px solid rgb(227 204 152 / 0.8);
+        border-radius: 2px;
+        color: #e3cc98;
+        font-size: 22px;
+      }
+      #slm-boot i {
+        color: #e3cc98;
+      }
+      #slm-boot .line {
+        position: relative;
+        width: 176px;
+        height: 2px;
+        margin: 28px auto 0;
+        overflow: hidden;
+        border-radius: 2px;
+        background: rgb(233 225 208 / 0.16);
+      }
+      #slm-boot .line::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        background: #e3cc98;
+        animation: slm-boot-run 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+      }
+      [data-theme="plain"] #slm-boot {
+        background: #fff;
+        font-family: system-ui, sans-serif;
+      }
+      [data-theme="plain"] #slm-boot .mark {
+        color: #101828;
+        font-weight: 600;
+      }
+      [data-theme="plain"] #slm-boot .s {
+        border-color: #4f46e5;
+        background: #4f46e5;
+        color: #fff;
+        border-radius: 10px;
+      }
+      [data-theme="plain"] #slm-boot i {
+        color: inherit;
+        font-style: normal;
+      }
+      [data-theme="plain"] #slm-boot .line::after {
+        background: #4f46e5;
+      }
+      @keyframes slm-boot-in {
+        from {
+          opacity: 0;
+        }
+      }
+      @keyframes slm-boot-run {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #slm-boot,
+        #slm-boot .line::after {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="slm-boot" role="status" aria-label="Loading Smart Library">
+        <div>
+          <div class="mark" aria-hidden="true">
+            <span class="s">S</span><span>Smart <i>Library</i></span>
+          </div>
+          <div class="line" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

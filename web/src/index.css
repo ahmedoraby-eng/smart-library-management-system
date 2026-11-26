@@ -108,6 +108,62 @@
   --shadow-card: 0 0 #0000;
   --shadow-pop: 0 14px 30px -18px rgb(31 27 22 / 0.35), 0 1px 0 rgb(31 27 22 / 0.06);
   --shadow-focus: 0 0 0 3px rgb(31 86 64 / 0.18);
+
+  /*
+   * Motion: quick and calm (150–300 ms, ease-out), entrances only, nothing bounces. Use the animate-* utilities
+   * behind `motion-safe:`; the reduced-motion block at the end of this file is the safety net for the rest.
+   */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-page-in: slm-fade-up 260ms var(--ease-out) backwards;
+  --animate-fade-up: slm-fade-up 240ms var(--ease-out) backwards;
+  --animate-fade-in: slm-fade-in 180ms var(--ease-out) backwards;
+  --animate-dialog-in: slm-dialog-in 220ms var(--ease-out) backwards;
+  --animate-pop-in: slm-pop-in 160ms var(--ease-out) backwards;
+  --animate-pop-up: slm-pop-up 160ms var(--ease-out) backwards;
+  --animate-toast-in: slm-toast-in 240ms var(--ease-out) backwards;
+  --animate-grow-x: slm-grow-x 600ms var(--ease-out) 120ms backwards;
+
+  @keyframes slm-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes slm-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slm-dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.97);
+    }
+  }
+  /* Popovers that open downwards (bell, action menu, combobox) and upwards (user menu). */
+  @keyframes slm-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+  @keyframes slm-pop-up {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+  }
+  @keyframes slm-toast-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes slm-grow-x {
+    from {
+      transform: scaleX(0);
+    }
+  }
 }
 
 /* Theme-only knobs used by the utilities below (not Tailwind namespaces). */
@@ -280,5 +336,76 @@
 @keyframes slm-pulse {
   50% {
     opacity: 0.5;
+  }
+}
+
+/* Lists and table rows arrive one after another (30 ms apart, the first ten), then settle. */
+@media (prefers-reduced-motion: no-preference) {
+  :where(.slm-stagger, .slm-table > tbody) > * {
+    animation: slm-fade-up 240ms var(--ease-out) backwards;
+    animation-delay: calc(min(var(--slm-i, 0), 10) * 30ms);
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(2) {
+    --slm-i: 1;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(3) {
+    --slm-i: 2;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(4) {
+    --slm-i: 3;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(5) {
+    --slm-i: 4;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(6) {
+    --slm-i: 5;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(7) {
+    --slm-i: 6;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(8) {
+    --slm-i: 7;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(9) {
+    --slm-i: 8;
+  }
+  :where(.slm-stagger, .slm-table > tbody) > :nth-child(n + 10) {
+    --slm-i: 9;
+  }
+}
+
+/* Loading screen: the mark draws in, the shelf rises spine by spine, a thin line runs underneath. */
+@keyframes slm-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+    filter: blur(2px);
+  }
+}
+@keyframes slm-spine-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes slm-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* Anyone who asks for less motion gets none: every animation and transition ends at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

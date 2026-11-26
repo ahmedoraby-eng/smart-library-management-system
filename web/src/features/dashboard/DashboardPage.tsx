@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../../lib/apiClient";
 import { reindexBatch, useAiUsageToday, useDashboard } from "./api";
 import { availabilitySegments, dismissNotice, isNoticeDismissed } from "./model";
+import { useCountUp } from "../../lib/useCountUp";
 
 /** Card-header links: brand-700, semibold. */
 const cardLink = "text-base font-semibold text-brand-700";
@@ -115,7 +116,7 @@ export function DashboardPage() {
       ) : !data ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="slm-stagger flex flex-col gap-4">
           <KpiCards k={data.kpis} />
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <RecentBorrowings rows={data.recentBorrowings} canBorrow={can("LOAN_PROCESS")} />
@@ -285,11 +286,19 @@ function KpiCard({
   );
 }
 
+/** A key figure that counts up when the dashboard arrives (still under reduced motion). */
+function CountUp({ value, testId }: { value: number; testId: string }) {
+  const shown = useCountUp(value);
+  return (
+    <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid={testId}>
+      {shown.toLocaleString("en-GB")}
+    </span>
+  );
+}
+
 const KpiValue = ({ value, unit, testId }: { value: number; unit?: string; testId: string }) => (
   <p className="mt-3 flex items-baseline gap-2">
-    <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid={testId}>
-      {value.toLocaleString("en-GB")}
-    </span>
+    <CountUp value={value} testId={testId} />
     {unit && <span className="text-md text-neutral-600">{unit}</span>}
   </p>
 );
@@ -299,7 +308,7 @@ function KpiCards({ k }: { k: Kpis }) {
   return (
     <section
       aria-label="Key figures"
-      className="grid grid-cols-2 xl:grid-cols-4 rr:rounded-xl rr:border rr:border-border rr:bg-surface rr:shadow-card plain:gap-4"
+      className="slm-stagger grid grid-cols-2 xl:grid-cols-4 rr:rounded-xl rr:border rr:border-border rr:bg-surface rr:shadow-card plain:gap-4"
     >
       <KpiCard icon={<BookIcon size={16} />} label="Catalog" testId="kpi-catalog">
         <KpiValue value={k.totalTitles} unit={k.totalTitles === 1 ? "title" : "titles"} testId="kpi-titles" />
@@ -313,9 +322,7 @@ function KpiCards({ k }: { k: Kpis }) {
 
       <KpiCard icon={<BookIcon size={16} />} label="Available copies" testId="kpi-available">
         <p className="mt-3 flex items-baseline gap-2">
-          <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid="kpi-available-copies">
-            {k.availableCopies.toLocaleString("en-GB")}
-          </span>
+          <CountUp value={k.availableCopies} testId="kpi-available-copies" />
           <span className="text-md text-neutral-600">of {k.totalCopies.toLocaleString("en-GB")}</span>
         </p>
         <AvailabilityBar seg={seg} />
@@ -371,12 +378,15 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
       <div
         role="img"
         aria-label={`${seg.available} available, ${seg.onLoan} on loan, ${seg.overdue} overdue, of ${seg.total} copies`}
-        className="mt-3.5 flex h-2 overflow-hidden rounded-full bg-neutral-100"
+        className="mt-3.5 h-2 overflow-hidden rounded-full bg-neutral-100"
         data-testid="availability-bar"
       >
-        {items.map((i) => (
-          <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
-        ))}
+        {/* The filled part sweeps in from the left once the figures arrive. */}
+        <div className="flex h-full origin-left motion-safe:animate-grow-x">
+          {items.map((i) => (
+            <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
+          ))}
+        </div>
       </div>
       <ul className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 whitespace-nowrap text-xs text-neutral-600">
         {items.map((i) => (
@@ -480,7 +490,7 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
           No loans in the last 30 days.
         </p>
       ) : (
-        <ol>
+        <ol className="slm-stagger">
           {books.map((b, i) => (
             <li
               key={b.id}
@@ -527,7 +537,7 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
           No books yet.
         </p>
       ) : (
-        <ul>
+        <ul className="slm-stagger">
           {books.map((b) => (
             <li
               key={b.id}

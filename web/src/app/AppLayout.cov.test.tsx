@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ToastProvider } from "../components/ui";
 import { meQueryKey } from "../features/auth/session";
-import { AppLayout } from "./AppLayout";
+import { AppLayout, pageKey } from "./AppLayout";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -73,10 +73,12 @@ async function renderShell(path = "/dashboard", seed?: unknown) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("AppLayout: loading and account errors", () => {
-  it("shows a skeleton shell while the session loads", async () => {
+  it("shows the branded loading screen while the session loads", async () => {
     stubFetch(() => new Promise<Response>(() => undefined)); // never answers
     await renderShell();
-    expect(await screen.findByTestId("shell-loading")).toBeInTheDocument();
+    const loading = await screen.findByTestId("shell-loading");
+    expect(loading).toHaveRole("status");
+    expect(loading).toHaveTextContent("Loading Smart Library…");
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 
@@ -313,5 +315,60 @@ describe("AppLayout: signing out", () => {
     release();
     await screen.findByText("You've signed out.");
     expect(callsTo(fetchMock, "/api/auth/logout")).toHaveLength(1);
+  });
+});
+
+describe("AppLayout: motion", () => {
+  it("the active-tab indicator sits on the current link, then slides when the section changes", async () => {
+    stubFetch((url) => (url === "/api/me" ? json(meBody("ADMIN")) : json({ items: [], page: 1, size: 5, total: 0 })));
+    const { router } = await renderShell("/dashboard");
+    await screen.findByRole("navigation", { name: "Main" });
+    const indicator = screen.getByTestId("nav-indicator");
+    expect(indicator).toHaveAttribute("aria-hidden", "true");
+    await waitFor(() => expect(indicator).toHaveAttribute("data-visible", "true"));
+    // Placed, not slid, the first time.
+    expect(indicator.className).not.toContain("transition-");
+    await userEvent.click(screen.getByTestId("nav-books"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/books"));
+    await waitFor(() => expect(indicator.className).toContain("transition-[transform,height,opacity]"));
+    expect(screen.getByTestId("nav-books")).toHaveAttribute("aria-current", "page");
+  });
+
+  it("hides the indicator on a page with no sidebar link", async () => {
+    stubFetch((url) => (url === "/api/me" ? json(meBody("SUPERVISOR")) : json({}, 404)));
+    await renderShell("/circulation");
+    await screen.findByRole("navigation", { name: "Main" });
+    // Supervisors have no Circulation link, so nothing in the sidebar is current.
+    expect(screen.getByTestId("nav-indicator")).toHaveAttribute("data-visible", "false");
+    expect(screen.getByTestId("nav-indicator").className).toContain("opacity-0");
+  });
+
+  it("each page enters with a fade; moving to another page replays it", async () => {
+    stubFetch((url) => (url === "/api/me" ? json(meBody("ADMIN")) : json({ items: [], page: 1, size: 5, total: 0 })));
+    const { router } = await renderShell("/dashboard");
+    const first = await screen.findByTestId("page");
+    expect(first).toHaveTextContent("page /dashboard");
+    expect(first.className).toContain("motion-safe:animate-page-in");
+    await router.navigate({ to: "/members" });
+    await waitFor(() => expect(screen.getByTestId("page")).toHaveTextContent("page /members"));
+    expect(screen.getByTestId("page")).not.toBe(first);
+  });
+
+  it("pageKey keeps Circulation's two tabs on one key and every other page on its own", () => {
+    expect(pageKey("/circulation/borrow")).toBe("/circulation");
+    expect(pageKey("/circulation/return")).toBe("/circulation");
+    expect(pageKey("/books/42")).toBe("/books/42");
+  });
+
+  it("a thin progress line shows while data is loading, and goes when it arrives", async () => {
+    let answer: (r: Response) => void = () => undefined;
+    stubFetch((url) =>
+      url === "/api/me" ? json(meBody("LIBRARIAN")) : new Promise<Response>((res) => (answer = res)),
+    );
+    await renderShell("/dashboard");
+    const line = await screen.findByTestId("fetch-progress");
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    answer(json({ items: [], page: 1, size: 5, total: 0 }));
+    await waitFor(() => expect(screen.queryByTestId("fetch-progress")).not.toBeInTheDocument());
   });
 });

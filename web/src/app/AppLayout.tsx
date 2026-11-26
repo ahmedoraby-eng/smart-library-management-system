@@ -1,7 +1,7 @@
 import type { Permission } from "@slm/contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useRouter } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useIsFetching, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BookIcon,
   Button,
@@ -13,10 +13,10 @@ import {
   LogoutIcon,
   MemberCardIcon,
   ShieldIcon,
-  Skeleton,
   SwapIcon,
   useToast,
 } from "../components/ui";
+import { LoadingScreen } from "../components/LoadingScreen";
 import { LogoMark } from "../components/LogoMark";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
@@ -71,18 +71,9 @@ function useSignOut() {
 export function AppLayout() {
   const me = useMe();
   const signOut = useSignOut();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (me.isPending) {
-    return (
-      <div className="flex min-h-screen" data-testid="shell-loading">
-        <div className="w-16 shrink-0 bg-spine plain:border-r plain:border-border xl:w-60" />
-        <div className="flex-1 p-7">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="mt-6 h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
+  if (me.isPending) return <LoadingScreen testId="shell-loading" />;
   if (me.error instanceof ApiError && me.error.code === "USER_DISABLED") {
     return (
       <main className="grid min-h-screen place-items-center p-6">
@@ -131,7 +122,8 @@ export function AppLayout() {
           </span>
         </div>
         <CommandPalette />
-        <nav aria-label="Main" className="flex flex-col gap-0.5">
+        <nav aria-label="Main" className="relative flex flex-col gap-0.5">
+          <NavIndicator active={[...items, ...adminItems].find((i) => isUnder(pathname, i.to))?.to} />
           {items.map((i) => (
             <NavLink key={i.to} item={i} />
           ))}
@@ -150,8 +142,64 @@ export function AppLayout() {
           </div>
         )}
         <ThemeToggle className="absolute top-1 right-1.5" />
-        <Outlet />
+        <FetchProgress />
+        {/* A new section fades up; tabs inside Circulation animate in CirculationLayout instead. */}
+        <div key={pageKey(pathname)} className="motion-safe:animate-page-in" data-testid="page">
+          <Outlet />
+        </div>
       </main>
+    </div>
+  );
+}
+
+/** One key per page, so moving between pages replays the entrance; Circulation's tabs share one. */
+export const pageKey = (pathname: string) => (pathname.startsWith("/circulation") ? "/circulation" : pathname);
+
+const isUnder = (pathname: string, to: string) => pathname === to || pathname.startsWith(`${to}/`);
+
+/**
+ * The active tab (cream paper with the brass edge; a tinted row in plain) is one element that slides to the
+ * current link, so changing section reads as one movement. It is placed without a slide the first time.
+ */
+function NavIndicator({ active }: { active: NavTo | undefined }) {
+  const self = useRef<HTMLSpanElement>(null);
+  const [box, setBox] = useState<{ top: number; height: number; slide: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = active ? self.current?.parentElement?.querySelector<HTMLElement>(`a[href="${active}"]`) : null;
+      setBox((prev) => (el ? { top: el.offsetTop, height: el.offsetHeight, slide: prev !== null } : null));
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [active]);
+  return (
+    <span
+      ref={self}
+      aria-hidden="true"
+      data-testid="nav-indicator"
+      data-visible={box ? "true" : "false"}
+      className={cn(
+        "pointer-events-none absolute top-0 right-0 left-0 rounded-l-sm bg-canvas before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:bg-brass-500 plain:rounded-md plain:bg-brand-50 plain:before:hidden",
+        box?.slide && "transition-[transform,height,opacity] duration-250 ease-out",
+        !box && "opacity-0",
+      )}
+      style={box ? { transform: `translateY(${box.top}px)`, height: box.height } : undefined}
+    />
+  );
+}
+
+/** A thin brass line along the top of the page while data loads for longer than a moment (decorative). */
+function FetchProgress() {
+  const fetching = useIsFetching() > 0;
+  if (!fetching) return null;
+  return (
+    <div
+      aria-hidden="true"
+      data-testid="fetch-progress"
+      className="pointer-events-none absolute inset-x-0 top-0 h-0.5 overflow-hidden motion-safe:animate-[slm-fade-in_200ms_ease-out_300ms_backwards]"
+    >
+      <div className="h-full w-1/3 bg-brass-500 plain:bg-brand-600 motion-safe:animate-[slm-progress_1.1s_var(--ease-out)_infinite]" />
     </div>
   );
 }
@@ -162,13 +210,9 @@ function NavLink({ item }: { item: NavItem }) {
       to={item.to}
       title={item.label}
       data-testid={`nav-${item.to.slice(1).replaceAll("/", "-")}`}
-      className="group relative flex items-center gap-2.5 rounded-l-sm rounded-r-none px-2.5 py-2 font-medium no-underline max-xl:justify-center plain:rounded-md"
-      inactiveProps={{ className: "text-spine-muted hover:bg-white/5 plain:hover:bg-neutral-50" }}
-      activeProps={{
-        className:
-          "bg-canvas font-semibold text-brand-700 before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:bg-brass-500 plain:bg-brand-50 plain:font-medium plain:before:hidden",
-        "aria-current": "page",
-      }}
+      className="group relative flex items-center gap-2.5 rounded-l-sm rounded-r-none px-2.5 py-2 font-medium no-underline transition-colors duration-200 ease-out max-xl:justify-center plain:rounded-md"
+      inactiveProps={{ className: "text-spine-muted hover:bg-white/5 hover:text-spine-ink plain:hover:bg-neutral-50" }}
+      activeProps={{ className: "font-semibold text-brand-700 plain:font-medium", "aria-current": "page" }}
     >
       {item.icon}
       <span className="hidden xl:inline">{item.label}</span>
@@ -211,7 +255,7 @@ function UserCard({ onSignOut, signingOut }: { onSignOut: () => void; signingOut
       {open && (
         <div
           role="menu"
-          className="absolute right-0 bottom-full left-0 mb-2 min-w-40 rounded-lg border border-border bg-surface p-1 shadow-pop"
+          className="absolute right-0 bottom-full left-0 mb-2 min-w-40 origin-bottom rounded-lg border border-border bg-surface p-1 shadow-pop motion-safe:animate-pop-up"
         >
           <button
             type="button"

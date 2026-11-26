@@ -292,7 +292,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   let index = -1;
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-neutral-900/40 p-4 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-neutral-900/40 p-4 pt-[12vh] motion-safe:animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       data-testid="palette-scrim"
     >
@@ -301,7 +301,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid="command-palette"
-        className="w-full max-w-140 overflow-hidden rounded-xl border border-border bg-surface shadow-pop"
+        className="w-full max-w-140 origin-top overflow-hidden rounded-xl border border-border bg-surface shadow-pop motion-safe:animate-dialog-in"
         onKeyDown={onKeyDown}
       >
         <h2 id={titleId} className="sr-only">
