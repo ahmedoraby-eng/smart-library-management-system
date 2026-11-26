@@ -500,6 +500,9 @@ async function main(): Promise<void> {
         .map((s) => s.status)
         .sort()
         .join(" and ");
+      // Talia, 26/11: the refusal is the moment; light it at once (the cursor leaves Confirm), again on its words.
+      const refusedNow = loseP.getByTestId("book-notice").or(loseP.getByTestId("borrow-error"));
+      if (await appears(refusedNow.first(), 5000)) await spotlight(loseP, refusedNow.first(), { ms: 1800, zoom: 1.5 });
       await say(page, "One gets the book…", `The ${won} desk: borrowed.`, tag);
       await point(winP, winP.getByTestId("borrow-success"), "gets", 0.5, 2000, 1.45);
       await say(page, "…the other is refused: no copies available (409)", "Never a second loan, never −1.", tag);

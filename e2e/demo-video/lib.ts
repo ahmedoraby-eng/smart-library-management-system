@@ -30,10 +30,17 @@ export async function glide(page: Page, loc: Locator): Promise<void> {
 export async function spotlight(page: Page, loc: Locator, opts: { zoom?: number; ms?: number } = {}): Promise<void> {
   const o = { zoom: opts.zoom ?? 1.3, ms: Math.round((opts.ms ?? 2400) / SPEED) };
   await loc.scrollIntoViewIfNeeded().catch(() => undefined);
-  await glide(page, loc);
-  await sleep(250);
+  // The cursor rests just below the element's left edge, never on the words (Talia, 26/11).
+  const beside = async (steps: number) => {
+    const b = await loc.boundingBox();
+    if (b) await page.mouse.move(b.x + Math.min(18, b.width / 4), b.y + b.height + 14, { steps });
+  };
+  await beside(18);
+  await sleep(200);
   await loc.evaluate((el, x) => (window as unknown as { __spot?: (e: Element, o: object) => void }).__spot?.(el, x), o);
-  await new Promise((r) => setTimeout(r, o.ms + 750));
+  await new Promise((r) => setTimeout(r, 650 / SPEED));
+  await beside(10); // follow the element as the page zooms
+  await new Promise((r) => setTimeout(r, Math.max(o.ms - 650 / SPEED, 0) + 750));
 }
 export async function click(page: Page, loc: Locator): Promise<void> {
   await loc.scrollIntoViewIfNeeded();

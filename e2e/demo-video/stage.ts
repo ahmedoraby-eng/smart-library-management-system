@@ -27,8 +27,10 @@ export function captionScript(): string {
     // __spot(el, {zoom, ms}): points at a key moment. The page zooms (about 1.3x) around the element's centre, so the
     // element and the cursor on it stay put, a soft ring lights it while the rest dims a little, then all eases back.
     window.__spot = (el, o) => {
-      o = o || {}; const zoom = o.zoom || 1, ms = o.ms || 2000, b = document.body;
+      o = o || {}; const ms = o.ms || 2000, b = document.body;
       const r0 = el.getBoundingClientRect();
+      // never zoom a wide element past the window: a long message stays whole
+      const zoom = Math.max(1, Math.min(o.zoom || 1, (innerWidth * 0.92) / Math.max(r0.width, 1), (innerHeight * 0.8) / Math.max(r0.height, 1)));
       const cx = r0.left + r0.width / 2 + scrollX, cy = r0.top + r0.height / 2 + scrollY;
       const ease = "cubic-bezier(.22,.7,.2,1)";
       if (zoom > 1) {
