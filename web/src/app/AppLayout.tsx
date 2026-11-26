@@ -148,8 +148,8 @@ export function AppLayout() {
         )}
         <ThemeToggle className="absolute top-1 right-1.5" />
         <FetchProgress />
-        {/* A new section fades up; tabs inside Circulation animate in CirculationLayout instead. */}
-        <div key={pageKey(pathname)} className="motion-safe:animate-page-in" data-testid="page">
+        {/* Page transitions: a view transition on this box (index.css), or a fade-up where the browser has none. */}
+        <div key={pageKey(pathname)} className="slm-page" data-testid="page">
           <Outlet />
         </div>
       </main>

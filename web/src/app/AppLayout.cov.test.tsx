@@ -343,12 +343,12 @@ describe("AppLayout: motion", () => {
     expect(screen.getByTestId("nav-indicator").className).toContain("opacity-0");
   });
 
-  it("each page enters with a fade; moving to another page replays it", async () => {
+  it("each page sits in the transition box; moving to another page renders a new one", async () => {
     stubFetch((url) => (url === "/api/me" ? json(meBody("ADMIN")) : json({ items: [], page: 1, size: 5, total: 0 })));
     const { router } = await renderShell("/dashboard");
     const first = await screen.findByTestId("page");
     expect(first).toHaveTextContent("page /dashboard");
-    expect(first.className).toContain("motion-safe:animate-page-in");
+    expect(first).toHaveClass("slm-page");
     await router.navigate({ to: "/members" });
     await waitFor(() => expect(screen.getByTestId("page")).toHaveTextContent("page /members"));
     expect(screen.getByTestId("page")).not.toBe(first);

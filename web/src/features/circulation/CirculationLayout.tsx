@@ -31,7 +31,7 @@ export function CirculationLayout() {
           )}
         </Tab>
       </nav>
-      <div key={pathname} className="motion-safe:animate-fade-in">
+      <div key={pathname} className="slm-tab-panel">
         <Outlet />
       </div>
     </RequirePermission>
