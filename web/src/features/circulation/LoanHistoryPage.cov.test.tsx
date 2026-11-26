@@ -53,6 +53,7 @@ describe("LoanHistoryPage states", () => {
     let calls = 0;
     await renderApp("/loans", ({ url }) => {
       if (url.pathname !== "/api/loans") return undefined;
+      if (url.searchParams.get("status") === "OVERDUE") return { body: page([]) }; // the shell's overdue bell (SLM-18)
       return ++calls === 1 ? problem(500, "INTERNAL") : { body: page([loan("l1")]) };
     });
     const alert = await screen.findByTestId("loans-error");
@@ -74,7 +75,9 @@ describe("LoanHistoryPage states", () => {
     const { fetchMock } = await renderApp("/loans?status=bogus", loansOnly([loan("l1")]));
     await screen.findByTestId("history-row");
     expect(screen.getByTestId("filter-status")).toHaveValue("");
-    expect(fetchMock.mock.calls.some(([u]) => String(u).includes("status="))).toBe(false);
+    // The page's own list query carries no status; the shell's overdue bell (SLM-18) asks for status=OVERDUE&size=5.
+    const pageCalls = fetchMock.mock.calls.filter(([u]) => !String(u).includes("size=5"));
+    expect(pageCalls.some(([u]) => String(u).includes("status="))).toBe(false);
   });
 
   it("returned loans show the returned date; active ones show a dash", async () => {

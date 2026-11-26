@@ -562,6 +562,7 @@ describe("index sync (store and embedder faked)", () => {
         return o.removed ?? 0;
       },
       nearest: async () => [],
+      similarTo: async () => [],
       usesPgvector: async () => o.pgvector ?? false,
     };
     return Object.assign(s, { applied });

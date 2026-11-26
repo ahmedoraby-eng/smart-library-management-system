@@ -20,6 +20,21 @@ export function discoveryRoutes(limiter: (c: Context<AppEnv>) => Limiter) {
   return r;
 }
 
+/**
+ * SLM-19: GET /api/books/:id/similar ("More like this"), mounted under /api/books next to the catalogue routes.
+ * Permission first, then 404 for an unknown book (the catalogue's own rule), then the neighbours. No model call,
+ * so no rate limit or quota: it costs one or two SQL queries.
+ */
+export function similarBookRoutes() {
+  const r = new Hono<AppEnv>();
+  r.get("/:id/similar", requirePermission("BOOK_READ"), async (c) => {
+    const id = c.req.param("id");
+    await c.var.container.books.get(id); // 404 "This book was not found." for an unknown or malformed id
+    return c.json(await c.var.container.similarBooks.forBook(id));
+  });
+  return r;
+}
+
 /** /api/admin/discovery (SLM-16): rebuild the hybrid-retrieval index (backfill after the migration, or a model change). */
 export function discoveryAdminRoutes(reindexLimiter: (c: Context<AppEnv>) => Limiter) {
   const r = new Hono<AppEnv>();
