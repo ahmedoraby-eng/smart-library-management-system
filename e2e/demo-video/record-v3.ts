@@ -346,6 +346,7 @@ async function main(): Promise<void> {
     await page.getByTestId("book-detail-title").waitFor();
   };
   const lotr = "The Lord of the Rings";
+  const lotrRe = /The Lord of the Rings/i; // Open Library spells it "The Lord Of The Rings"
   const LOTR_ISBN = "9780544003415";
   /**
    * Look up, retried: Open Library sometimes answers after the app's 3-second limit ("No details found…"). After four
@@ -506,10 +507,19 @@ async function main(): Promise<void> {
       await page.goto(`${LIVE}/books/new`);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await lookUp();
+      await typeInto(page, page.getByTestId("field-category"), "Fantasy"); // required; Look up never fills it
       await typeInto(page, page.getByTestId("field-totalCopies"), "1");
       await click(page, page.getByTestId("save-book"));
       await row(2, 10);
-      await show(page, page.getByText(/Another book already uses this ISBN/), 2600, 1.4);
+      const dup = page.getByText(/already uses this ISBN/i);
+      if (!(await appears(dup.first(), 10_000)))
+        await page
+          .screenshot({
+            path: join(homedir(), "Code/slm-ops/video/edit-v3/out/scene6-no-duplicate.png"),
+            fullPage: true,
+          })
+          .catch(() => undefined);
+      await show(page, dup, 2600, 1.4);
       await click(page, page.getByTestId("cancel-book"));
       const discard = page.getByRole("button", { name: /discard|leave/i });
       if (await appears(discard.first(), 1500)) await click(page, discard.first());
@@ -598,7 +608,7 @@ async function main(): Promise<void> {
         await typeInto(p, p.getByTestId("member-combobox").getByRole("combobox"), member);
         await click(p, p.getByRole("option", { name: new RegExp(member) }).first());
         await typeInto(p, p.getByTestId("book-combobox").getByRole("combobox"), lotr);
-        await click(p, p.getByRole("option", { name: new RegExp(lotr) }).first());
+        await click(p, p.getByRole("option", { name: lotrRe }).first());
       };
       await prep(pL, "Nour Hassan");
       await prep(pR, "Yara Samy");
@@ -622,13 +632,7 @@ async function main(): Promise<void> {
       if (await appears(refused, 3000)) await spotlight(loseP, refused, { ms: 3000, zoom: 1.6 });
       await row(6, 26);
       await winP.goto(`${LIVE}/books?q=${encodeURIComponent(lotr)}`);
-      await click(
-        winP,
-        winP
-          .getByRole("link", { name: new RegExp(lotr) })
-          .filter({ visible: true })
-          .first(),
-      );
+      await click(winP, winP.getByRole("link", { name: lotrRe }).filter({ visible: true }).first());
       await winP.getByTestId("book-detail-title").waitFor();
       await spotlight(winP, winP.getByTestId("copies-available"), { ms: 2400, zoom: 1.6 });
       await row(7, 30);
@@ -651,7 +655,7 @@ async function main(): Promise<void> {
         await click(page, page.getByTestId("detail-actions"));
         await click(page, page.getByRole("menuitem", { name: "Delete" }));
       };
-      await openBook(lotr, new RegExp(lotr));
+      await openBook(lotr, lotrRe);
       await row(0, 0.3);
       await deleteFromMenu();
       const blocked = page.getByTestId("delete-dialog-blocked");
