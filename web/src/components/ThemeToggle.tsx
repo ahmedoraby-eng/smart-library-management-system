@@ -33,12 +33,12 @@ export function ThemeToggle({ className }: { className?: string }) {
       data-testid="theme-toggle"
       data-theme-current={theme}
       className={cn(
-        "grid h-6 w-6 place-items-center rounded-sm text-neutral-500 opacity-50 transition-[opacity,background-color,transform] duration-200 hover:bg-neutral-100 hover:opacity-100 focus-visible:opacity-100 motion-safe:active:rotate-180",
+        "grid h-8 w-8 place-items-center rounded-md text-neutral-500 opacity-70 transition-[opacity,background-color,transform] duration-200 hover:bg-neutral-100 hover:opacity-100 focus-visible:opacity-100 motion-safe:active:rotate-180",
         className,
       )}
     >
       {/* Half-filled circle: the usual "change look" mark. */}
-      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="2" />
         <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" />
       </svg>

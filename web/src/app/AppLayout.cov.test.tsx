@@ -372,3 +372,30 @@ describe("AppLayout: motion", () => {
     await waitFor(() => expect(screen.queryByTestId("fetch-progress")).not.toBeInTheDocument());
   });
 });
+
+describe("AppLayout: top bar", () => {
+  it("shows where you are, names the browser tab, and its search opens the command palette", async () => {
+    stubFetch((url) => (url === "/api/me" ? json(meBody("ADMIN")) : json({ items: [], page: 1, size: 5, total: 0 })));
+    const { router } = await renderShell("/members");
+    const bar = await screen.findByTestId("top-bar");
+    const crumbs = within(bar).getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(crumbs).getByTestId("breadcrumb-current")).toHaveTextContent("Members");
+    expect(within(crumbs).getByTestId("breadcrumb-current")).toHaveAttribute("aria-current", "page");
+    await waitFor(() => expect(document.title).toBe("Members · Smart Library"));
+    expect(within(bar).getByTestId("overdue-bell-slot")).toBeInTheDocument();
+    expect(within(bar).getByTestId("theme-toggle")).toBeInTheDocument();
+
+    await userEvent.click(within(bar).getByTestId("top-search"));
+    expect(await screen.findByTestId("command-palette")).toBeInTheDocument();
+
+    await router.navigate({ to: "/admin/users" });
+    await waitFor(() => expect(within(crumbs).getByTestId("breadcrumb-current")).toHaveTextContent("Staff users"));
+  });
+
+  it("no bell for a role that can't read loans", async () => {
+    stubFetch((url) => (url === "/api/me" ? json(meBody("ADMIN", { permissions: [] })) : json({}, 404)));
+    await renderShell("/dashboard");
+    const bar = await screen.findByTestId("top-bar");
+    expect(within(bar).queryByTestId("overdue-bell-slot")).not.toBeInTheDocument();
+  });
+});

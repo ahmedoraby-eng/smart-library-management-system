@@ -1,5 +1,5 @@
 import type { Permission } from "@slm/contracts";
-import { useIsFetching, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -18,13 +18,12 @@ import {
 } from "../components/ui";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { LogoMark } from "../components/LogoMark";
-import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
 import { useMe } from "../features/auth/session";
 import { splashReady } from "../lib/splash";
-import { OverdueBell } from "../features/circulation/OverdueBell";
 import { CommandPalette } from "../features/palette/CommandPalette";
+import { TopBar } from "./TopBar";
 
 type NavTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
 interface NavItem {
@@ -139,15 +138,8 @@ export function AppLayout() {
         </nav>
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
       </aside>
-      <main className="relative min-w-0 flex-1 px-8 pt-7 pb-8" data-testid="main">
-        {/* The slot is out of the flow (no layout shift); the bell's own box stays relative, so its popover opens under it (D-46-1). */}
-        {can("LOAN_READ") && (
-          <div className="absolute top-1 right-8 z-40" data-testid="overdue-bell-slot">
-            <OverdueBell />
-          </div>
-        )}
-        <ThemeToggle className="absolute top-1 right-1.5" />
-        <FetchProgress />
+      <main className="relative min-w-0 flex-1 px-8 pb-8" data-testid="main">
+        <TopBar pathname={pathname} showBell={can("LOAN_READ")} />
         {/* Page transitions: a view transition on this box (index.css), or a fade-up where the browser has none. */}
         <div key={pageKey(pathname)} className="slm-page" data-testid="page">
           <Outlet />
@@ -191,21 +183,6 @@ function NavIndicator({ active }: { active: NavTo | undefined }) {
       )}
       style={box ? { transform: `translateY(${box.top}px)`, height: box.height } : undefined}
     />
-  );
-}
-
-/** A thin brass line along the top of the page while data loads for longer than a moment (decorative). */
-function FetchProgress() {
-  const fetching = useIsFetching() > 0;
-  if (!fetching) return null;
-  return (
-    <div
-      aria-hidden="true"
-      data-testid="fetch-progress"
-      className="pointer-events-none absolute inset-x-0 top-0 h-0.5 overflow-hidden motion-safe:animate-[slm-fade-in_200ms_ease-out_300ms_backwards]"
-    >
-      <div className="h-full w-1/3 bg-brass-500 plain:bg-brand-600 motion-safe:animate-[slm-progress_1.1s_var(--ease-out)_infinite]" />
-    </div>
   );
 }
 

@@ -70,14 +70,14 @@ export function OverdueBell() {
         aria-controls={open ? popoverId : undefined}
         onClick={() => setOpen((v) => !v)}
         data-testid="overdue-bell"
-        className="relative grid h-6 w-6 place-items-center rounded-sm text-neutral-600 transition-colors duration-150 hover:bg-neutral-100 aria-expanded:bg-neutral-100"
+        className="relative grid h-8 w-8 place-items-center rounded-md text-neutral-600 transition-colors duration-150 hover:bg-neutral-100 aria-expanded:bg-neutral-100"
       >
-        <BellIcon size={16} />
+        <BellIcon size={18} />
         {total !== undefined && total > 0 && (
           <span
             aria-hidden="true"
             data-testid="overdue-count"
-            className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-danger-600 px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums motion-safe:animate-[slm-dialog-in_240ms_var(--ease-out)_backwards]"
+            className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-danger-600 px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums motion-safe:animate-[slm-dialog-in_240ms_var(--ease-out)_backwards]"
           >
             {total > 99 ? "99+" : total}
           </span>
@@ -90,7 +90,7 @@ export function OverdueBell() {
           role="dialog"
           aria-label="Overdue loans"
           data-testid="overdue-popover"
-          className="absolute top-full right-0 z-50 mt-1.5 w-80 origin-top-right rounded-lg border border-border bg-surface p-1 text-left shadow-pop motion-safe:animate-pop-in"
+          className="absolute top-full right-0 z-50 mt-2 w-80 origin-top-right rounded-lg border border-border bg-surface p-1 text-left shadow-pop motion-safe:animate-pop-in"
         >
           <p className="px-2.5 pt-2 pb-1.5 text-sm font-semibold text-neutral-900">
             Overdue loans{total ? ` (${total})` : ""}

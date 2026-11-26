@@ -129,6 +129,13 @@ export function matches(query: string, text: string): boolean {
     .every((w) => hay.includes(w));
 }
 
+const OPEN_EVENT = "slm:open-palette";
+
+/** Opens the palette from elsewhere (the top bar's search box). */
+export function openCommandPalette(): void {
+  document.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 const isMac = () =>
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
@@ -151,8 +158,13 @@ export function CommandPalette() {
       e.preventDefault();
       setOpen((v) => !v);
     };
+    const onOpen = () => setOpen(true);
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener(OPEN_EVENT, onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener(OPEN_EVENT, onOpen);
+    };
   }, [open]);
 
   const mac = isMac();
