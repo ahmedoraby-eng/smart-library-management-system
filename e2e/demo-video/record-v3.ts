@@ -141,6 +141,11 @@ function finish(work: string, googleClip: string | undefined): void {
   ];
   // Row sync: every logged event (events.json, footage time) is pinned to its key word (cue k_<name>, narration
   // time) minus 0.15 s, so it lands just before the word. Scenes 2 and 3 carry Ahmed's Google clip: not re-timed.
+  const ovFile = arg("--sync-overrides");
+  const ov = (ovFile && existsSync(ovFile) ? JSON.parse(readFileSync(ovFile, "utf8")) : {}) as {
+    anchors?: Record<string, [number, string, number][]>;
+    captions?: [number, string, number, number, string, string][];
+  };
   const evFile = join(outDir, "events.json");
   const anchorArgs: string[] = [];
   if (existsSync(evFile)) {
@@ -153,6 +158,7 @@ function finish(work: string, googleClip: string | undefined): void {
     );
     for (const n of new Set(evList.map((e) => e.scene))) {
       if (n === 2 || n === 3 || process.env.NO_ROW_SYNC === "1") continue;
+      if (ov.anchors?.[String(n)]) continue; // hand-set below
       const pairs = evList
         .filter((e) => e.scene === n && cues[String(n)]?.[`k_${e.name}`] !== undefined)
         .map((e) => `${(e.t - starts.get(n)!).toFixed(2)}=${(cues[String(n)]![`k_${e.name}`]! - 0.15).toFixed(2)}`);
@@ -178,6 +184,20 @@ function finish(work: string, googleClip: string | undefined): void {
     endCard && existsSync(endCard) && kLinks !== undefined
       ? ["--overlay-image", `14:${kLinks - 0.15}-end|${endCard}`]
       : [];
+  // hand-set anchors and captions (--sync-overrides file.json): replace a scene's logged events where they fall short
+  for (const [n, list] of Object.entries(ov.anchors ?? {})) {
+    const c = cues[n] ?? {};
+    const pairs = list
+      .filter(([, cue]) => c[cue] !== undefined)
+      .map(([f, cue, off]) => `${f.toFixed(2)}=${(c[cue]! + off).toFixed(2)}`);
+    if (pairs.length) anchorArgs.push("--anchors", `${n}:${pairs.join(",")}`);
+  }
+  const ovCaptions = (ov.captions ?? []).flatMap(([n, cue, from, to, title, sub]) => {
+    const at = cues[String(n)]?.[cue];
+    return at === undefined
+      ? []
+      : ["--overlay", `${n}:${(at + from).toFixed(2)}-${(at + to).toFixed(2)}|${title}|${sub}`];
+  });
   // Scene 9's numbers caption, drawn in post on the voice cue (the live run can fall behind the voice there)
   const r7 = (cues["9"] ?? {}).r7 ?? (30 / DEFAULT_S[8]!) * clips[8]!;
   const overlays = [
@@ -193,7 +213,19 @@ function finish(work: string, googleClip: string | undefined): void {
   writeFileSync(mainMarks, JSON.stringify(all.filter((m) => voiced(m.scene))));
   execFileSync(
     assemble,
-    [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays, ...anchorArgs, ...skipArgs, ...endArgs],
+    [
+      silent,
+      mainMarks,
+      audioDir,
+      final,
+      ...insert,
+      ...crop,
+      ...overlays,
+      ...ovCaptions,
+      ...anchorArgs,
+      ...skipArgs,
+      ...endArgs,
+    ],
     {
       stdio: "inherit",
     },
