@@ -36,6 +36,10 @@ export async function settle(page: Page, maxMs = 2500): Promise<void> {
     .waitForFunction(
       () =>
         !document.getElementById("slm-splash") &&
+        // SLM-15 loading states (Haya 26/11): the fetch progress bar, skeleton sheens, the shell loading screen
+        !document.querySelector(
+          '[data-testid="fetch-progress"],[data-testid$="skeleton"],[data-testid="loading-screen"],[data-testid="shell-loading"]',
+        ) &&
         document.getAnimations().every((a) => {
           const t = a.effect?.getComputedTiming();
           return a.playState !== "running" || !t || t.endTime === Infinity;

@@ -221,6 +221,13 @@ async function scene(n: number, body: () => Promise<void | false>): Promise<void
 
 async function signIn(page: Page, who: { email: string; password: string }): Promise<void> {
   await page.goto(`${LIVE}/signin`);
+  await settle(page, 5000); // SLM-15 splash
+  // SLM-15: /signin with a session that is still valid goes straight to the dashboard
+  const form = page.getByTestId("signin-email");
+  await Promise.race([form.waitFor({ timeout: 15_000 }), page.waitForURL(/\/dashboard/, { timeout: 15_000 })]).catch(
+    () => undefined,
+  );
+  if (/\/dashboard/.test(page.url())) return;
   await page.getByTestId("signin-email").fill(who.email);
   await page.getByTestId("signin-password").fill(who.password);
   await page.getByTestId("signin-submit").click();
