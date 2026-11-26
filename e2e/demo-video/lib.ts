@@ -51,10 +51,17 @@ export async function settle(page: Page, maxMs = 2500): Promise<void> {
 }
 /** Waits until `loc`'s text stops changing (count-up numbers, SLM-15), at most `maxMs`. */
 export async function steadyText(loc: Locator, maxMs = 2500): Promise<void> {
-  let last = "";
+  // inputs have no inner text: read their value; a value that stays the same twice (even empty) is steady
+  const read = () =>
+    loc
+      .evaluate((el) =>
+        el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value : el.textContent,
+      )
+      .catch(() => "");
+  let last: string | null = null;
   for (let waited = 0; waited < maxMs; waited += 200) {
-    const now = (await loc.innerText().catch(() => "")) ?? "";
-    if (now === last && now !== "") return;
+    const now = (await read()) ?? "";
+    if (now === last) return;
     last = now;
     await new Promise((r) => setTimeout(r, 200));
   }
