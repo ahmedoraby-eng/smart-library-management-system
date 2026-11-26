@@ -139,6 +139,12 @@ function finish(work: string, googleClip: string | undefined): void {
     ...(part(3) ? ["--insert", `3:${part(3)}`, "--line-at", "0", "--line-end", String(to3)] : []),
     ...(googleClip && !part(2) ? ["--insert", `2:${googleClip}`, "--line-at", String(from2)] : []),
   ];
+  // Scene 9's numbers caption, drawn in post on the voice cue (the live run can fall behind the voice there)
+  const r7 = (cues["9"] ?? {}).r7 ?? (30 / DEFAULT_S[8]!) * clips[8]!;
+  const overlays = [
+    "--overlay",
+    `9:${r7}-end|20 at once · 3 copies → 3 win, 17 refused|The database checks and updates in one step.`,
+  ];
   // A recording padded into a bigger video (an older run): only its top-left WxH is the page.
   const crop = arg("--crop-main") ? ["--crop-main", arg("--crop-main")!] : [];
   // Extra scenes (9+) without their narration yet stay out of the main cut and go to a silent preview.
@@ -146,7 +152,7 @@ function finish(work: string, googleClip: string | undefined): void {
   const voiced = (_n: number) => true; // v3: every scene is in the cut; one without its clip yet stays silent
   const mainMarks = join(work, "main-scenes.json");
   writeFileSync(mainMarks, JSON.stringify(all.filter((m) => voiced(m.scene))));
-  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop], { stdio: "inherit" });
+  execFileSync(assemble, [silent, mainMarks, audioDir, final, ...insert, ...crop, ...overlays], { stdio: "inherit" });
   const pending = all.filter((m) => !voiced(m.scene));
   if (pending.length) {
     const extrasMarks = join(work, "extras-scenes.json");

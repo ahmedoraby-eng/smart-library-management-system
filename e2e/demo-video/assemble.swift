@@ -9,6 +9,8 @@
 // dashboard), the clip plays at its own speed and holds its last frame if the sentence runs longer (if the clip is longer,
 // the scene runs up to 3 s past the sentence, then the clip plays faster).
 import AVFoundation
+import CoreText
+import QuartzCore
 import Foundation
 
 struct Mark: Decodable { let scene: Int; let start: Double; let end: Double }
@@ -24,6 +26,8 @@ var pos: [String] = []
 // belong to the --insert just before them.
 struct Insert { let scene: Int; let url: URL; var lineAt: Double? = nil; var lineEnd: Double? = nil }
 var inserts: [Insert] = []
+var overlays: [(scene: Int, from: Double, to: Double?, title: String, sub: String)] = []
+var sceneSpan: [Int: (start: Double, end: Double)] = [:]
 var cropMain: CGSize? = nil  // --crop-main WxH: the recording only fills this top-left area (Playwright pads to the video size)
 while !rest.isEmpty {
   let a = rest.removeFirst()
@@ -31,6 +35,14 @@ while !rest.isEmpty {
   case "--insert":
     guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--insert N:<clip.mp4>") }
     inserts.append(Insert(scene: n, url: URL(fileURLWithPath: String(v[v.index(after: colon)...]))))
+    rest.removeFirst()
+  case "--overlay":
+    // --overlay N:from-to|Title|Sub   a caption drawn in post over scene N, from..to seconds into its narration
+    // ("end" = the scene's end); used where the live recording fell behind the voice (script v3, scene 9)
+    guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--overlay N:from-to|Title|Sub") }
+    let parts = v[v.index(after: colon)...].split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+    let r = parts[0].split(separator: "-").map(String.init)
+    overlays.append((n, Double(r[0]) ?? 0, r.count > 1 ? Double(r[1]) : nil, parts.count > 1 ? parts[1] : "", parts.count > 2 ? parts[2] : ""))
     rest.removeFirst()
   case "--crop-main":
     guard let v = rest.first?.split(separator: "x").compactMap({ Double($0) }), v.count == 2 else { fail("--crop-main WxH") }
@@ -130,6 +142,8 @@ func lastSentenceStart(_ url: URL) async throws -> Double? {
 
 var at = CMTime.zero
 for m in marks {
+  let sceneAt = at.seconds
+  defer { sceneSpan[m.scene] = (sceneAt, at.seconds) }
   let start = t(m.start)
   let end = CMTimeMinimum(t(m.end), videoEnd)
   let seg = end - start
@@ -225,6 +239,56 @@ let videoComposition = AVMutableVideoComposition()
 videoComposition.renderSize = render
 videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
 videoComposition.instructions = [instruction]
+
+if !overlays.isEmpty {
+  let parent = CALayer(), video = CALayer()
+  parent.frame = CGRect(origin: .zero, size: render)
+  parent.isGeometryFlipped = true  // measured: without it the overlay lands upside down (bottom bar at the top)
+  video.frame = parent.frame
+  parent.addSublayer(video)
+  let total = at.seconds
+  for o in overlays {
+    guard let span = sceneSpan[o.scene] else { continue }
+    let a0 = span.start + o.from, a1 = o.to.map { span.start + $0 } ?? span.end
+    guard a1 > a0 + 0.5 else { continue }
+    // the recorder's caption banner, same look (navy bar at the bottom, title 36 px, subtitle 23 px), drawn by hand
+    // into a full-frame transparent image: layer geometry and CATextLayer do not survive this export reliably
+    let W = Int(render.width), H = Int(render.height)
+    let ctx = CGContext(data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: W * 4,
+                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let test = ProcessInfo.processInfo.environment["OVERLAY_TEST"] == "1"
+    ctx.setFillColor(test ? CGColor(red: 1, green: 0, blue: 0, alpha: 1) : CGColor(red: 15 / 255, green: 20 / 255, blue: 48 / 255, alpha: 0.95))
+    ctx.fill(CGRect(x: 0, y: 0, width: W, height: 150))  // CGContext: y 0 is the bottom
+    func draw(_ s: String, _ size: CGFloat, _ y: CGFloat, _ color: CGColor, bold: Bool) {
+      let font = CTFontCreateWithName((bold ? "Helvetica-Bold" : "Helvetica") as CFString, size, nil)
+      let attr = NSAttributedString(string: s, attributes: [
+        NSAttributedString.Key(kCTFontAttributeName as String): font,
+        NSAttributedString.Key(kCTForegroundColorAttributeName as String): color,
+      ])
+      let line = CTLineCreateWithAttributedString(attr)
+      ctx.textPosition = CGPoint(x: 58, y: y)
+      CTLineDraw(line, ctx)
+    }
+    draw(o.title, 36, 84, CGColor(gray: 1, alpha: 1), bold: true)
+    if !o.sub.isEmpty { draw(o.sub, 23, 40, CGColor(red: 0.78, green: 0.82, blue: 1, alpha: 1), bold: false) }
+    let bar = CALayer()
+    bar.frame = parent.bounds
+    bar.contents = ctx.makeImage()
+    bar.opacity = test ? 1 : 0
+    let fade = 0.3
+    let anim = CAKeyframeAnimation(keyPath: "opacity")
+    anim.values = [0, 0, 1, 1, 0, 0]
+    anim.keyTimes = [0, a0 / total, (a0 + fade) / total, (a1 - fade) / total, a1 / total, 1].map { NSNumber(value: $0) }
+    anim.duration = total
+    anim.beginTime = AVCoreAnimationBeginTimeAtZero
+    anim.isRemovedOnCompletion = false
+    anim.fillMode = .both
+    if !test { bar.add(anim, forKey: "show") }
+    parent.addSublayer(bar)
+    print(String(format: "overlay on scene %d: %.1f–%.1f s: %@", o.scene, a0, a1, o.title))
+  }
+  videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: video, in: parent)
+}
 
 let out = URL(fileURLWithPath: pos[3])
 try? FileManager.default.removeItem(at: out)
