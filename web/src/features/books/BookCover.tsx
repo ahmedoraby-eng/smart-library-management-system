@@ -26,7 +26,7 @@ export function BookCover({
     <div
       data-testid="book-cover"
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-[1px_3px_3px_1px] font-book text-[#fbf3e2] plain:rounded-sm plain:font-semibold plain:text-white",
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-[1px_3px_3px_1px] transition-[transform,box-shadow] duration-200 ease-out motion-safe:group-hover/row:-translate-y-0.5 motion-safe:group-hover/card:-translate-y-0.5 group-hover/row:shadow-[0_6px_12px_-6px_rgb(31_27_22/.45)] group-hover/card:shadow-[0_6px_12px_-6px_rgb(31_27_22/.45)] font-book text-[#fbf3e2] plain:rounded-sm plain:font-semibold plain:text-white",
         SIZES[size],
         !show && tintFor(title),
         !show && "shadow-[inset_3px_0_0_rgb(0_0_0/.22)] plain:shadow-none",

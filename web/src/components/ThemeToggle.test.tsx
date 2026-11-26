@@ -66,3 +66,33 @@ describe("theme (Reading Room default, plain behind a toggle)", () => {
     expect(html.dataset.theme).toBe("plain");
   });
 });
+
+describe("theme switch cross-fade", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (document as { startViewTransition?: unknown }).startViewTransition;
+  });
+
+  it("uses a view transition when the browser has one and motion is allowed", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q }));
+    const start = vi.fn((cb: () => void) => cb());
+    (document as { startViewTransition?: unknown }).startViewTransition = start;
+    html.dataset.theme = "reading-room";
+    render(<ThemeToggle />);
+    await userEvent.click(screen.getByTestId("theme-toggle"));
+    expect(start).toHaveBeenCalledOnce();
+    expect(html.dataset.theme).toBe("plain");
+    expect(screen.getByTestId("theme-toggle")).toHaveAttribute("data-theme-current", "plain");
+  });
+
+  it("switches at once under reduced motion, even with view transitions", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("reduce"), media: q }));
+    const start = vi.fn();
+    (document as { startViewTransition?: unknown }).startViewTransition = start;
+    html.dataset.theme = "reading-room";
+    render(<ThemeToggle />);
+    await userEvent.click(screen.getByTestId("theme-toggle"));
+    expect(start).not.toHaveBeenCalled();
+    expect(html.dataset.theme).toBe("plain");
+  });
+});

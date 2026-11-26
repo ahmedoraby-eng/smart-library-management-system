@@ -129,7 +129,14 @@ export function matches(query: string, text: string): boolean {
     .every((w) => hay.includes(w));
 }
 
-const isMac = () =>
+const OPEN_EVENT = "slm:open-palette";
+
+/** Opens the palette from elsewhere (the top bar's search box). */
+export function openCommandPalette(): void {
+  document.dispatchEvent(new Event(OPEN_EVENT));
+}
+
+export const isMac = () =>
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 /**
@@ -151,8 +158,13 @@ export function CommandPalette() {
       e.preventDefault();
       setOpen((v) => !v);
     };
+    const onOpen = () => setOpen(true);
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener(OPEN_EVENT, onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener(OPEN_EVENT, onOpen);
+    };
   }, [open]);
 
   const mac = isMac();
@@ -292,7 +304,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   let index = -1;
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-neutral-900/40 p-4 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-neutral-900/40 p-4 pt-[12vh] motion-safe:animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       data-testid="palette-scrim"
     >
@@ -301,7 +313,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid="command-palette"
-        className="w-full max-w-140 overflow-hidden rounded-xl border border-border bg-surface shadow-pop"
+        className="w-full max-w-140 origin-top overflow-hidden rounded-xl border border-border bg-surface shadow-pop motion-safe:animate-dialog-in"
         onKeyDown={onKeyDown}
       >
         <h2 id={titleId} className="sr-only">

@@ -66,14 +66,17 @@ export function Modal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" onKeyDown={onKeyDown}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4 motion-safe:animate-fade-in"
+      onKeyDown={onKeyDown}
+    >
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid={testId}
-        className="w-full max-w-120 rounded-xl border border-border bg-surface p-6 shadow-pop"
+        className="w-full max-w-120 rounded-xl border border-border bg-surface p-6 shadow-pop motion-safe:animate-dialog-in"
       >
         <h2 id={titleId} className="text-lg font-semibold">
           {title}

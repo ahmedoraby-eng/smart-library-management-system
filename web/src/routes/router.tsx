@@ -21,6 +21,7 @@ import { MemberDetailPage } from "../features/members/MemberDetailPage";
 import { MembersPage } from "../features/members/MembersPage";
 import { StaffUsersPage } from "../features/staff/StaffUsersPage";
 import { ApiError } from "../lib/apiClient";
+import { pageTransitionTypes } from "../lib/pageTransition";
 import { queryClient, setApiErrorHandler } from "../lib/queryClient";
 
 /**
@@ -170,6 +171,8 @@ export const router = createRouter({
     return s ? `?${s}` : "";
   },
   defaultPreload: "intent",
+  // Moving between pages animates (index.css, "Page transitions"); query-only changes and reduced motion don't.
+  defaultViewTransition: { types: pageTransitionTypes },
 });
 
 declare module "@tanstack/react-router" {

@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { LogoMark } from "../components/LogoMark";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { splashReady } from "../lib/splash";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -17,6 +18,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
  * consent screen. Outside the shell and needs no session, like /signin.
  */
 export function PrivacyPage() {
+  useEffect(() => splashReady(), []);
   return (
     <main className="min-h-screen px-4 py-10" data-testid="privacy">
       <article className="mx-auto max-w-170">
