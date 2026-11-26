@@ -32,7 +32,7 @@ Issues stayed open after their work shipped. And "merged" isn't "live" while the
 
 ## Notes
 
-**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): the issue reaches Released from Ready for Release; the `Jira status` check stops a merge before QA passed.
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (in force since 2026-11-25): the issue reaches Released from Ready for Release; the `Jira status` check stops a merge before QA passed.
 
 The shared close tool was fixed so --deploy-check waits for every project, not only guarded ones, and its comment names the target status. Released is SLM's done status. Pickup automation stays off for SLM.
 

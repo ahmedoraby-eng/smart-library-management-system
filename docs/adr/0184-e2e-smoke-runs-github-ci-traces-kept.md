@@ -1,6 +1,6 @@
 # 0184. E2E smoke runs in GitHub CI, with traces kept on failure
 
-- **Status:** Accepted, not yet in force (supersedes [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md))
+- **Status:** Accepted (supersedes [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md))
 - **Date:** 2026-11-25
 - **Area:** testing
 - **Deciders:** Ahmed Oraby (owner), on QA and architecture's recommendation
@@ -31,10 +31,10 @@
 
 ## Notes
 
-**In force when** PR #35 (`e2e.yml`, opened by the owner's script) merges; its own run is green (E2E passed in about 50 s). Until then [0176](0176-playwright-e2e-smoke-three-flows-run-locally.md) still describes `main`: E2E is a local run.
+**In force since 2026-11-25:** PR #35 (`e2e.yml`) merged as 1a88d14; `e2e` is a required check of the `protect-main` ruleset.
 
 ## Sources
 
-Public: PR #33; PR #17
+Public: PR #35; PR #33; PR #17
 
 Also from the owner's working notes and conversations (not published): owner conversation, 2026-11-25

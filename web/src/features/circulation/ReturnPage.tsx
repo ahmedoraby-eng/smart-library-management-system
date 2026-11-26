@@ -26,6 +26,7 @@ import { formatDate } from "../../lib/format";
 import { useLoans, useReturn } from "./api";
 import { ReturnConfirmDialog, returnErrorMessage } from "./ReturnConfirmDialog";
 import { LoanStatusBadge } from "./LoanStatusBadge";
+import { RenewButton, RenewedBadge, RenewError, useRenewAction } from "./RenewAction";
 
 const route = getRouteApi("/app/circulation/return");
 const PAGE_SIZE = 20;
@@ -34,13 +35,15 @@ const FADE_MS = 150;
 
 /**
  * Return (ux.md §4.2): the active loans are listed before any search (overdue first, then soonest due);
- * one search box narrows them; [Return] asks to confirm; the row fades out on success.
+ * one search box narrows them; [Return] asks to confirm; the row fades out on success. [Renew] (SLM-18) extends
+ * an eligible loan once.
  */
 export function ReturnPage() {
   const search = route.useSearch();
   const navigate = route.useNavigate();
   const toast = useToast();
   const giveBack = useReturn();
+  const renewal = useRenewAction();
   const [confirming, setConfirming] = useState<LoanDto | null>(null);
   const [fading, setFading] = useState<Set<string>>(new Set());
 
@@ -118,6 +121,8 @@ export function ReturnPage() {
           autoComplete="off"
         />
       </div>
+
+      <RenewError message={renewal.error} onDismiss={renewal.clearError} />
 
       {loans.isError && !data ? (
         <div className="p-5">
@@ -217,9 +222,12 @@ export function ReturnPage() {
                     </Td>
                     <Td kind="nowrap">
                       <LoanStatusBadge loan={loan} />
+                      <RenewedBadge loan={loan} />
                     </Td>
                     <Td align="right" kind="actions">
+                      <RenewButton loan={loan} pending={renewal.pendingId === loan.id} onRenew={renewal.run} />
                       <Button
+                        className="ml-1.5"
                         size="sm"
                         ref={(el) => {
                           if (el) returnButtons.current.set(loan.id, el);

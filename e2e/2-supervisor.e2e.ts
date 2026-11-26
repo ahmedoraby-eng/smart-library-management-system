@@ -59,4 +59,12 @@ test("supervisor is read-only", async ({ page, context, baseURL }) => {
   });
   expect(res.status()).toBe(403);
   expect((await res.json()).code).toBe("FORBIDDEN");
+
+  // SLM-18: Loan history shows no Renew to a Supervisor, and the API refuses a renewal
+  await page.goto("/loans?status=ACTIVE");
+  await expect(page.getByTestId("history-row").first()).toBeVisible();
+  await expect(page.getByTestId("renew-button")).toHaveCount(0);
+  const open = (await (await page.request.get("/api/loans?status=ACTIVE&size=1")).json()).items[0];
+  const renew = await page.request.post(`/api/loans/${open.id}/renew`, { headers: { origin: baseURL! } });
+  expect(renew.status()).toBe(403);
 });

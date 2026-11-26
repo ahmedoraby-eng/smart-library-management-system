@@ -17,6 +17,8 @@ export const LoanDtoSchema = z.object({
   borrowedAt: z.string(),
   dueAt: z.string(),
   returnedAt: z.string().nullable(),
+  /** SLM-18: when the loan was renewed (once at most). Absent or null = never renewed. */
+  renewedAt: z.string().nullable().optional(),
 });
 export type LoanDto = z.infer<typeof LoanDtoSchema>;
 
