@@ -269,7 +269,7 @@ function MemberRow({ member, onEdit }: { member: MemberDto; onEdit: (m: MemberDt
         <Link
           to="/members/$memberId"
           params={{ memberId: member.id }}
-          className="block font-semibold text-neutral-900 no-underline hover:underline"
+          className="tap-y block font-semibold text-neutral-900 no-underline hover:underline"
           data-testid="member-name"
         >
           {member.fullName}

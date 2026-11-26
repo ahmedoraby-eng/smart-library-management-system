@@ -58,6 +58,8 @@ test("librarian sees overdue loans in the bell and renews a loan once", async ({
 
 // D-46-1 and D-46-2 (QA on #46): the bell sits in the top-right corner without moving the page, its popover opens
 // under it, and Loan history with Renew buttons doesn't scroll sideways at 1280 px (SLM-7 AC4).
+// SLM-15: the bell now lives in the sticky top bar (next to the theme switch), so the page head is measured from the
+// bar's foot, and the bell must sit inside the bar at its right end.
 test("SLM-18 layout at 1280 px: bell in the corner, popover under it, no sideways scroll in Loan history", async ({
   page,
 }) => {
@@ -69,6 +71,7 @@ test("SLM-18 layout at 1280 px: bell in the corner, popover under it, no sideway
 
   const layout = await page.evaluate(() => {
     const main = document.querySelector("main")!.getBoundingClientRect();
+    const bar = document.querySelector('[data-testid="top-bar"]')!.getBoundingClientRect();
     const h1 = document.querySelector("main h1")!.getBoundingClientRect();
     const bell = document.querySelector('[data-testid="overdue-bell"]')!.getBoundingClientRect();
     const scrolls = document.documentElement.scrollWidth > document.documentElement.clientWidth;
@@ -76,13 +79,14 @@ test("SLM-18 layout at 1280 px: bell in the corner, popover under it, no sideway
     const clipped = Array.from(document.querySelectorAll('[data-testid="renew-button"]')).filter(
       (b) => b.getBoundingClientRect().right > card.right + 0.5,
     ).length;
-    return { mainRight: main.right, mainTop: main.top, h1Top: h1.top, bell, scrolls, clipped };
+    return { mainRight: main.right, barTop: bar.top, barBottom: bar.bottom, h1Top: h1.top, bell, scrolls, clipped };
   });
   expect(layout.scrolls, "the page scrolls sideways").toBe(false);
   expect(layout.clipped, "Renew buttons cut off at the card edge").toBe(0);
-  expect(layout.h1Top - layout.mainTop, "the page head moved down").toBeLessThanOrEqual(28);
-  expect(layout.mainRight - layout.bell.right, "the bell is not in the top-right corner").toBeLessThan(48);
-  expect(layout.bell.top - layout.mainTop).toBeLessThan(12);
+  expect(layout.h1Top - layout.barBottom, "the page head moved down").toBeLessThanOrEqual(28);
+  expect(layout.mainRight - layout.bell.right, "the bell is not in the top-right corner").toBeLessThan(80);
+  expect(layout.bell.top, "the bell is not in the top bar").toBeGreaterThanOrEqual(layout.barTop);
+  expect(layout.bell.bottom, "the bell is not in the top bar").toBeLessThanOrEqual(layout.barBottom);
 
   await page.getByTestId("overdue-bell").click();
   const pop = await page.getByTestId("overdue-popover").boundingBox();

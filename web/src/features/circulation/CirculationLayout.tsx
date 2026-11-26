@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { PlusIcon, SwapIcon } from "../../components/ui";
 import { RequirePermission } from "../../app/RequirePermission";
@@ -7,6 +7,8 @@ import { useLoans } from "./api";
 /** ux.md U2: Borrow and Return together under Circulation, two tabs. Hidden for Supervisor (no LOAN_PROCESS). */
 export function CirculationLayout() {
   const active = useLoans({ status: "ACTIVE", size: 1 });
+  // Switching tabs fades the new tab in; the header and tab bar stay put.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <RequirePermission permission="LOAN_PROCESS">
       <header className="mb-5">
@@ -29,7 +31,9 @@ export function CirculationLayout() {
           )}
         </Tab>
       </nav>
-      <Outlet />
+      <div key={pathname} className="slm-tab-panel">
+        <Outlet />
+      </div>
     </RequirePermission>
   );
 }
@@ -49,7 +53,7 @@ function Tab({
     <Link
       to={to}
       data-testid={testId}
-      className="-mb-px inline-flex items-center gap-2 border-b-2 border-transparent px-1 pb-3 font-semibold text-neutral-600 no-underline hover:text-neutral-900 aria-[current=page]:border-brand-600 aria-[current=page]:text-brand-700"
+      className="relative -mb-px inline-flex items-center gap-2 border-b-2 border-transparent px-1 pb-3 font-semibold text-neutral-600 no-underline transition-colors duration-200 ease-out after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:scale-x-0 after:bg-brand-600 after:transition-transform after:duration-250 after:ease-out hover:text-neutral-900 aria-[current=page]:text-brand-700 aria-[current=page]:after:scale-x-100"
       activeProps={{ "aria-current": "page" }}
     >
       {icon}

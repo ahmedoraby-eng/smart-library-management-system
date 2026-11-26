@@ -17,7 +17,7 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
 
   return (
     <section className="border-t border-border" data-testid="book-loans" aria-label="Loans">
-      <div className="flex items-center justify-between px-5 pt-4">
+      <div className="flex items-center justify-between px-5 pt-4 max-sm:flex-wrap max-sm:gap-x-4 max-sm:gap-y-2">
         <div role="tablist" aria-label="Loans" className="flex gap-4">
           {(["active", "history"] as const).map((t) => (
             <button
@@ -28,7 +28,7 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
               onClick={() => setTab(t)}
               data-testid={`book-loans-tab-${t}`}
               className={cn(
-                "-mb-px border-b-2 pb-2 text-sm font-semibold",
+                "-mb-px whitespace-nowrap border-b-2 pb-2 text-sm font-semibold",
                 tab === t
                   ? "border-brand-600 text-brand-700"
                   : "border-transparent text-neutral-600 hover:text-neutral-900",
@@ -41,7 +41,7 @@ export function BookLoans({ bookId, activeCount }: { bookId: string; activeCount
         <Link
           to="/loans"
           search={{ bookId, page: 1, size: 20, ...(tab === "active" ? { status: "ACTIVE" as const } : {}) }}
-          className="text-sm font-semibold text-brand-700 no-underline hover:underline"
+          className="tap-y text-sm font-semibold text-brand-700 no-underline hover:underline"
           data-testid="book-loans-all"
         >
           View in Loan history

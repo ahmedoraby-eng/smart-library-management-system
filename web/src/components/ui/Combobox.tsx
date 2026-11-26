@@ -120,7 +120,7 @@ export function Combobox<T>({
       </div>
       {hint && !expanded && <p className="mt-1.5 text-sm text-neutral-600">{hint}</p>}
       {expanded && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-pop">
+        <div className="absolute z-30 mt-1 w-full origin-top overflow-hidden rounded-lg border border-border bg-surface shadow-pop motion-safe:animate-pop-in">
           <ul id={listId} role="listbox" aria-label={label} className="max-h-96 overflow-y-auto p-1">
             {shown.map((o, i) => {
               const reason = reasonOf(o);

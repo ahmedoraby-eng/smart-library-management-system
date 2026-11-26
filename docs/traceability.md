@@ -2,20 +2,20 @@
 
 Every requirement of the assessment, traced to its Jira story, the merged pull request(s) that built it, the tests that prove it, the CI run that ran those tests, and an honest status.
 
-- **Owner:** product owner. **Filled:** 25/11/2026 against `main` at `d6de6ce`. **Re-checked:** 26/11/2026 against `main` at `a933f05` (after [#43][pr43], [#44][pr44], [#47][pr47], [#45][pr45], [#46][pr46]): every row below was checked again against that commit.
+- **Owner:** product owner. **Filled:** 25/11/2026 against `main` at `d6de6ce`. **Final refresh:** 26/11/2026 against `main` at `cc1b616` (after [#37][pr37]–[#42][pr42] and [#49][pr49]–[#52][pr52]), with the QA live regression run of the same evening: every row below was checked again against that commit.
 - **Statuses:** **Done** (built, merged and proven by a test that runs in CI, or checked live where stated) · **Partial** (part of it is missing or not yet verified; the row says what) · **Not done** (not on `main` yet) · **Descoped** (left out on purpose, with the reason). None of the rows is descoped.
 - **Terminology.** The assessment says *checked in* = borrowed and *checked out* = returned. The app uses only **Borrow Book** (`POST /api/loans/borrow`) and **Return Book** (`POST /api/loans/{id}/return`).
 - **Jira:** project `SLM`. Epics: `SLM-14` (core, the assessment minimum) and `SLM-15` (bonus items). Out of scope on purpose: payments, fees and fines, a member portal, reservations ([ADR-0029](adr/0029-out-scope-payments-fees-member-portal-reservations.md)).
 
 ## CI evidence
 
-All tests below run in CI on every pull request and on every push to `main`. Last green runs on `main` (`a933f05`):
+All tests below run in CI on every pull request and on every push to `main`. Last green runs on `main` (`cc1b616`):
 
 | Workflow | What it runs | Run on `main` |
 |---|---|---|
-| `ci` → job **hygiene** | secret scan (gitleaks), forbidden-names check | [ci #45727332744][ci] |
-| `ci` → job **ci / Build and test** | `npm run check` (typecheck, dependency rules, lint, format, build); `npm run test:coverage`: API tests on a real PostgreSQL 16 + pgvector, contract tests, web tests (Vitest + Testing Library), 90% coverage gate; production dependency audit | [ci #45727332744][ci] |
-| `e2e` | Playwright smoke in Chromium against the app built from the commit: `e2e/1-librarian.e2e.ts`, `e2e/2-supervisor.e2e.ts`, `e2e/3-admin.e2e.ts`, `e2e/4-command-palette.e2e.ts`, `e2e/4-renew-overdue.e2e.ts` | [e2e #45727332174][e2e] |
+| `ci` → job **hygiene** | secret scan (gitleaks), forbidden-names check | [ci #45886770118][ci] |
+| `ci` → job **ci / Build and test** | `npm run check` (typecheck, dependency rules, lint, format, build); `npm run test:coverage`: API tests on a real PostgreSQL 16 + pgvector, contract tests, web tests (Vitest + Testing Library), 90% coverage gate; production dependency audit | [ci #45886770118][ci] |
+| `e2e` | Playwright smoke in Chromium against the app built from the commit: `e2e/1-librarian.e2e.ts`, `e2e/2-supervisor.e2e.ts`, `e2e/3-admin.e2e.ts`, `e2e/4-command-palette.e2e.ts`, `e2e/4-renew-overdue.e2e.ts`, `e2e/5-responsive.e2e.ts` | [e2e #45886770145][e2e] |
 | `migrations gate` | a PR that changes `migrations/` needs the `migrations-applied` label | runs on PRs only |
 
 Test names below are the `it(...)` titles, shortened. API tests live in `api/test/`, UI tests in `web/src/**`, E2E in `e2e/`.
@@ -36,7 +36,19 @@ Public endpoints of https://smart-library.ahmedoraby.workers.dev, checked from t
 
 Google sign-in was also checked live by QA on 25/11 at about 18:30 Cairo time (Jira SLM-8): start and callback, forged or missing state and tampered cookies refused with no session, rate limits on start and callback, protected routes 401 without a session. The owner then signed in with a real Google account on the live site and was made Admin through Staff users.
 
-The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book; SLM-10 AC3) is **not recorded yet**. The same flows pass in the `e2e` job against the build of every commit.
+The signed-in checks on the live site are in the next section.
+
+## Live E2E regression (QA, 26/11/2026)
+
+QA ran a signed-in Playwright regression of 11 areas against https://smart-library.ahmedoraby.workers.dev (demo Librarian and Admin accounts; the Google consent screen itself is checked by hand). Result: **11 of 11 areas pass on live**.
+
+| Run (UTC) | Areas | Result |
+|---|---|---|
+| 26/11 18:57, full run | 01 sign-in, 02 roles, 03 books, 04 circulation, 05 AI, 06 ⌘K, 07 themes, 08 new UI, 09 privacy, 10 mobile and tablet, 11 reset | 9 pass; 08 failed (Books table scrolled inside its card at 1280 px) and 10 failed (sideways page scroll at 375 and 768 px) |
+| 26/11 19:27, re-run | 08, 10 | 08 pass (after [#51][pr51]); 10 failed only on the book page at 375 px |
+| 26/11 19:56, re-run | 10 | pass (after [#52][pr52]): no sideways scroll at 375 and 768 px on the dashboard, books, book page and loan history |
+
+What the full run covered on live, among others: wrong password refused with no session; Google start → 302 with PKCE S256; demo accounts protected (409); typo and ISBN search; Add with Look up (filled from Open Library after 4.4 s); duplicate ISBN 409; delete and archive rules; Borrow Book and Return Book; renewal once (+14 days, then 409; overdue 409); overdue bell; last-copy race (one 201, one 409); AI discovery (AI-ranked, daily counter 48 → 47) and More like this; privacy page; Reset demo data restores the 64 books; sign out. The same layout checks now run in CI on every commit (`e2e/5-responsive.e2e.ts`, which also covers `/signin` at 375 px).
 
 ## Part 1. The assessment, line by line
 
@@ -47,15 +59,15 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | O-3 | Minimum features | «Search: Find books by title, author, or other fields.» | SLM-2 | R-C1–C9 | **Done** |
 | O-4 | Requirements | «Complete a working product using any language, framework, or development tool (including AI tools).» | SLM-6, SLM-7 | R-G1, R-G2 | **Done** |
 | O-5 | Requirements | «Provide your source code and a brief README explaining how to run it.» | SLM-6 | R-G3, R-G4 | **Done** |
-| O-6 | Bonus | «Deploy the app and provide a URL for live testing.» | SLM-10, SLM-11 | R-X1–X3 | **Partial**: deployed and healthy; the README link and the signed-in live smoke are pending |
-| O-7 | Bonus | «Use Loom or other video software to record a demo of the app.» | SLM-11, SLM-17 | R-X4, R-X5 | **Not done**: the recording is in progress |
+| O-6 | Bonus | «Deploy the app and provide a URL for live testing.» | SLM-10, SLM-11 | R-X1–X3 | **Done** |
+| O-7 | Bonus | «Use Loom or other video software to record a demo of the app.» | SLM-11, SLM-17 | R-X4, R-X5 | **Done** |
 | O-8 | Bonus | «Add an authentication system with SSO, preferably with different user roles and permissions.» | SLM-8 | R-X6–X9 | **Done** |
 | O-9 | Bonus | «Implement any AI features you can think of.» | SLM-9, SLM-16 | R-X10 | **Done** |
 | O-10 | Bonus | «Add extra features as you see fit, to demonstrate your creativity.» | SLM-12, SLM-13, SLM-18, SLM-19, SLM-20 | R-X11–X14 | **Done** |
 | O-11 | Evaluation | «Completeness: Does the product work and cover the core features?» | SLM-1–SLM-7 | R-E1 | **Done** |
 | O-12 | Evaluation | «Creativity: Are extra features and creative ideas incorporated?» | SLM-9, SLM-12, SLM-13, SLM-16, SLM-18, SLM-19, SLM-20 | R-E2 | **Done** |
 | O-13 | Evaluation | «Product Quality: Is the product clean and organized?» | SLM-6, SLM-7, SLM-10, SLM-11 | R-E3 | **Done** |
-| O-14 | Evaluation | «Usability: Is the app intuitive» | SLM-7 | R-E4 | **Partial**: no automated accessibility or viewport check |
+| O-14 | Evaluation | «Usability: Is the app intuitive» | SLM-7, SLM-15, SLM-20 | R-E4 | **Partial**: layout and keyboard checks are automated; no automated accessibility (axe) check |
 
 ## Part 2. Derived requirements with evidence
 
@@ -68,7 +80,7 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | R-A3 | Delete books (Admin only; archive when it has history) | SLM-1 | [#2][pr2] via [#6][pr6] | `catalog.test.ts` «SLM-1 AC6 delete with an open loan → 409», «SLM-1 AC7 past loans only → archived…; never borrowed → deleted», «Supervisor reads but can't create, edit or delete; Librarian can't delete»; `DeleteBookDialog.test.tsx` (3 variants) | ci | **Done** |
 | R-A4 | Store title and author | SLM-1 | [#2][pr2] via [#6][pr6] | `catalog.test.ts` «SLM-1 AC1 create…», «SLM-1 AC2 invalid fields → 400…»; `migrations/0001_init.sql` NOT NULL + non-blank checks; `schema.test.ts` | ci | **Done** |
 | R-A5 | Other useful metadata | SLM-1 | [#2][pr2] via [#6][pr6] | `contracts/src/books.ts` (isbn, description, category, publisher, publicationYear, coverImageUrl, copies, timestamps); `catalog.test.ts` AC1; `books.cov.test.ts` | ci | **Done** |
-| R-A6 | ISBN, description, category, publisher, year, cover URL (+ ISBN lookup) | SLM-1, SLM-13 | [#2][pr2] via [#6][pr6], [#13][pr13] | `catalog.test.ts` «SLM-1 AC2 ISBN hyphens accepted and normalised», «SLM-1 AC3 duplicate ISBN…»; `BookForm.test.tsx` «rejects an ISBN with a bad checksum…», «requires an https cover URL…»; `isbn-lookup.test.ts` «AC2 maps an Open Library record», AC3 not found / timeout / upstream error; `BookFormIsbnLookup.test.tsx` «fills only empty fields and never overwrites typed text» | ci | **Done** |
+| R-A6 | ISBN, description, category, publisher, year, cover URL (+ ISBN lookup) | SLM-1, SLM-13, SLM-21 | [#2][pr2] via [#6][pr6], [#13][pr13], [#49][pr49] | `catalog.test.ts` «SLM-1 AC2 ISBN hyphens accepted and normalised», «SLM-1 AC3 duplicate ISBN…»; `BookForm.test.tsx` «rejects an ISBN with a bad checksum…», «requires an https cover URL…»; `isbn-lookup.test.ts` «AC2 maps an Open Library record», AC3 not found / timeout / upstream error; `BookFormIsbnLookup.test.tsx` «fills only empty fields and never overwrites typed text»; SLM-21: the lookup waits up to 6 s for Open Library and the browser up to 8 s (`ISBN_LOOKUP_TIMEOUT_MS` in `contracts/src/books.ts`): `isbn-lookup.test.ts` «AC3 default wait is the shared ISBN_LOOKUP_TIMEOUT_MS: a slow answer inside it still succeeds», «SLM-13 lookup cache» (a found book is served from memory the second time; not_found, timeout and unavailable are never cached; TTL expiry; oldest dropped first), `api.cov.test.tsx` «lookupIsbn waits for the API's timeout plus a margin…»; live: Look up filled from Open Library in 4.4 s (QA run 26/11) | ci, live | **Done** |
 | R-A7 | Total copies and available copies | SLM-1, SLM-4 | [#2][pr2] via [#6][pr6], [#8][pr8] | `catalog.test.ts` «SLM-1 AC1 … available = total», «derived fields: activeLoans and nextDueAt…»; `BookForm.test.tsx` «equals total when adding» | ci | **Done** |
 | R-A8 | Created and modified timestamps | SLM-1 | [#2][pr2] via [#6][pr6] | `catalog.test.ts` «SLM-1 AC1 create → 201, …, timestamps, Location»; `contracts/src/books.ts` `createdAt`, `updatedAt` | ci | **Done** |
 | R-A9 | Field validation | SLM-1, SLM-3 | [#2][pr2] via [#6][pr6], [#7][pr7] | `catalog.test.ts` «SLM-1 AC2 invalid fields → 400 VALIDATION_FAILED, one message per field, nothing saved»; `BookForm.test.tsx` «blocks submit and shows the required-field messages», «limits the publication year…», «requires at least 1 total copy»; `members.test.ts` «SLM-3 AC2 invalid input → 400…» | ci | **Done** |
@@ -122,16 +134,16 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | Req | Requirement | Jira | Merged PR(s) | Evidence | CI | Status |
 |---|---|---|---|---|---|---|
 | R-X1 | Deploy the application | SLM-10 | [#24][pr24], [#25][pr25] | every merge to `main` deploys through Cloudflare Workers Builds (`wrangler.toml`); live `GET /api/health?deep=1` → ok (25/11 14:33 UTC) | live | **Done** |
-| R-X2 | Provide a public URL | SLM-10 | [#24][pr24] | https://smart-library.ahmedoraby.workers.dev answers 200. **Gap:** the README still shows the `<LIVE_URL>` placeholder; the link is in open PR [#39][pr39] | live | **Partial** |
-| R-X3 | Verify the deployed app works | SLM-10, SLM-11 | [#24][pr24] | public live checks above pass. **Gap:** the signed-in smoke on the live URL (sign in, search, Borrow Book, Return Book), with date and result, is not recorded yet (SLM-10 AC3); the same flows pass in the `e2e` job | live, e2e | **Partial** |
-| R-X4 | Demo recording | SLM-11, SLM-17 | none merged | the captioned walkthrough is open PR [#38][pr38]; the voice-over is SLM-17 (Refinement) | — | **Not done** |
-| R-X5 | Recording URL provided | SLM-11 | none merged | README still shows `<VIDEO_URL>` | — | **Not done** |
+| R-X2 | Provide a public URL | SLM-10, SLM-11 | [#24][pr24], [#39][pr39] | https://smart-library.ahmedoraby.workers.dev answers 200; README «Live demo» links to it | live | **Done** |
+| R-X3 | Verify the deployed app works | SLM-10, SLM-11 | [#24][pr24], [#51][pr51], [#52][pr52] | public live checks pass; QA live regression on 26/11: **11 of 11 areas pass** (sign-in, search, Borrow Book, Return Book and the rest; see «Live E2E regression» above) | live | **Done** |
+| R-X4 | Demo recording | SLM-11, SLM-17 | [#38][pr38] | the 6:14 demo was recorded on the live site with the pipeline in `e2e/demo-video/` (`npm run demo:video:live`, narration per scene) and published: [demo video](https://drive.google.com/file/d/1jXu0H11htHGphXL9EOXlRxrW9IgLX8IK/view?usp=sharing); a 2:56 ad cut is extra: [ad](https://drive.google.com/file/d/1K8ku46NTX82Uj5hfpc-z78CAYsPbVe27/view?usp=sharing) | live | **Done** |
+| R-X5 | Recording URL provided | SLM-11 | this PR | README «Demo video» links to the published demo (and the ad); both links open without signing in | — | **Done** |
 | R-X6 | Authentication | SLM-8, SLM-6 | [#1][pr1], [#12][pr12], [#15][pr15] | `skeleton.test.ts` «SL-08 demo accounts» (HttpOnly cookie, same 401 for wrong password and unknown email, 6th attempt → 429, logout), «no header or flag signs anyone in (no bypass)», «writes from another origin are refused (CSRF)»; `rbac-matrix.test.ts` «session-cookie-flags: missing, malformed, tampered, expired, foreign-secret or wrong-alg cookies → 401»; `e2e/*` sign in as each role | ci, e2e | **Done** |
 | R-X7 | SSO (Google) | SLM-8 | [#12][pr12], [#15][pr15], [#43][pr43], [#44][pr44] | `google-auth.test.ts` (OIDC with PKCE S256, state, nonce, ID-token verification with a local key pair, unverified email refused, open-redirect guard, demo emails refused, `sub` binding, rate limits); `SignInPage.test.tsx` «shows Google + divider when configured…». **Live:** production Google client merged in [#43][pr43]; live checks above and QA on the live site passed; a real Google sign-in on the live site worked (25/11). the public privacy page for the Google consent screen is live (`GET /privacy` → 200; `router.cov.test.tsx` «/privacy is public: no session needed, outside the shell, and linked from the sign-in footer (SLM-8)», «a direct visit to /privacy stays there without a session») | ci, live | **Done** |
 | R-X8 | Different roles and permissions | SLM-8 | [#1][pr1], [#12][pr12], [#15][pr15] | Admin, Librarian, Supervisor ([ADR-0172](adr/0172-rbac-matrix-test-covers-every-role-every.md)); `rbac-matrix.test.ts` «every registered route has a row, and every row a route», one case per role × route; `staff-users.test.ts` role change, disable, last Admin, demo rows protected; `e2e/2-supervisor.e2e.ts` «supervisor is read-only» | ci, e2e | **Done** |
 | R-X9 | Authorisation enforced by the API (403 on a direct call) | SLM-8 | [#12][pr12], [#15][pr15] | `rbac-matrix.test.ts` role × route cases, «a validly signed cookie that claims role=ADMIN for a Supervisor is still a Supervisor»; `skeleton.test.ts` «role and permissions come from the database on every request», «a disabled staff user gets 403 USER_DISABLED»; 403 cases in `circulation.test.ts`, `members.test.ts`, `catalog.test.ts`, `staff-users.test.ts`, `isbn-lookup.test.ts` | ci | **Done** |
 | R-X10 | An AI feature that helps the real library workflow | SLM-9, SLM-16 | [#4][pr4] via [#6][pr6], [#19][pr19], [#20][pr20], [#21][pr21] | `discovery.test.ts` «SLM-9 AC1 up to 5 real catalog books…», «SLM-9 AC2 a book id the model invented … is dropped», «SLM-9 AC3 availability always comes from the database», «SLM-9 AC5 provider error / timeout / invalid JSON → fallback», «prompt injection in the request still returns only catalog books», AC6 limits, AC8 logging; `hybrid-retrieval.test.ts` (chunking, RRF, pgvector, fallbacks); `ai-cost.test.ts` (cache, quota, daily cap, tiers); `DiscoveryPage.test.tsx`; [docs/ai.md](ai.md); live `vector: hnsw` | ci, live | **Done** |
-| R-X11 | Meaningful extra features | SLM-12, SLM-13, SLM-8 | [#3][pr3] via [#6][pr6], [#13][pr13], [#12][pr12], [#18][pr18] | dashboard: `dashboard.test.ts` SLM-12 AC1–AC4, `DashboardPage.test.tsx`; due-soon/overdue badges (2 days, `web/src/lib/loanStatus.ts`): `loanStatus.test.ts`; ISBN lookup: `isbn-lookup.test.ts`; staff users screen: `StaffUsersPage.test.tsx`; demo reset: `demo-reset.test.ts`, `e2e/3-admin.e2e.ts`; theme toggle: `ThemeToggle.test.tsx`. The three later extras have their own rows: R-X12 to R-X14 | ci, e2e | **Done** |
+| R-X11 | Meaningful extra features | SLM-12, SLM-13, SLM-8, SLM-15, SLM-21 | [#3][pr3] via [#6][pr6], [#13][pr13], [#12][pr12], [#18][pr18], [#49][pr49], [#50][pr50] | dashboard: `dashboard.test.ts` SLM-12 AC1–AC4, `DashboardPage.test.tsx`; due-soon/overdue badges (2 days, `web/src/lib/loanStatus.ts`): `loanStatus.test.ts`; ISBN lookup: `isbn-lookup.test.ts`; staff users screen: `StaffUsersPage.test.tsx`; demo reset: `demo-reset.test.ts`, `e2e/3-admin.e2e.ts`; theme toggle: `ThemeToggle.test.tsx`; ISBN lookup cache (SLM-21): `isbn-lookup.test.ts` «SLM-13 lookup cache»; loading screen, page transitions and top bar (SLM-15): `LoadingScreen.test.tsx`, `splash.test.ts`, `pageTransition.test.ts`, `TopBar.test.tsx`, `AppLayout.cov.test.tsx` «AppLayout: motion», all respecting reduced motion. The three later extras have their own rows: R-X12 to R-X14 | ci, e2e | **Done** |
 | R-X12 | «More like this»: up to 4 similar catalogue books on the book page, from stored vectors (no model call), with availability and Borrow | SLM-19 | [#47][pr47] | `similar-books.test.ts` «lists the closest other books best first, at most 4, with fresh availability; never the book itself», «archived books are never suggested…», «a book that isn't indexed yet gets an empty list…», «with vector search off (no embedder) the list is empty», «makes no model call: nothing is embedded or ranked, and no AI usage is counted», «every staff role may read it (BOOK_READ); no session → 401…», «demo seed: H Is for Hawk's two closest are A Grief Observed and Crying in H Mart»; `SimilarBooks.test.tsx` «More like this (SLM-19)» (a Supervisor gets no Borrow; hidden when there are no neighbours or the request fails); `e2e/1-librarian.e2e.ts` «librarian sees «More like this» on a book page and opens a suggestion (SLM-19)»; `rbac-matrix.test.ts` (new route) | ci, e2e | **Done** |
 | R-X13 | Command palette (⌘K / Ctrl K): one search for books and members, plus actions filtered by role | SLM-20 | [#45][pr45] | `CommandPalette.test.tsx` «⌘K opens it with focus in the search box; Esc closes it and gives focus back», «Ctrl K opens it too…», «Librarian: every action, including the write ones…», «Supervisor: no write actions and no 'Borrow for'…», «Admin also sees Staff users», «searches books and members as you type (debounced)…», «↑↓ move the highlight (aria-activedescendant, wrapping)…», «'Borrow for <member>' opens the Borrow page with that member already picked», «D-45-1 Enter right after retyping never opens the previous query's hit»; `e2e/4-command-palette.e2e.ts` «librarian: ⌘K → member → Borrow for → Borrow page pre-filled; ⌘K → overdue → Loan history filtered» | ci, e2e | **Done** |
 | R-X14 | Loan renewal (once, by the loan period from the current due date; refused when overdue or already renewed) and an overdue bell in the header | SLM-18 | [#46][pr46] | `loan-renewal.test.ts` «SLM-18 happy renew → 200, due date + LOAN_DAYS from the current due date…, stock unchanged», «overdue → 409 LOAN_OVERDUE», «already renewed → 409 LOAN_ALREADY_RENEWED…», «returned → 409 LOAN_ALREADY_RETURNED», «RBAC: Supervisor → 403…», «concurrency: 10 parallel renewals of one loan → exactly one 200…», «the database refuses a renewal marker without who renewed it… (loans_renewed_ck)»; `RenewAction.cov.test.tsx` (Return list and Loan history); `OverdueBell.cov.test.tsx` «shows the overdue count as a badge…», «keyboard: focus goes to the first item, arrows move, Esc closes…», «a role without LOAN_READ sees no bell»; `e2e/4-renew-overdue.e2e.ts` «librarian sees overdue loans in the bell and renews a loan once», «SLM-18 layout at 1280 px… no sideways scroll in Loan history» | ci, e2e | **Done** |
@@ -143,27 +155,24 @@ The signed-in smoke on the live site (sign in, search, Borrow Book, Return Book;
 | R-E1 | Completeness: works and covers every core feature | SLM-1–SLM-7 | rows A, B, C, G | every A, B, C and G row is Done; the three E2E flows pass on every commit | ci, e2e | **Done** |
 | R-E2 | Creativity | SLM-9, SLM-12, SLM-13, SLM-16 | rows R-X10, R-X11 | hybrid AI discovery with cost tiers and fallback, dashboard, badges, ISBN lookup | ci | **Done** |
 | R-E3 | Product quality: clean and organised | SLM-6, SLM-7, SLM-10, SLM-11 | [#1][pr1], [#26][pr26], [#27][pr27], [#29][pr29], [#31][pr31], [#33][pr33] | layered modular monolith with enforced dependency rules (`.dependency-cruiser.cjs`, `npm run lint:deps`); 90% coverage gate; lint and format in CI; API tests on real PostgreSQL; [docs/architecture.md](architecture.md); one ADR per decision ([decisions.md](decisions.md)) | ci | **Done** |
-| R-E4 | Usability: intuitive | SLM-7, SLM-20 | [#11][pr11], [#18][pr18], [#45][pr45] | shared states and guards: `RequirePermission.test.tsx`, `Circulation.test.tsx` «SLM-7 S1/S2 the active tab carries aria-current…», «Circulation is hidden for Supervisor», `MembersPages.test.tsx` «arrow keys move between them», `MemberModal.test.tsx` «opens with the first field focused», «…focusing the first error», empty and error states in `BooksPage.test.tsx`, `DashboardPage.test.tsx`; keyboard-first navigation in `CommandPalette.test.tsx`, and `e2e/4-renew-overdue.e2e.ts` checks no sideways scroll in Loan history at 1280 px. **Gap:** SLM-7 AC4 (no horizontal scroll at 1280 and 1024 px) and AC5 (keyboard and focus across every form and dialog) rely on manual UI reviews; no automated accessibility (axe) check, and no viewport check across every screen, runs in CI | ci | **Partial** |
+| R-E4 | Usability: intuitive | SLM-7, SLM-15, SLM-20 | [#11][pr11], [#18][pr18], [#45][pr45], [#50][pr50], [#51][pr51], [#52][pr52] | shared states and guards: `RequirePermission.test.tsx`, `Circulation.test.tsx` «SLM-7 S1/S2 the active tab carries aria-current…», «Circulation is hidden for Supervisor», `MembersPages.test.tsx` «arrow keys move between them», `MemberModal.test.tsx` «opens with the first field focused», «…focusing the first error», empty and error states in `BooksPage.test.tsx`, `DashboardPage.test.tsx`; keyboard-first navigation in `CommandPalette.test.tsx`; layout: `e2e/5-responsive.e2e.ts` «no sideways page scroll at 375 and 768 px; the Books table fits at 1280 px» (sign-in, dashboard, books, book page, loan history, members), `e2e/4-renew-overdue.e2e.ts` at 1280 px; reduced motion: `splash.test.ts`, `useCountUp.test.ts`, `pageTransition.test.ts`; live: QA areas 08 and 10 pass. **Gap:** no automated accessibility (axe) check runs in CI, and 1024 px is not checked on its own | ci, e2e, live | **Partial** |
 | R-E5 | A traceability matrix from every requirement to implementation and test evidence (ours) | SLM-11 | this document | this file; [ADR-0049](adr/0049-requirements-traceability-matrix-evidence-every-row.md). Note: the generated-evidence script of [ADR-0171](adr/0171-tests-tagged-story-ac-requirement-id.md) is not built; tests carry story and AC ids in their titles, and this matrix was filled by hand from them | — | **Done** |
 
 ## Summary
 
 | | Done | Partial | Not done | Descoped | Total |
 |---|---|---|---|---|---|
-| Part 1 (assessment lines) | 11 | 2 (O-6, O-14) | 1 (O-7) | 0 | 14 |
-| Part 2 (derived rows) | 52 | 3 (R-X2, R-X3, R-E4) | 2 (R-X4, R-X5) | 0 | 57 |
+| Part 1 (assessment lines) | 13 | 1 (O-14) | 0 | 0 | 14 |
+| Part 2 (derived rows) | 56 | 1 (R-E4) | 0 | 0 | 57 |
 
-Every minimum feature (O-1 to O-5) is Done. What is left is in the bonus items and one evaluation row:
+Every minimum feature (O-1 to O-5) and every bonus item (O-6 to O-10) is Done; the deployed app passes the live regression and the demo is published. What is left:
 
-1. **Live URL in the README** (R-X2): open PR [#39][pr39].
-2. **Signed-in smoke on the live URL** (R-X3, SLM-10 AC3): sign in, search, Borrow Book, Return Book on the live site, then record the date and result here.
-3. **Demo recording and its URL** (R-X4, R-X5): open PR [#38][pr38] and SLM-17.
-4. **Accessibility and viewport checks** (R-E4): an automated axe pass and a viewport pass over every screen, or a recorded manual pass, for SLM-7 AC4 and AC5.
+1. **Accessibility check** (R-E4): an automated axe pass in CI, or a recorded manual pass, for SLM-7 AC5.
 
 This file is updated when any of these lands.
 
-[ci]: https://github.com/ahmedoraby-eng/smart-library-management-system/actions/runs/45727332744
-[e2e]: https://github.com/ahmedoraby-eng/smart-library-management-system/actions/runs/45727332174
+[ci]: https://github.com/ahmedoraby-eng/smart-library-management-system/actions/runs/45886770118
+[e2e]: https://github.com/ahmedoraby-eng/smart-library-management-system/actions/runs/45886770145
 [pr1]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/1
 [pr2]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/2
 [pr3]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/3
@@ -200,3 +209,11 @@ This file is updated when any of these lands.
 [pr45]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/45
 [pr46]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/46
 [pr47]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/47
+[pr37]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/37
+[pr40]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/40
+[pr41]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/41
+[pr42]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/42
+[pr49]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/49
+[pr50]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/50
+[pr51]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/51
+[pr52]: https://github.com/ahmedoraby-eng/smart-library-management-system/pull/52

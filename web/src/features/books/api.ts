@@ -7,6 +7,7 @@ import type {
   Page,
   SimilarBooksResponse,
 } from "@slm/contracts";
+import { ISBN_LOOKUP_CLIENT_WAIT_MS } from "@slm/contracts";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, toQuery } from "../../lib/apiClient";
 
@@ -68,7 +69,9 @@ export function useDeleteBook() {
   });
 }
 
-/** SLM-13: suggestions from Open Library for the book form. Not cached: each click asks again. */
+/** SLM-13: suggestions from Open Library for the book form. Waits a little longer than the API does. */
 export function lookupIsbn(isbn: string) {
-  return api<IsbnLookupResult>(`/books/isbn-lookup${toQuery({ isbn })}`);
+  return api<IsbnLookupResult>(`/books/isbn-lookup${toQuery({ isbn })}`, {
+    signal: AbortSignal.timeout(ISBN_LOOKUP_CLIENT_WAIT_MS),
+  });
 }

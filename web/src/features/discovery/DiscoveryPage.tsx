@@ -377,7 +377,7 @@ function Results({
         </span>
       </div>
       <Card>
-        <ol>
+        <ol className="slm-stagger">
           {data.items.map((item, i) => (
             <ResultRow
               key={item.book.id}

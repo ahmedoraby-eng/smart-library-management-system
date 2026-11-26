@@ -15,7 +15,10 @@ export function EmptyState({
   testId?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-14 text-center" data-testid={testId}>
+    <div
+      className="flex flex-col items-center gap-2 px-6 py-14 text-center motion-safe:animate-fade-up"
+      data-testid={testId}
+    >
       {icon && <div className="text-neutral-400">{icon}</div>}
       <h3 className="text-md font-semibold">{title}</h3>
       {text && <p className="max-w-md text-base text-neutral-600">{text}</p>}

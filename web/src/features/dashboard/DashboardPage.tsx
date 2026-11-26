@@ -33,9 +33,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../../lib/apiClient";
 import { reindexBatch, useAiUsageToday, useDashboard } from "./api";
 import { availabilitySegments, dismissNotice, isNoticeDismissed } from "./model";
+import { useCountUp } from "../../lib/useCountUp";
 
 /** Card-header links: brand-700, semibold. */
-const cardLink = "text-base font-semibold text-brand-700";
+const cardLink = "link-draw text-base font-semibold text-brand-700 no-underline";
 
 type Kpis = DashboardSummary["kpis"];
 const today = () =>
@@ -52,7 +53,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="page-head mb-6 flex items-start justify-between gap-4">
+      <header className="page-head mb-6 flex items-start justify-between gap-4 max-sm:flex-wrap">
         <div>
           <h1 className="font-book text-title plain:tracking-tight">Dashboard</h1>
           <p className="mt-1 text-neutral-600" data-testid="today">
@@ -115,9 +116,9 @@ export function DashboardPage() {
       ) : !data ? (
         <DashboardSkeleton />
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="slm-stagger flex flex-col gap-4">
           <KpiCards k={data.kpis} />
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="grid items-start gap-4 max-xl:grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_22rem]">
             <RecentBorrowings rows={data.recentBorrowings} canBorrow={can("LOAN_PROCESS")} />
             <div className="flex flex-col gap-4">
               <PopularBooks books={data.popularBooks} />
@@ -273,7 +274,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="border-border px-5.5 pt-4 pb-4.5 rr:max-xl:even:border-l rr:max-xl:[&:nth-child(n+3)]:border-t rr:xl:[&:not(:first-child)]:border-l plain:rounded-xl plain:border plain:bg-surface plain:p-5 plain:shadow-card"
+      className="border-border px-5.5 pt-4 pb-4.5 transition-colors duration-200 hover:bg-neutral-25 rr:max-xl:even:border-l rr:max-xl:[&:nth-child(n+3)]:border-t rr:xl:[&:not(:first-child)]:border-l plain:rounded-xl plain:border plain:bg-surface plain:p-5 plain:shadow-card"
       data-testid={testId}
     >
       <div className="flex items-center gap-2 text-neutral-600">
@@ -285,11 +286,19 @@ function KpiCard({
   );
 }
 
+/** A key figure that counts up when the dashboard arrives (still under reduced motion). */
+function CountUp({ value, testId }: { value: number; testId: string }) {
+  const shown = useCountUp(value);
+  return (
+    <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid={testId}>
+      {shown.toLocaleString("en-GB")}
+    </span>
+  );
+}
+
 const KpiValue = ({ value, unit, testId }: { value: number; unit?: string; testId: string }) => (
   <p className="mt-3 flex items-baseline gap-2">
-    <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid={testId}>
-      {value.toLocaleString("en-GB")}
-    </span>
+    <CountUp value={value} testId={testId} />
     {unit && <span className="text-md text-neutral-600">{unit}</span>}
   </p>
 );
@@ -299,7 +308,7 @@ function KpiCards({ k }: { k: Kpis }) {
   return (
     <section
       aria-label="Key figures"
-      className="grid grid-cols-2 xl:grid-cols-4 rr:rounded-xl rr:border rr:border-border rr:bg-surface rr:shadow-card plain:gap-4"
+      className="slm-stagger grid grid-cols-2 xl:grid-cols-4 rr:rounded-xl rr:border rr:border-border rr:bg-surface rr:shadow-card plain:gap-4"
     >
       <KpiCard icon={<BookIcon size={16} />} label="Catalog" testId="kpi-catalog">
         <KpiValue value={k.totalTitles} unit={k.totalTitles === 1 ? "title" : "titles"} testId="kpi-titles" />
@@ -313,9 +322,7 @@ function KpiCards({ k }: { k: Kpis }) {
 
       <KpiCard icon={<BookIcon size={16} />} label="Available copies" testId="kpi-available">
         <p className="mt-3 flex items-baseline gap-2">
-          <span className="font-book text-kpi tracking-[-0.02em] tabular-nums" data-testid="kpi-available-copies">
-            {k.availableCopies.toLocaleString("en-GB")}
-          </span>
+          <CountUp value={k.availableCopies} testId="kpi-available-copies" />
           <span className="text-md text-neutral-600">of {k.totalCopies.toLocaleString("en-GB")}</span>
         </p>
         <AvailabilityBar seg={seg} />
@@ -371,12 +378,15 @@ function AvailabilityBar({ seg }: { seg: ReturnType<typeof availabilitySegments>
       <div
         role="img"
         aria-label={`${seg.available} available, ${seg.onLoan} on loan, ${seg.overdue} overdue, of ${seg.total} copies`}
-        className="mt-3.5 flex h-2 overflow-hidden rounded-full bg-neutral-100"
+        className="mt-3.5 h-2 overflow-hidden rounded-full bg-neutral-100"
         data-testid="availability-bar"
       >
-        {items.map((i) => (
-          <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
-        ))}
+        {/* The filled part sweeps in from the left once the figures arrive. */}
+        <div className="flex h-full origin-left motion-safe:animate-grow-x">
+          {items.map((i) => (
+            <div key={i.key} className={i.dot} style={{ width: pct(i.n) }} data-segment={i.key} />
+          ))}
+        </div>
       </div>
       <ul className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 whitespace-nowrap text-xs text-neutral-600">
         {items.map((i) => (
@@ -438,7 +448,7 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
                   <Link
                     to="/books/$bookId"
                     params={{ bookId: l.book.id }}
-                    className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                    className="tap-y font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                   >
                     {l.book.title}
                   </Link>
@@ -480,11 +490,11 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
           No loans in the last 30 days.
         </p>
       ) : (
-        <ol>
+        <ol className="slm-stagger">
           {books.map((b, i) => (
             <li
               key={b.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex items-center gap-3 border-b border-border px-5 py-3 transition-colors duration-200 last:border-b-0 hover:bg-neutral-25"
               data-testid="popular-row"
             >
               <span className="w-5 text-right font-book text-[20px] leading-6 text-brass-500 tabular-nums book-italic plain:w-3 plain:text-left plain:text-sm plain:font-normal plain:text-neutral-600">
@@ -494,7 +504,7 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
                 <Link
                   to="/books/$bookId"
                   params={{ bookId: b.id }}
-                  className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                  className="tap-y block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                 >
                   {b.title}
                 </Link>
@@ -527,11 +537,11 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
           No books yet.
         </p>
       ) : (
-        <ul>
+        <ul className="slm-stagger">
           {books.map((b) => (
             <li
               key={b.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex items-center gap-3 border-b border-border px-5 py-3 transition-colors duration-200 last:border-b-0 hover:bg-neutral-25"
               data-testid="added-row"
             >
               <BookCover title={b.title} url={b.coverImageUrl} />
@@ -539,7 +549,7 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
                 <Link
                   to="/books/$bookId"
                   params={{ bookId: b.id }}
-                  className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                  className="tap-y block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                 >
                   {b.title}
                 </Link>

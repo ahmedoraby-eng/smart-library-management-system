@@ -5,7 +5,9 @@ import { ChevronDownIcon, ChevronUpIcon } from "./icons";
 /**
  * Cell kinds (Haya pass 1, M1/M2): numbers, dates, badges and actions never wrap; the actions column
  * shrinks to its content; long secondary text truncates to one line. Set them per column so every
- * table gets the same rule. The wrapper's `overflow-x-auto` is only a safety net.
+ * table gets the same rule. The wrapper's `overflow-x-auto` is only a safety net;
+ * it is `relative` so absolutely placed bits inside (e.g. the `sr-only` Actions header) stay in it and never widen
+ * the page.
  */
 export type CellKind = "text" | "nowrap" | "num" | "actions" | "truncate";
 const kindClass: Record<CellKind, string> = {
@@ -18,8 +20,8 @@ const kindClass: Record<CellKind, string> = {
 
 export function Table({ className, children, ...rest }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto">
-      <table className={cn("w-full border-collapse text-left text-base", className)} {...rest}>
+    <div className="relative overflow-x-auto">
+      <table className={cn("slm-table w-full border-collapse text-left text-base", className)} {...rest}>
         {children}
       </table>
     </div>
@@ -77,7 +79,7 @@ export function SortableTh({
         type="button"
         onClick={() => onSort(dir === "ascending" ? `-${sortKey}` : sortKey)}
         className={cn(
-          "-mx-1 inline-flex items-center gap-1 rounded-sm px-1 [font-weight:inherit] [text-transform:inherit] hover:text-neutral-900",
+          "tap-y -mx-1 inline-flex items-center gap-1 rounded-sm px-1 [font-weight:inherit] [text-transform:inherit] hover:text-neutral-900",
           dir !== "none" && "text-neutral-900",
         )}
         data-testid={`sort-${sortKey}`}
@@ -96,7 +98,15 @@ export function SortableTh({
 }
 
 export function Tr({ className, ...rest }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-border last:border-b-0 hover:bg-neutral-25", className)} {...rest} />;
+  return (
+    <tr
+      className={cn(
+        "group/row border-b border-border transition-[background-color,box-shadow] duration-200 ease-out last:border-b-0 hover:bg-neutral-25 hover:shadow-[inset_3px_0_0_var(--color-brass-500)] plain:hover:shadow-[inset_3px_0_0_var(--color-brand-500)]",
+        className,
+      )}
+      {...rest}
+    />
+  );
 }
 
 export function Td({

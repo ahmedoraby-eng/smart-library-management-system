@@ -1,3 +1,4 @@
+import { ISBN_LOOKUP_TIMEOUT_MS } from "@slm/contracts";
 import type { IsbnLookup, IsbnLookupBook, IsbnLookupResult } from "../domain/IsbnLookup";
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
@@ -28,14 +29,48 @@ export function mapOpenLibrary(d: OpenLibraryData): IsbnLookupBook {
   };
 }
 
+/**
+ * Small in-memory cache of successful lookups (SLM-13). It lives in one Worker isolate, so it
+ * is only a shortcut for repeated clicks: a miss just asks Open Library again. Only found books
+ * are stored, never "timeout" or "unavailable".
+ */
+export class IsbnLookupCache {
+  private readonly entries = new Map<string, { book: IsbnLookupBook; expires: number }>();
+  constructor(
+    private readonly maxEntries = 200,
+    private readonly ttlMs = 60 * 60 * 1000,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  get(isbn: string): IsbnLookupBook | null {
+    const e = this.entries.get(isbn);
+    if (!e) return null;
+    if (e.expires <= this.now()) {
+      this.entries.delete(isbn);
+      return null;
+    }
+    return e.book;
+  }
+
+  set(isbn: string, book: IsbnLookupBook): void {
+    this.entries.delete(isbn);
+    // Map keeps insertion order: the first key is the oldest entry.
+    if (this.entries.size >= this.maxEntries) this.entries.delete(this.entries.keys().next().value!);
+    this.entries.set(isbn, { book, expires: this.now() + this.ttlMs });
+  }
+}
+
 /** Open Library adapter. `fetchFn` is injected so tests never reach the live service. */
 export class OpenLibraryIsbnLookup implements IsbnLookup {
   constructor(
     private readonly fetchFn: FetchLike = (url, init) => fetch(url, init),
-    private readonly timeoutMs = 3000,
+    private readonly timeoutMs = ISBN_LOOKUP_TIMEOUT_MS,
+    private readonly cache?: IsbnLookupCache,
   ) {}
 
   async lookup(isbn: string): Promise<IsbnLookupResult> {
+    const cached = this.cache?.get(isbn);
+    if (cached) return { found: true, book: cached };
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), this.timeoutMs);
     try {
@@ -49,9 +84,9 @@ export class OpenLibraryIsbnLookup implements IsbnLookup {
       const data = json?.[`ISBN:${isbn}`];
       if (!data || typeof data !== "object") return { found: false, reason: "not_found" };
       const book = mapOpenLibrary(data);
-      return Object.values(book).every((v) => v === null)
-        ? { found: false, reason: "not_found" }
-        : { found: true, book };
+      if (Object.values(book).every((v) => v === null)) return { found: false, reason: "not_found" };
+      this.cache?.set(isbn, book);
+      return { found: true, book };
     } catch (e) {
       return {
         found: false,

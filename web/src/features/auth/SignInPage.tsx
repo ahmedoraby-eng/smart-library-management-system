@@ -3,10 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button, EyeIcon, EyeOffIcon, GoogleMark, InlineAlert, Input } from "../../components/ui";
+import { BookShelf } from "../../components/BookShelf";
 import { LogoMark } from "../../components/LogoMark";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import { ApiError, api } from "../../lib/apiClient";
 import { useAuthProviders } from "./providers";
+import { splashReady } from "../../lib/splash";
 import { meQueryKey, safeNext, useMe } from "./session";
 
 const route = getRouteApi("/signin");
@@ -19,24 +21,6 @@ const GOOGLE_NOTICES: Record<string, string> = {
 };
 
 const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-
-/** Decorative shelf on the sign-in plate: [width, height, colour] of each spine (Reading Room). */
-const SHELF: Array<[number, number, string]> = [
-  [26, 150, "#2f5a4c"],
-  [34, 182, "#8b6a2c"],
-  [22, 140, "#6a3b4f"],
-  [30, 196, "#3a4668"],
-  [24, 160, "#7c3f2f"],
-  [38, 174, "#4c5a63"],
-  [20, 130, "#2f5a4c"],
-  [28, 188, "#a07a3a"],
-  [34, 150, "#5a3542"],
-  [24, 170, "#2c3a58"],
-  [30, 200, "#6d4a22"],
-  [22, 144, "#3f5d50"],
-  [36, 178, "#7c3f2f"],
-  [26, 160, "#4c5a63"],
-];
 
 /** Left half at ≥ 1024 px in Reading Room: the library plate with a quote and a shelf. Hidden in plain. */
 function SignInPlate() {
@@ -51,23 +35,13 @@ function SignInPlate() {
           Smart <i className="text-brass-200">Library</i>
         </span>
       </div>
-      <blockquote className="mt-12 max-w-115 font-book text-[30px] leading-10 font-normal text-[#f6efe0] book-italic">
+      <blockquote className="mt-12 max-w-115 font-book text-[30px] leading-10 font-normal text-[#f6efe0] book-italic motion-safe:animate-[slm-fade-up_700ms_var(--ease-out)_250ms_backwards]">
         “Every book its reader. Every reader their book.”
         <cite className="mt-3.5 block font-sans eyebrow not-italic text-brass-200">
           After S. R. Ranganathan · Five laws of library science
         </cite>
       </blockquote>
-      <div className="mt-auto flex h-52.5 items-end gap-0.75" aria-hidden="true">
-        {SHELF.map(([w, h, c], i) => (
-          <span
-            key={i}
-            className="relative block rounded-t-[1px] shadow-[inset_2px_0_0_rgb(0_0_0/.2)]"
-            style={{ width: w, height: h, background: c }}
-          >
-            <span className="absolute top-3.5 right-0.75 left-0.75 h-px bg-[rgb(240_220_170/.5)] shadow-[0_3px_0_rgb(240_220_170/.3)]" />
-          </span>
-        ))}
-      </div>
+      <BookShelf className="mt-auto h-52.5" />
       <div className="-mx-16 h-1.5 bg-[#0f241c]" aria-hidden="true" />
     </section>
   );
@@ -98,6 +72,8 @@ export function SignInPage() {
   const emailRef = useRef<HTMLInputElement>(null);
 
   const target = safeNext(search.next) ?? "/dashboard";
+
+  useEffect(() => splashReady(), []);
 
   // Already signed in → straight to the app.
   useEffect(() => {
@@ -168,7 +144,7 @@ export function SignInPage() {
           <p className="mt-1 hidden text-base text-neutral-600 plain:block">Staff sign-in</p>
         </div>
 
-        <div className="w-full max-w-100">
+        <div className="w-full max-w-100 motion-safe:animate-[slm-fade-up_450ms_var(--ease-out)_120ms_backwards]">
           {search.expired && (
             <InlineAlert variant="info" className="mb-3" testId="signin-expired">
               Your session ended. Sign in again to continue.
@@ -316,7 +292,7 @@ export function SignInPage() {
             />
           </div>
           <footer className="mt-6 text-center text-sm text-neutral-600">
-            <Link to="/privacy" className="underline underline-offset-2" data-testid="signin-privacy">
+            <Link to="/privacy" className="tap-y underline underline-offset-2" data-testid="signin-privacy">
               Privacy policy
             </Link>
           </footer>

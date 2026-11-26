@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { BookDto, BookInput } from "@slm/contracts";
+import { type BookDto, type BookInput, ISBN_LOOKUP_CLIENT_WAIT_MS, ISBN_LOOKUP_TIMEOUT_MS } from "@slm/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -126,5 +126,15 @@ describe("useDeleteBook and lookupIsbn", () => {
     const f = stub({ found: false });
     await expect(lookupIsbn("9780132350884")).resolves.toEqual({ found: false });
     expect(f.mock.calls[0]![0]).toBe("/api/books/isbn-lookup?isbn=9780132350884");
+  });
+
+  it("lookupIsbn waits for the API's timeout plus a margin before giving up (SLM-13)", async () => {
+    const f = stub({ found: false });
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    await lookupIsbn("9780132350884");
+    expect(ISBN_LOOKUP_CLIENT_WAIT_MS).toBeGreaterThan(ISBN_LOOKUP_TIMEOUT_MS);
+    expect(timeout).toHaveBeenCalledWith(ISBN_LOOKUP_CLIENT_WAIT_MS);
+    expect(f.mock.calls[0]![1]!.signal).toBeInstanceOf(AbortSignal);
+    timeout.mockRestore();
   });
 });
