@@ -128,13 +128,15 @@ function finish(work: string, googleClip: string | undefined): void {
   if (!assemble) return log("swiftc not available: kept the .webm only");
   const final = join(outDir, "smart-library-demo-v3.mp4");
   // Ahmed's silent Google clip, in two parts (google-clip.swift output, emails blurred): part 2 covers scene 2 from
-  // its row 2 (the Google sign-in) to the end; part 3 covers all of scene 3. Row times come from the voice cues.
+  // its row 2 (the Google sign-in) to the end; part 3 covers scene 3 up to its row 4. Row times come from the voice cues.
   const part = (n: number) => arg(`--google-${n}`);
   const c2 = cues["2"] ?? {};
   const from2 = c2.r2 ?? (10 / DEFAULT_S[1]!) * clips[1]!;
+  const to3 = (cues["3"] ?? {}).r4 ?? (16 / DEFAULT_S[2]!) * clips[2]!;
   const insert = [
     ...(part(2) ? ["--insert", `2:${part(2)}`, "--line-at", String(from2)] : []),
-    ...(part(3) ? ["--insert", `3:${part(3)}`, "--line-at", "0"] : []),
+    // part 3 runs to row 4; the 403 after it is filmed live with the demo librarian (same page, no Google account)
+    ...(part(3) ? ["--insert", `3:${part(3)}`, "--line-at", "0", "--line-end", String(to3)] : []),
     ...(googleClip && !part(2) ? ["--insert", `2:${googleClip}`, "--line-at", String(from2)] : []),
   ];
   // A recording padded into a bigger video (an older run): only its top-left WxH is the page.
