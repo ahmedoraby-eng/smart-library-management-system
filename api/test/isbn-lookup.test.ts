@@ -1,5 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { mapOpenLibrary, OpenLibraryIsbnLookup } from "../src/catalog/infrastructure/OpenLibraryIsbnLookup";
+import { ISBN_LOOKUP_TIMEOUT_MS } from "@slm/contracts";
+import {
+  IsbnLookupCache,
+  mapOpenLibrary,
+  OpenLibraryIsbnLookup,
+} from "../src/catalog/infrastructure/OpenLibraryIsbnLookup";
 import { as, pool, resetDb, seedStaff, testApp } from "./support";
 
 afterAll(() => pool.end());
@@ -76,6 +81,34 @@ describe("SLM-13 ISBN lookup", () => {
     expect(await res.json()).toEqual({ found: false, reason: "timeout" });
   });
 
+  it("AC3 default wait is the shared ISBN_LOOKUP_TIMEOUT_MS: a slow answer inside it still succeeds", async () => {
+    vi.useFakeTimers();
+    try {
+      const slow = (_u: string, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          setTimeout(() => resolve(new Response(JSON.stringify(sample))), ISBN_LOOKUP_TIMEOUT_MS - 500);
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        });
+      const p = new OpenLibraryIsbnLookup(slow).lookup(ISBN);
+      await vi.advanceTimersByTimeAsync(ISBN_LOOKUP_TIMEOUT_MS - 500);
+      expect(await p).toMatchObject({ found: true });
+      const hang = (_u: string, init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        });
+      const q = new OpenLibraryIsbnLookup(hang).lookup(ISBN);
+      await vi.advanceTimersByTimeAsync(ISBN_LOOKUP_TIMEOUT_MS - 1);
+      let settled = false;
+      void q.then(() => (settled = true));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await q).toEqual({ found: false, reason: "timeout" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("AC3 upstream 500 and network errors → unavailable", async () => {
     expect(await (await get(appWith(json({}, 500)), staff.librarian, ISBN)).json()).toEqual({
       found: false,
@@ -105,6 +138,72 @@ describe("SLM-13 ISBN lookup", () => {
     const res = await get(appWith(f), staff.supervisor, ISBN);
     expect(res.status).toBe(403);
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe("SLM-13 lookup cache", () => {
+  const book = {
+    ...Object.fromEntries(["title", "author", "publisher", "description", "coverImageUrl"].map((k) => [k, k])),
+    publicationYear: 2008,
+  };
+  const svc = (f: ReturnType<typeof vi.fn>, cache: IsbnLookupCache) => new OpenLibraryIsbnLookup(f as never, 50, cache);
+
+  it("a found book is served from memory the second time (one outbound call)", async () => {
+    const f = vi.fn(json(sample));
+    const s = svc(f, new IsbnLookupCache());
+    const first = await s.lookup(ISBN);
+    const second = await s.lookup(ISBN);
+    expect(second).toEqual(first);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("not_found, timeout and unavailable are never cached", async () => {
+    const f = vi
+      .fn()
+      .mockImplementationOnce(json({}))
+      .mockImplementationOnce(json({}, 500))
+      .mockImplementation(json(sample));
+    const s = svc(f, new IsbnLookupCache());
+    expect(await s.lookup(ISBN)).toEqual({ found: false, reason: "not_found" });
+    expect(await s.lookup(ISBN)).toEqual({ found: false, reason: "unavailable" });
+    expect(await s.lookup(ISBN)).toMatchObject({ found: true });
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("an entry expires after the TTL", async () => {
+    let now = 1_000;
+    const cache = new IsbnLookupCache(200, 3_600_000, () => now);
+    const f = vi.fn(json(sample));
+    const s = svc(f, cache);
+    await s.lookup(ISBN);
+    now += 3_600_000 - 1;
+    await s.lookup(ISBN);
+    expect(f).toHaveBeenCalledTimes(1);
+    now += 1;
+    await s.lookup(ISBN);
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it("holds at most maxEntries and drops the oldest first", () => {
+    const cache = new IsbnLookupCache(2);
+    cache.set("a", book as never);
+    cache.set("b", book as never);
+    cache.set("c", book as never);
+    expect(cache.get("a")).toBeNull();
+    expect(cache.get("b")).not.toBeNull();
+    expect(cache.get("c")).not.toBeNull();
+    cache.set("b", book as never); // refreshing keeps the size at 2
+    cache.set("d", book as never);
+    expect(cache.get("c")).toBeNull();
+    expect(cache.get("b")).not.toBeNull();
+  });
+
+  it("without a cache every lookup goes out (the default, so other tests stay independent)", async () => {
+    const f = vi.fn(json(sample));
+    const s = new OpenLibraryIsbnLookup(f as never);
+    await s.lookup(ISBN);
+    await s.lookup(ISBN);
+    expect(f).toHaveBeenCalledTimes(2);
   });
 });
 

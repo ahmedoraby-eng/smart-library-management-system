@@ -1,4 +1,4 @@
-# 0084. ISBN lookup through a backend adapter to Open Library, 3 s timeout
+# 0084. ISBN lookup through a backend adapter to Open Library, waits up to 8 s
 
 - **Status:** Accepted
 - **Date:** 2026-11-24
@@ -20,7 +20,8 @@ ISBN autofill is an extra; it must never block saving a book.
 ## Decision
 
 - `GET /api/books/isbn-lookup?isbn=` (BOOK_WRITE) always returns 200 with found true/false (not_found / timeout / unavailable); an invalid ISBN is 400 with no outbound call.
-- Port `IsbnLookup` + `OpenLibraryIsbnLookup` (fetch, 3 s abort, generic User-Agent). No key or binding.
+- Port `IsbnLookup` + `OpenLibraryIsbnLookup` (fetch, 8 s abort (`ISBN_LOOKUP_TIMEOUT_MS` in `contracts/src/books.ts`; the browser waits 2 s longer), generic User-Agent). No key or binding.
+- Open Library answered in up to 6.5 s when busy (26/11/2026), so the wait is 8 s (worst case seen plus a buffer); there is no retry. Successful lookups are kept in memory per Worker isolate (200 entries, 1 h), so a repeated ISBN answers at once; failures are never cached. Waiting on `fetch` is I/O, not CPU time, so it does not count against the Workers CPU limit.
 - UI 'Look up' fills only empty fields and says 'Filled from Open Library – check before saving'. Category and description aren't prefilled.
 - Tests stub the adapter.
 
