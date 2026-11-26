@@ -145,6 +145,7 @@ function finish(work: string, googleClip: string | undefined): void {
   const ov = (ovFile && existsSync(ovFile) ? JSON.parse(readFileSync(ovFile, "utf8")) : {}) as {
     anchors?: Record<string, [number, string, number][]>;
     captions?: [number, string, number, number, string, string][];
+    stills?: [number, string, number, number, string][]; // [scene, cue, from, to, png]: a held, ringed frame
   };
   const evFile = join(outDir, "events.json");
   const anchorArgs: string[] = [];
@@ -192,6 +193,12 @@ function finish(work: string, googleClip: string | undefined): void {
       .map(([f, cue, off]) => `${f.toFixed(2)}=${(c[cue]! + off).toFixed(2)}`);
     if (pairs.length) anchorArgs.push("--anchors", `${n}:${pairs.join(",")}`);
   }
+  const ovStills = (ov.stills ?? []).flatMap(([n, cue, from, to, png]) => {
+    const at = cues[String(n)]?.[cue];
+    return at === undefined || !existsSync(png)
+      ? []
+      : ["--overlay-image", `${n}:${(at + from).toFixed(2)}-${(at + to).toFixed(2)}|${png}`];
+  });
   const ovCaptions = (ov.captions ?? []).flatMap(([n, cue, from, to, title, sub]) => {
     const at = cues[String(n)]?.[cue];
     return at === undefined
@@ -222,6 +229,7 @@ function finish(work: string, googleClip: string | undefined): void {
       ...crop,
       ...overlays,
       ...ovCaptions,
+      ...ovStills,
       ...anchorArgs,
       ...skipArgs,
       ...endArgs,

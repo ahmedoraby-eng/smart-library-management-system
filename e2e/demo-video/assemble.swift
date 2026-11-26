@@ -409,15 +409,21 @@ if !overlays.isEmpty || !imageOverlays.isEmpty {
     l.contentsGravity = .resizeAspectFill
     l.opacity = 0
     let anim = CAKeyframeAnimation(keyPath: "opacity")
-    anim.values = [0, 0, 1, 1]
-    anim.keyTimes = [0, a0 / total, (a0 + 0.35) / total, 1].map { NSNumber(value: $0) }
+    if o.to != nil, a1 < total - 0.1 {
+      // a held still (e.g. the cursor on a link, ringed): fades in, then hands back to identical footage at once
+      anim.values = [0, 0, 1, 1, 0, 0]
+      anim.keyTimes = [0, a0 / total, (a0 + 0.3) / total, (a1 - 0.04) / total, a1 / total, 1].map { NSNumber(value: $0) }
+    } else {
+      anim.values = [0, 0, 1, 1]
+      anim.keyTimes = [0, a0 / total, (a0 + 0.35) / total, 1].map { NSNumber(value: $0) }
+    }
     anim.duration = total
     anim.beginTime = AVCoreAnimationBeginTimeAtZero
     anim.isRemovedOnCompletion = false
     anim.fillMode = .both
     l.add(anim, forKey: "show")
     parent.addSublayer(l)
-    print(String(format: "image overlay on scene %d: %.1f s – end of scene", o.scene, a0))
+    print(String(format: "image overlay on scene %d: %.1f–%.1f s", o.scene, a0, a1))
   }
   videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: video, in: parent)
 }
