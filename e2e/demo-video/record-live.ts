@@ -291,9 +291,15 @@ async function main(): Promise<void> {
   const point = async (p: Page, loc: Locator, name: string, frac: number, ms = 2200, zoom = 1.3) => {
     await holdFor(name, frac);
     const shown = loc.filter({ visible: true }).first(); // lists render a hidden mobile copy of each row too
-    if (!(await shown.isVisible().catch(() => false))) return log(`  (nothing to point at for "${name}")`);
+    if (!(await appears(shown, 5000))) return log(`  (nothing to point at for "${name}")`);
     await spotlight(p, shown, { ms, zoom });
   };
+  /** Waits up to `ms` for `loc` to show (isVisible() does not wait). */
+  const appears = (loc: Locator, ms: number) =>
+    loc
+      .waitFor({ state: "visible", timeout: ms })
+      .then(() => true)
+      .catch(() => false);
   /** Switches the filmed window's session (its cookies) without a sign-in on camera. */
   const switchTo = async (who: { email: string; password: string }) => {
     const r = await context.request.post(`${LIVE}/api/auth/demo-login`, {
@@ -435,7 +441,7 @@ async function main(): Promise<void> {
       const tag = "Renew and the overdue bell";
       await page.goto(`${LIVE}/circulation/return`);
       const renew = page.getByTestId("renew-button").first();
-      if (!(await renew.isVisible({ timeout: 10_000 }).catch(() => false))) {
+      if (!(await appears(renew, 10_000))) {
         log("  scene 12: no Renew button on the live site yet (SLM-18 not deployed)");
         return false;
       }
@@ -609,7 +615,7 @@ async function main(): Promise<void> {
       const tag = "More like this";
       await openBook("H Is for Hawk", /H Is for Hawk/);
       const strip = page.getByTestId("similar-books");
-      if (!(await strip.isVisible({ timeout: 8000 }).catch(() => false))) {
+      if (!(await appears(strip, 10_000))) {
         log("  scene 13: no More like this on the live site yet (SLM-19 not deployed)");
         return false;
       }
@@ -639,12 +645,7 @@ async function main(): Promise<void> {
     14: async () => {
       const tag = "Command K";
       await page.goto(`${LIVE}/dashboard`);
-      if (
-        !(await page
-          .getByTestId("palette-trigger")
-          .isVisible({ timeout: 8000 })
-          .catch(() => false))
-      ) {
+      if (!(await appears(page.getByTestId("palette-trigger"), 10_000))) {
         log("  scene 14: no command palette on the live site yet (SLM-20 not deployed)");
         return false;
       }
