@@ -39,7 +39,7 @@ export function captionScript(): string {
         requestAnimationFrame(() => { b.style.transform = "scale(" + zoom + ")"; });
       }
       const ring = mk("position:absolute;border-radius:12px;border:3px solid #f59e0b;opacity:0;" +
-        "box-shadow:0 0 0 4px rgba(245,158,11,.25),0 0 24px rgba(245,158,11,.55),0 0 0 9999px rgba(15,20,48,.22);" +
+        "box-shadow:0 0 0 4px rgba(245,158,11,.25),0 0 24px rgba(245,158,11,.55),0 0 0 9999px rgba(0,0,0,.08);" +
         "transition:opacity .35s ease,transform .35s " + ease + ";transform:scale(1.08)");
       root.insertBefore(ring, cur);
       setTimeout(() => {
