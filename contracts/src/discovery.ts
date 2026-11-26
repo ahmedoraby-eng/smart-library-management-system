@@ -74,3 +74,14 @@ export type AiUsageToday = z.infer<typeof AiUsageTodaySchema>;
 /** GET /api/ai/quota (AI_DISCOVER): the caller's AI searches left today (UTC). */
 export const AiQuotaSchema = z.object({ left: z.number().int(), limit: z.number().int() });
 export type AiQuota = z.infer<typeof AiQuotaSchema>;
+
+/**
+ * GET /api/books/:id/similar (SLM-19, BOOK_READ): "More like this", up to 4 other live books closest in meaning,
+ * best first. From stored embeddings only (no model call). Empty when the book isn't indexed yet.
+ * `similarity` is the cosine of the book's best chunk with the mean of this book's chunks (0 to 1, 3 decimals).
+ */
+export const SimilarBooksResponseSchema = z.object({
+  items: z.array(z.object({ book: DiscoveryBookSchema, similarity: z.number() })).max(4),
+});
+export type SimilarBooksResponse = z.infer<typeof SimilarBooksResponseSchema>;
+export type SimilarBook = SimilarBooksResponse["items"][number];

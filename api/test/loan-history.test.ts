@@ -105,6 +105,7 @@ describe("SLM-5 loan history", () => {
       "id",
       "member",
       "processedBy",
+      "renewedAt", // SLM-18: when the loan was renewed (null here)
       "returnedAt",
       "returnedBy",
       "status",
