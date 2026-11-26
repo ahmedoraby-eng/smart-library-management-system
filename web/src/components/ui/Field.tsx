@@ -15,6 +15,7 @@ interface FieldChrome {
 
 const control =
   "block w-full rounded-md border bg-surface px-3 text-base text-neutral-900 placeholder:text-neutral-500 " +
+  "transition-[border-color,box-shadow] duration-150 ease-out " +
   "disabled:bg-neutral-100 disabled:text-neutral-500 focus:outline-none focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500";
 const border = (invalid: boolean) => (invalid ? "border-danger-500" : "border-border-strong");
 

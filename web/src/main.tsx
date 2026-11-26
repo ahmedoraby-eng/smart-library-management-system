@@ -18,8 +18,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ToastProvider } from "./components/ui";
 import { queryClient } from "./lib/queryClient";
+import { startSplash } from "./lib/splash";
 import { router } from "./routes/router";
 import "./index.css";
+
+startSplash();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

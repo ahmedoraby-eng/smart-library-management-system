@@ -30,7 +30,11 @@ export function InlineAlert({
     <div
       role={variant === "danger" || variant === "warning" ? "alert" : "status"}
       data-testid={testId}
-      className={cn("flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-base", styles[variant], className)}
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-base motion-safe:animate-fade-up",
+        styles[variant],
+        className,
+      )}
     >
       <Icon size={18} className="mt-0.5" />
       <div className="min-w-0 flex-1">{children}</div>

@@ -19,7 +19,7 @@ const kindClass: Record<CellKind, string> = {
 export function Table({ className, children, ...rest }: HTMLAttributes<HTMLTableElement>) {
   return (
     <div className="overflow-x-auto">
-      <table className={cn("w-full border-collapse text-left text-base", className)} {...rest}>
+      <table className={cn("slm-table w-full border-collapse text-left text-base", className)} {...rest}>
         {children}
       </table>
     </div>
@@ -96,7 +96,15 @@ export function SortableTh({
 }
 
 export function Tr({ className, ...rest }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-border last:border-b-0 hover:bg-neutral-25", className)} {...rest} />;
+  return (
+    <tr
+      className={cn(
+        "group/row border-b border-border transition-[background-color,box-shadow] duration-200 ease-out last:border-b-0 hover:bg-neutral-25 hover:shadow-[inset_3px_0_0_var(--color-brass-500)] plain:hover:shadow-[inset_3px_0_0_var(--color-brand-500)]",
+        className,
+      )}
+      {...rest}
+    />
+  );
 }
 
 export function Td({

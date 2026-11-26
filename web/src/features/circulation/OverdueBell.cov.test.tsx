@@ -149,10 +149,10 @@ describe("SLM-18 overdue bell", () => {
     expect(await screen.findByTestId("overdue-error")).toHaveTextContent("Couldn't load overdue loans.");
   });
 
-  it("D-46-1 regression: the shell's slot is positioned out of the flow; the bell's own box is relative only, so the popover anchors to it", async () => {
+  it("D-46-1 regression: the bell sits in the top bar (no layout shift on the page); its own box is relative only, so the popover anchors to it", async () => {
     await renderApp("/dashboard", bell(three));
     const slot = await screen.findByTestId("overdue-bell-slot");
-    expect(slot).toHaveClass("absolute", "top-1", "right-8");
+    expect(screen.getByTestId("top-bar")).toContainElement(slot);
     const box = screen.getByTestId("overdue-bell").parentElement!;
     expect(slot).toContainElement(box);
     expect(box.className).toBe("relative");

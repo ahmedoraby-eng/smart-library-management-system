@@ -112,3 +112,29 @@ describe("Toast", () => {
     spy.mockRestore();
   });
 });
+
+describe("Toast exit", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q }));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("with motion allowed, a dismissed toast slides out before it is removed", () => {
+    render(
+      <ToastProvider>
+        <Buttons />
+      </ToastProvider>,
+    );
+    click("err");
+    act(() => screen.getByRole("button", { name: "Dismiss notification" }).click());
+    const t = screen.getByTestId("toast");
+    expect(t).toHaveAttribute("data-leaving", "true");
+    expect(t.className).toContain("slm-toast-out");
+    act(() => vi.advanceTimersByTime(200));
+    expect(screen.queryByTestId("toast")).not.toBeInTheDocument();
+  });
+});

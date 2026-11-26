@@ -1,6 +1,7 @@
 import type { Permission } from "@slm/contracts";
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { LoadingScreen } from "../components/LoadingScreen";
 import { useCan, useMe } from "../features/auth/session";
 
 /**
@@ -10,6 +11,6 @@ import { useCan, useMe } from "../features/auth/session";
 export function RequirePermission({ permission, children }: { permission: Permission; children: ReactNode }) {
   const me = useMe();
   const can = useCan();
-  if (me.isPending) return null;
+  if (me.isPending) return <LoadingScreen />;
   return can(permission) ? <>{children}</> : <Navigate to="/403" replace />;
 }
