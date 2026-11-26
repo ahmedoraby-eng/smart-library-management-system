@@ -2,7 +2,7 @@
 
 Every decision taken for Smart Library so far, one ADR each in [`adr/`](adr/). Superseded decisions are kept, with a link to the decision that replaced them, so the history stays visible.
 
-185 decisions: 162 accepted (4 of them not yet in force), 22 superseded, 1 rejected, 0 proposed.
+186 decisions: 163 accepted, 22 superseded, 1 rejected, 0 proposed.
 
 Each ADR's **Sources** line starts with what a reader of this repository can open (a PR, a commit, a file); the owner's private working notes and conversations are listed after it.
 
@@ -169,8 +169,8 @@ Each ADR's **Sources** line starts with what a reader of this repository can ope
 | ADR-0159 | CI: a hygiene job and a test job on every PR and push to main | 2026-11-24 | Accepted | cicd | [adr/0159-ci-hygiene-job-test-job-every-pr.md](adr/0159-ci-hygiene-job-test-job-every-pr.md) |
 | ADR-0160 | Manual deploy with `npm run deploy` from a deploy branch | 2026-11-24 | Superseded by [0022](adr/0022-workers-builds-auto-deploy.md) | cicd | [adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md](adr/0160-manual-deploy-npm-run-deploy-deploy-branch.md) |
 | ADR-0161 | Deploy checklist: AI binding on, Hyperdrive cache off, all limiters bound, no test flags | 2026-11-24 | Accepted | cicd | [adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md](adr/0161-deploy-checklist-ai-binding-hyperdrive-cache-off.md) |
-| ADR-0162 | Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard | 2026-11-25 | Accepted, not yet in force | cicd | [adr/0162-same-ci-gates-shared-playbook-90-coverage.md](adr/0162-same-ci-gates-shared-playbook-90-coverage.md) |
-| ADR-0163 | CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested | 2026-11-25 | Accepted, not yet in force | cicd | [adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md) |
+| ADR-0162 | Same CI gates as the shared playbook: 90 % coverage, lint, format, audit and AI guard | 2026-11-25 | Accepted | cicd | [adr/0162-same-ci-gates-shared-playbook-90-coverage.md](adr/0162-same-ci-gates-shared-playbook-90-coverage.md) |
+| ADR-0163 | CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested | 2026-11-25 | Accepted | cicd | [adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md) |
 | ADR-0164 | API tests run on real PostgreSQL 16, never a mocked database | 2026-11-24 | Accepted | testing | [adr/0164-api-tests-run-real-postgresql-16-mocked.md](adr/0164-api-tests-run-real-postgresql-16-mocked.md) |
 | ADR-0165 | Concurrency race tests are release gates | 2026-11-24 | Accepted | testing | [adr/0165-concurrency-race-tests-release-gates.md](adr/0165-concurrency-race-tests-release-gates.md) |
 | ADR-0166 | Inventory invariant checked by a property test and by raw SQL against the CHECK | 2026-11-24 | Accepted | testing | [adr/0166-inventory-invariant-checked-property-test-raw-sql.md](adr/0166-inventory-invariant-checked-property-test-raw-sql.md) |
@@ -191,8 +191,9 @@ Each ADR's **Sources** line starts with what a reader of this repository can ope
 | ADR-0181 | Record the demo after a manual reset, never around 02:00 Cairo; warm the app first | 2026-11-24 | Accepted | demo | [adr/0181-record-demo-after-manual-reset-around-02.md](adr/0181-record-demo-after-manual-reset-around-02.md) |
 | ADR-0182 | Submission package: ≤ 8-minute recording, live URL, filled RTM, final diagram | 2026-11-24 | Accepted | demo | [adr/0182-submission-package-8-minute-recording-live-url.md](adr/0182-submission-package-8-minute-recording-live-url.md) |
 | ADR-0183 | Three documented demo queries show lexical, semantic and both | 2026-11-25 | Accepted | demo | [adr/0183-three-documented-demo-queries-show-lexical-semantic.md](adr/0183-three-documented-demo-queries-show-lexical-semantic.md) |
-| ADR-0184 | E2E smoke runs in GitHub CI, with traces kept on failure | 2026-11-25 | Accepted, not yet in force | testing | [adr/0184-e2e-smoke-runs-github-ci-traces-kept.md](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md) |
-| ADR-0185 | QA tests on the pull request before merge; merge only after QA passes | 2026-11-25 | Accepted, not yet in force | process | [adr/0185-qa-tests-pr-before-merge.md](adr/0185-qa-tests-pr-before-merge.md) |
+| ADR-0184 | E2E smoke runs in GitHub CI, with traces kept on failure | 2026-11-25 | Accepted | testing | [adr/0184-e2e-smoke-runs-github-ci-traces-kept.md](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md) |
+| ADR-0185 | QA tests on the pull request before merge; merge only after QA passes | 2026-11-25 | Accepted | process | [adr/0185-qa-tests-pr-before-merge.md](adr/0185-qa-tests-pr-before-merge.md) |
+| ADR-0186 | Loan renewal: once, by LOAN_DAYS from the current due date, recorded in `renewed_at`/`renewed_by` | 2026-11-25 | Accepted | data | [adr/0186-loan-renewal-once-loan-days-from-due-date.md](adr/0186-loan-renewal-once-loan-days-from-due-date.md) |
 
 ## Adding a decision
 

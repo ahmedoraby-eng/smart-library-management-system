@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory";
 import { bookRoutes } from "./catalog/api/routes";
 import { loanRoutes } from "./circulation/api/routes";
 import { dashboardRoutes } from "./dashboard/api/routes";
-import { discoveryAdminRoutes, discoveryRoutes } from "./discovery/api/routes";
+import { discoveryAdminRoutes, discoveryRoutes, similarBookRoutes } from "./discovery/api/routes";
 import type { Container } from "./container";
 import { memberRoutes } from "./members/api/routes";
 import { adminRoutes } from "./demo/api/routes";
@@ -125,6 +125,7 @@ export function createApp(openContainer: ContainerFactory) {
 
   app.get("/me", (c) => c.json(toMe(c.var.principal)));
   app.route("/books", bookRoutes());
+  app.route("/books", similarBookRoutes()); // SLM-19 "More like this" (discovery module)
   app.route("/loans", loanRoutes());
   app.route(
     "/ai",

@@ -11,6 +11,7 @@ import { PgDashboardReadModel } from "./dashboard/infrastructure/PgDashboardRead
 import { BookDiscoveryService } from "./discovery/application/BookDiscoveryService";
 import { BookIndexSync } from "./discovery/application/BookIndexSync";
 import { HybridCatalogRetrieval } from "./discovery/application/HybridCatalogRetrieval";
+import { SimilarBooks } from "./discovery/application/SimilarBooks";
 import { PgAiBudget, PgAiCache } from "./discovery/infrastructure/PgAiCost";
 import { PgChunkStore } from "./discovery/infrastructure/PgChunkStore";
 import { PgCatalogRetrieval } from "./discovery/infrastructure/PgCatalogRetrieval";
@@ -43,6 +44,7 @@ export function buildContainer(
   // SLM-16 hybrid retrieval: one embedder and one chunk store for indexing and search.
   const embedder = selectEmbedder(config, ai);
   const chunkStore = new PgChunkStore(db, embedder?.dimensions);
+  const catalogRetrieval = new PgCatalogRetrieval(db);
   // SLM-16 cost controls: daily budget (global Neuron cap + per-user quota) and a TTL cache, in Postgres.
   const aiBudget = new PgAiBudget(db, clock, config.aiDailyNeuronCap, config.aiUserDailySearches);
   const aiCache = new PgAiCache(db, clock);
@@ -69,7 +71,7 @@ export function buildContainer(
     ),
     discovery: new BookDiscoveryService(
       new HybridCatalogRetrieval(
-        new PgCatalogRetrieval(db),
+        catalogRetrieval,
         chunkStore,
         embedder,
         (e) => logJson({ event: "ai_retrieval", ...e }),
@@ -81,6 +83,8 @@ export function buildContainer(
       undefined,
       { cache: aiCache, budget: aiBudget, userQuota: config.aiUserDailySearches },
     ),
+    // SLM-19 "More like this": stored vectors only, no model call.
+    similarBooks: new SimilarBooks(chunkStore, catalogRetrieval, embedder),
     bookIndex: new BookIndexSync(chunkStore, embedder, (e) => logJson(e), aiBudget),
     aiBudget,
     aiCache,

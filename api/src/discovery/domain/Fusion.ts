@@ -77,3 +77,15 @@ export function cosine(a: ArrayLike<number>, b: ArrayLike<number>): number {
   }
   return na === 0 || nb === 0 ? 0 : dot / Math.sqrt(na * nb);
 }
+
+/**
+ * SLM-19: the element-wise mean of a book's chunk vectors, one vector for the whole book (pgvector's
+ * `avg(vector)` on the HNSW path). Empty input → empty vector. Vectors of different lengths use the shortest.
+ */
+export function meanVector(vectors: ArrayLike<number>[]): number[] {
+  if (vectors.length === 0) return [];
+  const n = Math.min(...vectors.map((v) => v.length));
+  const out = new Array<number>(n).fill(0);
+  for (const v of vectors) for (let i = 0; i < n; i++) out[i]! += v[i]!;
+  return out.map((x) => x / vectors.length);
+}

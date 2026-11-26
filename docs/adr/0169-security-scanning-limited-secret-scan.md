@@ -25,7 +25,7 @@ No npm audit, Dependabot, CodeQL/SAST, pen test or container scan; documented as
 
 ## Notes
 
-The replacement, [0162](0162-same-ci-gates-shared-playbook-90-coverage.md), is accepted but not yet in force: until the gates PR merges, this ADR still describes what CI on `main` does.
+The replacement, [0162](0162-same-ci-gates-shared-playbook-90-coverage.md), is in force since PR #29 merged (2026-11-25).
 
 ## Sources
 

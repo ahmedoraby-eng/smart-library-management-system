@@ -16,6 +16,8 @@ export interface LoanView {
   borrowedAt: Date;
   dueAt: Date;
   returnedAt: Date | null;
+  /** SLM-18: set once, when the loan was renewed. */
+  renewedAt: Date | null;
 }
 
 export function loanStatus(loan: { returnedAt: Date | null; dueAt: Date }, now: Date): LoanStatus {
@@ -122,6 +124,38 @@ export function loanAlreadyReturned(state: { returnedAt: Date; returnedByName: s
   );
 }
 
+/** What a refused renewal is explained from (read after the guarded update matched no row). */
+export interface RenewalState {
+  dueAt: Date;
+  returnedAt: Date | null;
+  returnedByName: string | null;
+  renewedAt: Date | null;
+}
+
+/**
+ * Renewal rule (SLM-18): an open loan that is not overdue and was never renewed is extended once, by
+ * the standard loan period (LOAN_DAYS) counted from its current due date. The guarded UPDATE enforces
+ * it; this explains a refusal, in the order returned → already renewed → overdue.
+ */
+export function renewalRefused(state: RenewalState): ConflictError {
+  if (state.returnedAt)
+    return loanAlreadyReturned({ returnedAt: state.returnedAt, returnedByName: state.returnedByName });
+  if (state.renewedAt) {
+    return new ConflictError(
+      "LOAN_ALREADY_RENEWED",
+      "Loan already renewed",
+      `This loan was already renewed on ${dayMonthYear.format(state.renewedAt)}. A loan can be renewed only once.`,
+      { renewedAt: state.renewedAt.toISOString(), dueAt: state.dueAt.toISOString() },
+    );
+  }
+  return new ConflictError(
+    "LOAN_OVERDUE",
+    "Loan overdue",
+    `This loan was due ${dayMonthYear.format(state.dueAt)} and is overdue, so it can't be renewed. Record the return instead.`,
+    { dueAt: state.dueAt.toISOString() },
+  );
+}
+
 export interface NewLoan {
   bookId: string;
   memberId: string;
@@ -141,6 +175,14 @@ export interface LoanWriter {
   close(loanId: string, staffId: string, at: Date): Promise<{ bookId: string } | null>;
   /** Explains a failed close: null = no such loan. */
   returnState(loanId: string): Promise<{ returnedAt: Date; returnedByName: string | null } | null>;
+  /**
+   * Guarded renewal (SLM-18), one statement: due_at += days and renewed_at/by set, only WHERE the loan is
+   * open, not renewed and not overdue at `at`. Two parallel renewals: one row updated, the other none.
+   * Returns false when nothing matched.
+   */
+  renew(loanId: string, staffId: string, at: Date, days: number): Promise<boolean>;
+  /** Explains a failed renewal: null = no such loan. */
+  renewalState(loanId: string): Promise<RenewalState | null>;
 }
 
 /** What a circulation transaction can touch: its own rows and catalog's stock statements. */
