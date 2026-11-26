@@ -20,16 +20,17 @@ func fail(_ msg: String) -> Never {
 
 var rest = Array(CommandLine.arguments.dropFirst())
 var pos: [String] = []
-var insert: (scene: Int, url: URL)? = nil
-var lineAtArg: Double? = nil
-var lineEndArg: Double? = nil
+// --insert may repeat (script v3: Ahmed's Google clip in two parts, scenes 2 and 3); --line-at and --line-end
+// belong to the --insert just before them.
+struct Insert { let scene: Int; let url: URL; var lineAt: Double? = nil; var lineEnd: Double? = nil }
+var inserts: [Insert] = []
 var cropMain: CGSize? = nil  // --crop-main WxH: the recording only fills this top-left area (Playwright pads to the video size)
 while !rest.isEmpty {
   let a = rest.removeFirst()
   switch a {
   case "--insert":
     guard let v = rest.first, let colon = v.firstIndex(of: ":"), let n = Int(v[..<colon]) else { fail("--insert N:<clip.mp4>") }
-    insert = (n, URL(fileURLWithPath: String(v[v.index(after: colon)...])))
+    inserts.append(Insert(scene: n, url: URL(fileURLWithPath: String(v[v.index(after: colon)...]))))
     rest.removeFirst()
   case "--crop-main":
     guard let v = rest.first?.split(separator: "x").compactMap({ Double($0) }), v.count == 2 else { fail("--crop-main WxH") }
@@ -37,11 +38,13 @@ while !rest.isEmpty {
     rest.removeFirst()
   case "--line-end":
     guard let v = rest.first.flatMap(Double.init) else { fail("--line-end <seconds>") }
-    lineEndArg = v
+    guard !inserts.isEmpty else { fail("--line-end comes after its --insert") }
+    inserts[inserts.count - 1].lineEnd = v
     rest.removeFirst()
   case "--line-at":
     guard let v = rest.first.flatMap(Double.init) else { fail("--line-at <seconds>") }
-    lineAtArg = v
+    guard !inserts.isEmpty else { fail("--line-at comes after its --insert") }
+    inserts[inserts.count - 1].lineAt = v
     rest.removeFirst()
   default: pos.append(a)
   }
@@ -139,7 +142,8 @@ for m in marks {
     try aOut.insertTimeRange(CMTimeRange(start: .zero, duration: clipLen!), of: aSrc, at: at)
   }
 
-  if let ins = insert, ins.scene == m.scene {
+  if let ins = inserts.first(where: { $0.scene == m.scene }) {
+    let lineAtArg = ins.lineAt, lineEndArg = ins.lineEnd
     let extra = AVURLAsset(url: ins.url)
     guard let eSrc = try await extra.loadTracks(withMediaType: .video).first else { fail("no video in \(ins.url.path)") }
     let eLen = try await extra.load(.duration)

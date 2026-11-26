@@ -51,6 +51,38 @@ export function captionScript(): string {
       setTimeout(() => { ring.style.opacity = "0"; if (zoom > 1) b.style.transform = ""; }, ms);
       setTimeout(() => { ring.remove(); b.style.transition = ""; b.style.transformOrigin = ""; }, ms + 700);
     };
+    // __tip(el): the tooltip a hover would show (its title), drawn on the page: native tooltips never reach the video.
+    window.__tip = (el) => {
+      const text = el.getAttribute("title") || el.querySelector("[title]")?.getAttribute("title") || "";
+      if (!text) return;
+      const r = el.getBoundingClientRect();
+      const tip = mk("position:absolute;max-width:360px;padding:8px 12px;border-radius:8px;background:#1f2937;color:#fff;" +
+        "font:500 14px/1.35 " + FONT + ";box-shadow:0 6px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .2s;" +
+        "left:" + Math.max(8, r.left + r.width / 2 - 180) + "px;top:" + (r.bottom + 10) + "px");
+      tip.textContent = text;
+      root.insertBefore(tip, cur);
+      requestAnimationFrame(() => { tip.style.opacity = "1"; });
+      setTimeout(() => { tip.style.opacity = "0"; setTimeout(() => tip.remove(), 300); }, 3000);
+    };
+    // Real email addresses never reach the video: any text with an address outside the reserved demo domains
+    // (example.com, *.example, *.test) is blurred where it is drawn.
+    const EMAIL = /[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}/g;
+    const DEMO = /@([a-z0-9-]+\\.)*(example\\.com|example|test)$/i;
+    const blurEmails = () => {
+      const w = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
+      for (let n = w.nextNode(); n; n = w.nextNode()) {
+        const hits = (n.nodeValue || "").match(EMAIL);
+        if (hits && hits.some((h) => !DEMO.test(h)) && n.parentElement && n.parentElement.style.filter !== "blur(6px)")
+          n.parentElement.style.filter = "blur(6px)";
+      }
+      document.querySelectorAll("input").forEach((i) => {
+        const v = i.value || "";
+        if (EMAIL.test(v) && !(v.match(EMAIL) || []).every((h) => DEMO.test(h))) i.style.filter = "blur(6px)";
+        EMAIL.lastIndex = 0;
+      });
+    };
+    blurEmails();
+    setInterval(blurEmails, 150);
     if (window.top === window) {
       const bar = mk("position:absolute;left:0;right:0;bottom:0;padding:22px 48px 26px;color:#fff;font-family:" + FONT + ";" +
         "background:linear-gradient(0deg,rgba(15,20,48,.97) 0%,rgba(15,20,48,.93) 80%,rgba(15,20,48,0) 100%);transition:opacity .25s");
