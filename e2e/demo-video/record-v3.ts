@@ -40,7 +40,7 @@ import { createServer } from "node:http";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, type BrowserContext, chromium, type Locator, type Page } from "@playwright/test";
-import { click, encodeMp4, glide, root, say, sleep, SPEED, spotlight, swiftTool, typeInto } from "./lib";
+import { click, encodeMp4, glide, root, say, settle, sleep, SPEED, spotlight, swiftTool, typeInto } from "./lib";
 import { captionScript, cardPage, PANE, pairPage } from "./stage";
 
 const LIVE = (process.env.SLM_LIVE_URL ?? "https://smart-library.ahmedoraby.workers.dev").replace(/\/$/, "");
@@ -331,6 +331,7 @@ async function main(): Promise<void> {
   await page.evaluate(() => localStorage.setItem("slm-theme", "plain"));
   await page.goto(`${LIVE}/dashboard`);
   await page.getByTestId("kpi-active-loans").waitFor({ timeout: 30_000 });
+  await settle(page, 4000); // SLM-15's splash and count-ups finish before scene 1
 
   // Script v3 (Nora, 26/11): one table per scene, each row a DO with a time. Row i waits for the voice cue `r<i>` (the
   // start of that row's SAY in Ahmed's edited take), else for its Time-column second. Every 👉 is a spotlight.
@@ -353,16 +354,24 @@ async function main(): Promise<void> {
       .then(() => true)
       .catch(() => false);
   /** Points at the first visible `loc` (skips quietly if it never shows). */
-  const show = async (p: Page, loc: Locator, ms = 2000, zoom = 1.3) => {
+  const show = async (p: Page, loc: Locator, ms = 2000, zoom = 1.3, onRing?: () => void) => {
     const shown = loc.filter({ visible: true }).first(); // lists render a hidden mobile copy of each row too
     if (!(await appears(shown, 6000))) return log(`  scene ${sceneNo}: nothing to point at (${String(loc)})`);
-    await spotlight(p, shown, { ms, zoom });
+    await spotlight(p, shown, { ms, zoom, onRing });
+  };
+  /** page.goto, then wait for SLM-15's opening splash and transitions to finish (no-op on the old UI). */
+  const go = async (url: string) => {
+    await page.goto(url);
+    await settle(page, 4000);
+  };
+  const goOn = async (p: Page, url: string) => {
+    await p.goto(url);
+    await settle(p, 4000);
   };
   /** show() on the key word of `name`: the ring lands with the word; logged. */
   const showK = async (p: Page, loc: Locator, name: string, ms = 2000, zoom = 1.3) => {
     await key(name, 0.55);
-    ev(name, 0.5);
-    await show(p, loc, ms, zoom);
+    await show(p, loc, ms, zoom, () => ev(name)); // logged when the ring lands
   };
   /** click() on the key word of `name`; logged when it lands. */
   const clickK = async (p: Page, loc: Locator, name: string) => {
@@ -382,7 +391,9 @@ async function main(): Promise<void> {
     if (!r.ok()) throw new Error(`demo sign-in answered ${r.status()}`);
   };
   page.on("dialog", (d) => void d.accept());
-  const nav = (name: string | RegExp) => page.getByRole("navigation").getByRole("link", { name }).first();
+  // the sidebar; SLM-15 adds a "Breadcrumb" navigation in the top bar, which this skips
+  const nav = (name: string | RegExp) =>
+    page.locator('nav:not([aria-label="Breadcrumb"])').first().getByRole("link", { name }).first();
   const search = async (q: string) => {
     const box = page.getByTestId("book-search");
     await box.fill("");
@@ -391,6 +402,7 @@ async function main(): Promise<void> {
   };
   const openBook = async (q: string, name: RegExp) => {
     await page.goto(`${LIVE}/books?q=${encodeURIComponent(q)}`);
+    await settle(page, 4000);
     await click(page, page.getByRole("link", { name }).filter({ visible: true }).first());
     await page.getByTestId("book-detail-title").waitFor();
   };
@@ -456,7 +468,7 @@ async function main(): Promise<void> {
     // SLM-02 · The front door (signed out; the Google sign-in itself is Ahmed's clip)
     2: async () => {
       await context.clearCookies();
-      await page.goto(`${LIVE}/signin`);
+      await go(`${LIVE}/signin`);
       await row(0, 0.3);
       await showK(page, page.getByTestId("google-signin"), "google", 2200, 1.25);
       await row(1, 4);
@@ -476,7 +488,7 @@ async function main(): Promise<void> {
     // SLM-03 · Who decides the role (Ahmed's clip covers it; this is the fallback picture without his account)
     3: async () => {
       await switchTo(admin);
-      await page.goto(`${LIVE}/admin/users`);
+      await go(`${LIVE}/admin/users`);
       await page.getByTestId("staff-table").waitFor();
       await row(0, 1);
       await show(page, page.getByTestId("staff-row").last(), 2000, 1.2);
@@ -484,7 +496,7 @@ async function main(): Promise<void> {
       await show(page, page.getByTestId("role-select").last(), 1800, 1.3);
       await switchTo(librarian);
       await row(3, 16);
-      await page.goto(`${LIVE}/admin/users`);
+      await go(`${LIVE}/admin/users`);
       await page.waitForURL(/\/403/);
       await row(4, 19);
       await showK(page, page.getByText("You don't have access to this page"), "nope", 2400, 1.35);
@@ -496,7 +508,7 @@ async function main(): Promise<void> {
     // SLM-04 · Finding books
     4: async () => {
       await switchTo(librarian);
-      await page.goto(`${LIVE}/books`);
+      await go(`${LIVE}/books`);
       await row(0, 0.3);
       await click(page, page.getByTestId("book-search"));
       await key("hobbit", 0.9);
@@ -525,7 +537,7 @@ async function main(): Promise<void> {
 
     // SLM-05 · Add a book by ISBN (The Lord of the Rings, 1 copy: scene 9 races for it)
     5: async () => {
-      await page.goto(`${LIVE}/books/new`);
+      await go(`${LIVE}/books/new`);
       await row(0, 0.3);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await row(1, 6);
@@ -568,7 +580,7 @@ async function main(): Promise<void> {
       await row(1, 5);
       await key("again", 0.3);
       ev("again", 0.4);
-      await page.goto(`${LIVE}/books/new`);
+      await go(`${LIVE}/books/new`);
       await typeInto(page, page.getByTestId("field-isbn"), LOTR_ISBN);
       await lookUp();
       await typeInto(page, page.getByTestId("field-category"), "Fantasy"); // required; Look up never fills it
@@ -594,7 +606,7 @@ async function main(): Promise<void> {
 
     // SLM-07 · Lend and return
     7: async () => {
-      await page.goto(`${LIVE}/circulation/borrow`);
+      await go(`${LIVE}/circulation/borrow`);
       await row(0, 0.3);
       await typeInto(page, page.getByTestId("member-combobox").getByRole("combobox"), "nour");
       await clickK(page, page.getByRole("option", { name: /Nour Hassan/ }).first(), "nour");
@@ -628,7 +640,7 @@ async function main(): Promise<void> {
 
     // SLM-08 · Renew, and the bell
     8: async () => {
-      await page.goto(`${LIVE}/circulation/return`);
+      await go(`${LIVE}/circulation/return`);
       const renew = page.locator(`[data-testid="renew-button"]:not([disabled])`).first(); // a late loan can't renew
       if (!(await appears(renew, 10_000))) return log("  scene 8: no enabled Renew on the live site");
       await row(0, 0.3);
@@ -672,8 +684,8 @@ async function main(): Promise<void> {
           if (r.request().method() === "POST" && r.url().endsWith("/api/loans/borrow"))
             statuses.push({ desk, status: r.status() });
         });
-      await Promise.all([pL, pR].map((p) => p.goto(`${LIVE}/circulation/borrow`)));
-      await page.goto(`${S}/pair`);
+      await Promise.all([pL, pR].map((p) => p.goto(`${LIVE}/circulation/borrow`).then(() => settle(p, 4000))));
+      await go(`${S}/pair`);
       const stops = [await stream(pL, page, "a"), await stream(pR, page, "b")];
       await row(1, 3);
       const prep = async (p: Page, member: string) => {
@@ -686,8 +698,7 @@ async function main(): Promise<void> {
       await prep(pR, "Yara Samy");
       await row(2, 10);
       await key("onecopy", 0.55);
-      ev("onecopy", 0.5);
-      await spotlight(pL, pL.getByTestId("copies-change"), { ms: 1500 });
+      await spotlight(pL, pL.getByTestId("copies-change"), { ms: 1500, onRing: () => ev("onecopy") });
       await spotlight(pR, pR.getByTestId("copies-change"), { ms: 1500 });
       await Promise.all([pL, pR].map((p) => glide(p, p.getByTestId("confirm-borrow"))));
       await row(3, 14);
@@ -704,19 +715,17 @@ async function main(): Promise<void> {
       if (await appears(refused, 5000)) await spotlight(loseP, refused, { ms: 1500, zoom: 1.5 });
       await row(4, 17);
       await key("gets", 0.55);
-      ev("gets", 0.5);
-      await spotlight(winP, winP.getByTestId("borrow-success"), { ms: 2000, zoom: 1.45 });
+      await spotlight(winP, winP.getByTestId("borrow-success"), { ms: 2000, zoom: 1.45, onRing: () => ev("gets") });
       await row(5, 20);
       await key("nocopies", 0.55);
-      ev("nocopies", 0.5);
-      if (await appears(refused, 3000)) await spotlight(loseP, refused, { ms: 3000, zoom: 1.6 });
+      if (await appears(refused, 3000))
+        await spotlight(loseP, refused, { ms: 3000, zoom: 1.6, onRing: () => ev("nocopies") });
       await row(6, 26);
       await key("minus", 2.2);
-      await winP.goto(`${LIVE}/books?q=${encodeURIComponent(lotr)}`);
+      await goOn(winP, `${LIVE}/books?q=${encodeURIComponent(lotr)}`);
       await click(winP, winP.getByRole("link", { name: lotrRe }).filter({ visible: true }).first());
       await winP.getByTestId("book-detail-title").waitFor();
-      ev("minus", 0.5);
-      await spotlight(winP, winP.getByTestId("copies-available"), { ms: 2400, zoom: 1.6 });
+      await spotlight(winP, winP.getByTestId("copies-available"), { ms: 2400, zoom: 1.6, onRing: () => ev("minus") });
       await row(7, 30);
       await caption("20 at once · 3 copies → 3 win, 17 refused", "The database checks and updates in one step.");
       await glide(winP, winP.getByTestId("copies-available"));
@@ -764,7 +773,7 @@ async function main(): Promise<void> {
 
     // SLM-11 · AI discovery (captions 1–4 as the script lists)
     11: async () => {
-      await page.goto(`${LIVE}/discover`);
+      await go(`${LIVE}/discover`);
       const left = page.getByTestId("ai-searches-left");
       await row(0, 0.3);
       await showK(page, left, "discovery", 2000, 1.35);
@@ -840,7 +849,7 @@ async function main(): Promise<void> {
 
     // SLM-13 · Command K (Ctrl K: headless Chromium on macOS swallows ⌘K; the palette takes both)
     13: async () => {
-      await page.goto(`${LIVE}/dashboard`);
+      await go(`${LIVE}/dashboard`);
       if (!(await appears(page.getByTestId("palette-trigger"), 10_000))) return log("  scene 13: no palette");
       await row(0, 0.3);
       await key("cmdk", 0.1);
@@ -880,7 +889,7 @@ async function main(): Promise<void> {
 
     // SLM-14 · The AI team, and goodbye (public code page)
     14: async () => {
-      await page.goto(REPO);
+      await go(REPO);
       await row(0, 0.3);
       const teamHead = page.getByRole("heading", { name: /How it was built/ }).first();
       await key("build", 0.4);
@@ -889,7 +898,7 @@ async function main(): Promise<void> {
       await sleep(1500);
       await row(1, 5);
       await key("agents", 1.0);
-      await page.goto(`${REPO}/blob/main/docs/ai-team.md`);
+      await go(`${REPO}/blob/main/docs/ai-team.md`);
       ev("agents");
       await sleep(1200);
       await scrollBy(page, 120, 14, 220);
@@ -904,7 +913,7 @@ async function main(): Promise<void> {
       await showK(page, human, "goals", 2000, 1.3);
       await row(4, 19);
       await key("links", 0.3);
-      await page.goto(`${S}/card/close`);
+      await go(`${S}/card/close`);
       ev("links", 0.2);
     },
   };

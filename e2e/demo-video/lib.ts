@@ -27,8 +27,42 @@ export async function glide(page: Page, loc: Locator): Promise<void> {
  * Points at a key moment (Ahmed, 26/11: "نشاور عليها بالكرسر عشان تبقى باينه"): the cursor glides onto the element,
  * the page zooms ~1.3x around it with a soft ring, holds, and eases back. Returns after the page is back to normal.
  */
-export async function spotlight(page: Page, loc: Locator, opts: { zoom?: number; ms?: number } = {}): Promise<void> {
+/**
+ * Waits until the page is still: no opening splash (#slm-splash, SLM-15), no running finite animation (view
+ * transitions, staggered rows), at most `maxMs`. Works on pages without any of these too.
+ */
+export async function settle(page: Page, maxMs = 2500): Promise<void> {
+  await page
+    .waitForFunction(
+      () =>
+        !document.getElementById("slm-splash") &&
+        document.getAnimations().every((a) => {
+          const t = a.effect?.getComputedTiming();
+          return a.playState !== "running" || !t || t.endTime === Infinity;
+        }),
+      null,
+      { timeout: maxMs, polling: 100 },
+    )
+    .catch(() => undefined);
+}
+/** Waits until `loc`'s text stops changing (count-up numbers, SLM-15), at most `maxMs`. */
+export async function steadyText(loc: Locator, maxMs = 2500): Promise<void> {
+  let last = "";
+  for (let waited = 0; waited < maxMs; waited += 200) {
+    const now = (await loc.innerText().catch(() => "")) ?? "";
+    if (now === last && now !== "") return;
+    last = now;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+export async function spotlight(
+  page: Page,
+  loc: Locator,
+  opts: { zoom?: number; ms?: number; onRing?: () => void } = {},
+): Promise<void> {
   const o = { zoom: opts.zoom ?? 1.3, ms: Math.round((opts.ms ?? 2400) / SPEED) };
+  await settle(page);
+  await steadyText(loc);
   await loc.scrollIntoViewIfNeeded().catch(() => undefined);
   // The cursor rests just left of the element, never on the words (Talia, 26/11); below it only at the window's edge.
   const beside = async (steps: number) => {
@@ -39,6 +73,7 @@ export async function spotlight(page: Page, loc: Locator, opts: { zoom?: number;
   };
   await beside(18);
   await sleep(200);
+  opts.onRing?.(); // the moment the ring lands (row sync logs it)
   await loc.evaluate((el, x) => (window as unknown as { __spot?: (e: Element, o: object) => void }).__spot?.(el, x), o);
   await new Promise((r) => setTimeout(r, 650 / SPEED));
   await beside(10); // follow the element as the page zooms
