@@ -33,7 +33,7 @@ export function BackToBooks() {
     <Link
       to="/books"
       search={{ page: 1, size: 20 }}
-      className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900"
+      className="-mt-[5px] mb-[11px] inline-flex items-center gap-1.5 py-[5px] text-sm font-semibold text-neutral-600 no-underline hover:text-neutral-900"
     >
       <ArrowLeftIcon size={16} /> Books
     </Link>
@@ -108,8 +108,8 @@ function BookDetail({ book }: { book: BookDto }) {
   return (
     <>
       <BackToBooks />
-      <header className="page-head mb-6 flex items-start justify-between gap-6">
-        <div className="flex items-start gap-6">
+      <header className="page-head mb-6 flex items-start justify-between gap-6 max-sm:flex-wrap max-sm:gap-4">
+        <div className="flex items-start gap-6 max-sm:min-w-0 max-sm:gap-4">
           <BookCover title={book.title} url={book.coverImageUrl} size="lg" />
           <div>
             <h1 className="font-book text-title plain:tracking-tight" data-testid="book-detail-title">
@@ -186,7 +186,7 @@ function BookDetail({ book }: { book: BookDto }) {
         </InlineAlert>
       )}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-4 max-lg:grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader title="Description" />
           <CardBody>

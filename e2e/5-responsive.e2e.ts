@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { signIn } from "./helpers";
 
 // SLM-15 responsive fixes (Salma's live E2E, areas 08 and 10): the page never scrolls sideways at phone and tablet
-// widths (wide tables scroll inside their own card), and at 1280 px the Books table fits its card.
+// widths, book page included (wide tables scroll inside their own card), and at 1280 px the Books table fits its card.
 const pages = ["/dashboard", "/books", "/loans", "/members"];
 
 test("no sideways page scroll at 375 and 768 px; the Books table fits at 1280 px", async ({ page }) => {
@@ -14,6 +14,9 @@ test("no sideways page scroll at 375 and 768 px; the Books table fits at 1280 px
   expect(await scrolls(), "375 px /signin scrolls sideways").toBe(false);
 
   await signIn(page, "LIBRARIAN");
+  // A book page with a Borrow button, active loans and "More like this" (Salma's live re-run: Clean Code at 375 px).
+  const found = await (await page.request.get("/api/books?q=Clean%20Code")).json();
+  const cleanCode = (found.items as { id: string; title: string }[]).find((b) => b.title === "Clean Code")!;
   for (const width of [375, 768]) {
     await page.setViewportSize({ width, height: 800 });
     for (const path of pages) {
@@ -22,6 +25,9 @@ test("no sideways page scroll at 375 and 768 px; the Books table fits at 1280 px
       await expect(page.locator(".slm-table").first()).toBeVisible();
       expect(await scrolls(), `${width} px ${path} scrolls sideways`).toBe(false);
     }
+    await page.goto(`/books/${cleanCode.id}`);
+    await expect(page.getByTestId("copies-card")).toBeVisible();
+    expect(await scrolls(), `${width} px book page scrolls sideways`).toBe(false);
   }
 
   await page.setViewportSize({ width: 1280, height: 900 });
