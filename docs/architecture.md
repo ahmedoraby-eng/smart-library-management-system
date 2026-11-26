@@ -67,7 +67,7 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ![Data model on main: staff_users, members, loans and books; book_chunks (the AI search index); ai_usage and ai_cache (AI cost controls)](img/data-model.png)
 
-Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry).
+Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry). `0006_loan_renewal.sql` adds `loans.renewed_at` and `loans.renewed_by` (nullable; a loan is renewed at most once).
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
 - **Stock invariant.** `0 <= available_copies <= total_copies` is a `CHECK` constraint. Available plus on-loan always equals total, where on-loan is the number of open loans of that book.
@@ -75,7 +75,7 @@ Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`.
 - **One open loan per member and title.** A partial unique index on `(member_id, book_id) WHERE returned_at IS NULL`.
 - **Books are archived, not removed, once they have history.** `loans.book_id` is `ON DELETE RESTRICT`. A book with open loans can't be deleted; with only past loans it is archived (`archived_at`); never borrowed, it is deleted. An archived book's ISBN can be reused (the ISBN unique index covers active books only).
 - **Optimistic concurrency.** Books and members carry a `version`. An update with an old version gets `409 STALE_VERSION`.
-- **Loan rules.** Member must be `ACTIVE`; no second open loan of the same title; open loans below `MAX_ACTIVE_LOANS` (default 5); due date defaults to `LOAN_DAYS` (14), or a custom date 1 to 60 days ahead. Returns are accepted for inactive members and archived books.
+- **Loan rules.** Member must be `ACTIVE`; no second open loan of the same title; open loans below `MAX_ACTIVE_LOANS` (default 5); due date defaults to `LOAN_DAYS` (14), or a custom date 1 to 60 days ahead. Returns are accepted for inactive members and archived books. A loan can be renewed once, while open and not overdue, by `LOAN_DAYS` from its current due date ([ADR-0186](adr/0186-loan-renewal-once-loan-days-from-due-date.md)).
 
 ### Borrow and return
 
@@ -92,6 +92,11 @@ Return (`CirculationService.return`):
 
 1. `UPDATE loans SET returned_at = ?, returned_by = ? WHERE id = ? AND returned_at IS NULL`. Two parallel returns: one updates a row, the other updates none and gets `409 LOAN_ALREADY_RETURNED`.
 2. `UPDATE books SET available_copies = available_copies + 1`.
+
+Renew (`CirculationService.renew`, SLM-18):
+
+1. `UPDATE loans SET due_at = due_at + LOAN_DAYS, renewed_at = ?, renewed_by = ? WHERE id = ? AND returned_at IS NULL AND renewed_at IS NULL AND due_at >= now`, with `now` from the injected clock (the complement of the overdue fragment). Two parallel renewals: one updates the row, the other updates none.
+2. When nothing was updated, the loan is read to explain why: `404` if it doesn't exist, else `409 LOAN_ALREADY_RETURNED`, `LOAN_ALREADY_RENEWED` or `LOAN_OVERDUE`, in that order. Stock is not touched.
 
 Deleting a book locks the book row first, so a borrow running at the same time waits and then finds the book archived or gone; if the borrow takes the row first, the delete then sees the open loan and gets `409 BOOK_HAS_ACTIVE_LOANS`.
 
@@ -117,6 +122,7 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `POST /members`, `PUT /members/:id` | A, L | Create, edit, deactivate |
 | `GET /loans`, `/loans/:id` | A, L, S | Loan history |
 | `POST /loans/borrow`, `POST /loans/:id/return` | A, L | Borrow Book, Return Book |
+| `POST /loans/:id/renew` | A, L | Renew a loan once (SLM-18) |
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
 | `GET /ai/quota` | A, L, S | AI-assisted searches left today |

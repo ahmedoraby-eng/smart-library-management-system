@@ -2,7 +2,7 @@
 
 A staff-facing library operations app: catalogue, members, **Borrow Book** / **Return Book**, loan history, search, a dashboard, and AI-assisted book discovery. Admins, Librarians and Supervisors sign in. Members are records and never sign in.
 
-**Live demo:** `<LIVE_URL>`
+**Live demo:** <https://smart-library.ahmedoraby.workers.dev>
 **Demo video:** `<VIDEO_URL>`
 
 > **Our interpretation.** The assessment doesn't say whether the app is staff-facing or customer-facing. We chose staff-facing because every required feature is an operator action.
@@ -69,6 +69,8 @@ Minimum features from the assessment:
 - [x] **Add, edit and delete books.** Create and edit with validation (ISBN check digit, no duplicate ISBN among active books, copies can't drop below copies on loan, a version check against lost updates). Delete follows one rule: a book with open loans can't be deleted; a book with only past loans is **archived** (gone from the list, history stays readable); a book that was never borrowed is deleted. Only Admins can delete.
 - [x] **Borrow Book (check-in in the assessment's words).** One database transaction: the member row is locked, the rules are checked (member is active, not already holding this title, under the loan limit), one copy is taken with a guarded update, and the loan is written. Default loan is 14 days; a custom due date can be 1 to 60 days ahead.
 - [x] **Return Book (check-out in the assessment's words).** One transaction: the loan is closed only if it is still open, and the copy goes back to stock. Returning twice gives a clear 409.
+- [x] **Renew a loan.** A Librarian or Admin can extend an open loan that is not overdue, once, by the standard loan period (`LOAN_DAYS`) counted from its current due date. One guarded update decides it, so two renewals at once can't both succeed; an overdue, returned or already renewed loan gets a clear 409. Renewed loans carry a «Renewed» marker.
+- [x] **Overdue bell.** A bell in the page corner shows how many loans are overdue; it opens the five most overdue (member, book, days overdue), each linking to that loan in Loan history, plus «View all overdue».
 - [x] **Search.** One search box over title, author, category, description, publisher and ISBN, with prefix matching while you type and typo tolerance on title and author. Filters for category and availability; sorting and paging.
 
 Bonus and extras:
@@ -128,7 +130,7 @@ On `main` today every pull request runs the hygiene job, one `test` job (typeche
 
 Contribution rules (branch and PR naming, review replies) are in [AGENTS.md](AGENTS.md). Agents commit through their own GitHub Apps ([ADR-0068](docs/adr/0068-agents-reach-repo-through-their-github-apps.md)); a separate neutral App identity was considered and rejected ([ADR-0069](docs/adr/0069-neutral-github-app-identity-agent-commits.md)).
 
-`npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. CI runs it in the `e2e` job on every PR and every push to `main`, and keeps the trace of a failed test. Locally it needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
+`npm run e2e` runs a small Playwright smoke in Chromium: a Librarian adds a book, borrows and returns it and finds it in Loan history; a Supervisor sees no write actions and a direct API write gets 403; an Admin resets the demo data; a Librarian opens the overdue bell and renews a loan once. It starts its own throwaway PostgreSQL and Worker on free ports and removes them afterwards. CI runs it in the `e2e` job on every PR and every push to `main`, and keeps the trace of a failed test. Locally it needs the Playwright Chromium installed (`npx playwright install chromium`). The Supervisor test creates its user directly in that throwaway database and signs the session cookie with the run's own throwaway secret, because Supervisors normally come from Google sign-in; the app itself has no sign-in bypass.
 
 Named release tests in `api/test`:
 
@@ -159,7 +161,7 @@ Set as Worker vars or secrets, or in `.dev.vars` locally. See `.dev.vars.example
 | `DEMO_ACCOUNTS_ENABLED` | turns on the two demo accounts | `false` |
 | `DEMO_LIBRARIAN_EMAIL`, `DEMO_LIBRARIAN_PASSWORD` (secret), `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` (secret) | demo account credentials (never in the repo). Required when demo accounts are on. Emails must be on a reserved domain (`.test`, `.invalid` or `.example`) so a real inbox can never become a demo account; passwords must be 12+ characters | none |
 | `BOOTSTRAP_ADMIN_EMAILS` | comma-separated Google emails that become Admin on first sign-in | none |
-| `LOAN_DAYS`, `MAX_ACTIVE_LOANS` | loan period (1–60 days) and open-loan limit per member (1–50) | `14`, `5` |
+| `LOAN_DAYS`, `MAX_ACTIVE_LOANS` | loan period (1–60 days, also the length of a renewal) and open-loan limit per member (1–50) | `14`, `5` |
 | `AI_MODEL` | Workers AI model id. If empty (and no `AI_FAKE`), discovery uses deterministic ranking | none (`wrangler.toml` sets `@cf/meta/llama-3.2-3b-instruct`) |
 | `AI_FAKE` | deterministic fake AI for local runs and tests (refused when `ENVIRONMENT=production`) | `false` |
 | `EMBEDDING_MODEL` | Workers AI embedding model for hybrid retrieval (768 dimensions, matches migration 0004). `off` means full-text only | `@cf/baai/bge-base-en-v1.5` |

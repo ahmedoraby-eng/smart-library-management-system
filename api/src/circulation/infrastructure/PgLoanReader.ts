@@ -13,7 +13,7 @@ const FROM = sql`FROM loans l
   JOIN staff_users ps ON ps.id = l.processed_by
   LEFT JOIN staff_users rs ON rs.id = l.returned_by`;
 
-const select = (now: Date) => sql`SELECT l.id, l.borrowed_at, l.due_at, l.returned_at,
+const select = (now: Date) => sql`SELECT l.id, l.borrowed_at, l.due_at, l.returned_at, l.renewed_at,
     b.id AS book_id, b.title AS book_title, b.author AS book_author,
     m.id AS member_id, m.member_number, m.full_name AS member_name,
     ps.id AS processed_by_id, ps.full_name AS processed_by_name,
@@ -41,6 +41,7 @@ function toView(r: Row): LoanView {
     borrowedAt: date(r.borrowed_at),
     dueAt: date(r.due_at),
     returnedAt: r.returned_at ? date(r.returned_at) : null,
+    renewedAt: r.renewed_at ? date(r.renewed_at) : null,
   };
 }
 

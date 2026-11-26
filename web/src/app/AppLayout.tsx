@@ -22,6 +22,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
 import { useMe } from "../features/auth/session";
+import { OverdueBell } from "../features/circulation/OverdueBell";
 import { CommandPalette } from "../features/palette/CommandPalette";
 
 type NavTo = "/dashboard" | "/books" | "/members" | "/circulation" | "/loans" | "/discover" | "/admin/users";
@@ -142,6 +143,12 @@ export function AppLayout() {
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
       </aside>
       <main className="relative min-w-0 flex-1 px-8 pt-7 pb-8" data-testid="main">
+        {/* The slot is out of the flow (no layout shift); the bell's own box stays relative, so its popover opens under it (D-46-1). */}
+        {can("LOAN_READ") && (
+          <div className="absolute top-1 right-8 z-40" data-testid="overdue-bell-slot">
+            <OverdueBell />
+          </div>
+        )}
         <ThemeToggle className="absolute top-1 right-1.5" />
         <Outlet />
       </main>
