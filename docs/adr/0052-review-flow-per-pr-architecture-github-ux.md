@@ -28,7 +28,7 @@ Agents write the code; independent checks keep quality and design consistent.
 
 ## Notes
 
-**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): QA tests the PR before the merge, not merged `main`; the merge waits for Ready for Release.
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (in force since 2026-11-25): QA tests the PR before the merge, not merged `main`; the merge waits for Ready for Release.
 
 ## Sources
 

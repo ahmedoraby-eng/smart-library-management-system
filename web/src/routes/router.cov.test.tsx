@@ -146,6 +146,30 @@ describe("routes", () => {
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
   });
 
+  it("/privacy is public: no session needed, outside the shell, and linked from the sign-in footer (SLM-8)", async () => {
+    world.role = null;
+    await visit("/signin");
+    const link = await screen.findByTestId("signin-privacy");
+    expect(link).toHaveAttribute("href", "/privacy");
+    link.click();
+    expect(await screen.findByTestId("privacy")).toHaveTextContent("Privacy policy");
+    expect(path()).toBe("/privacy");
+    expect(screen.getByTestId("privacy")).toHaveTextContent("openid");
+    expect(screen.getByTestId("privacy")).toHaveTextContent("support email on the Google sign-in screen");
+    expect(screen.getByTestId("privacy")).toHaveTextContent("theme choice (Reading Room or plain)");
+    expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
+    screen.getByTestId("privacy-back").click();
+    await waitFor(() => expect(path()).toBe("/signin"));
+  });
+
+  it("a direct visit to /privacy stays there without a session", async () => {
+    world.role = null;
+    await visit("/privacy");
+    expect(await screen.findByTestId("privacy")).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(path()).toBe("/privacy");
+  });
+
   it("previews links on intent", () => {
     expect(router.options.defaultPreload).toBe("intent");
   });

@@ -68,3 +68,12 @@ export function useReturn() {
     onSettled: () => invalidate(),
   });
 }
+
+/** SLM-18: extend an open, not-overdue loan once (POST /api/loans/:id/renew). */
+export function useRenew() {
+  const invalidate = useInvalidateCirculation();
+  return useMutation({
+    mutationFn: (loanId: string) => api<LoanDto>(`/loans/${encodeURIComponent(loanId)}/renew`, { method: "POST" }),
+    onSettled: () => invalidate(),
+  });
+}

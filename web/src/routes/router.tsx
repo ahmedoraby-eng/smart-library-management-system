@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, createRouter, Navigate, Outlet, redirect 
 import { z } from "zod";
 import { AppLayout } from "../app/AppLayout";
 import { ForbiddenPage, NotFoundPage } from "../app/pages";
+import { PrivacyPage } from "../app/PrivacyPage";
 import { RequirePermission } from "../app/RequirePermission";
 import { SignInPage } from "../features/auth/SignInPage";
 import { meQueryKey } from "../features/auth/session";
@@ -42,6 +43,9 @@ const signInRoute = createRoute({
   }),
   component: SignInPage,
 });
+
+// Public privacy policy (SLM-8, linked from the Google consent screen): no session, outside the shell.
+const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/privacy", component: PrivacyPage });
 
 // Pathless layout: everything below needs a session and renders inside the shell.
 const appRoute = createRoute({ getParentRoute: () => rootRoute, id: "app", component: AppLayout });
@@ -135,6 +139,7 @@ const notFoundRoute = createRoute({ getParentRoute: () => appRoute, path: "/404"
 
 const routeTree = rootRoute.addChildren([
   signInRoute,
+  privacyRoute,
   appRoute.addChildren([
     indexRoute,
     dashboardRoute,
@@ -177,7 +182,8 @@ declare module "@tanstack/react-router" {
 setApiErrorHandler((err: ApiError, queryKey?: readonly unknown[]) => {
   const here = router.state.location;
   if (err.status === 401) {
-    if (here.pathname.startsWith("/signin")) return;
+    // Public pages: a late 401 (e.g. sign-in's /me still in flight) never bounces them to sign-in.
+    if (here.pathname.startsWith("/signin") || here.pathname === "/privacy") return;
     // `expired` only when we had a session before; a first visit just goes to sign-in.
     const hadSession = queryClient.getQueryData(meQueryKey) !== undefined;
     queryClient.removeQueries({ queryKey: meQueryKey });

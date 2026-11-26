@@ -6,6 +6,7 @@ import {
   bookUnavailable,
   checkBorrow,
   loanAlreadyReturned,
+  renewalRefused,
   resolveDueAt,
   type CirculationStore,
   type LoanPolicy,
@@ -19,7 +20,7 @@ const endOf = (v: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(new Date(v).getTime() + 86_400_000 - 1) : new Date(v);
 
 /**
- * Borrow Book and Return Book (SLM-4) and loan reads (SLM-5). Each write is one transaction owned here;
+ * Borrow Book and Return Book (SLM-4), renewal (SLM-18) and loan reads (SLM-5). Each write is one transaction owned here;
  * the rules are the domain's, the SQL is the infrastructure's. Authorization is checked by the route guard.
  */
 export class CirculationService {
@@ -61,6 +62,18 @@ export class CirculationService {
       }
       // Accepted for an inactive member and an archived book (D4): returnCopy has no such guard.
       await stock.returnCopy(closed.bookId);
+    });
+    return this.get(loanId);
+  }
+
+  /** SLM-18: extend an open, not-overdue loan once by LOAN_DAYS from its current due date. */
+  async renew(loanId: string, staffId: string): Promise<LoanView> {
+    const now = this.clock();
+    await this.store.inTransaction(async ({ loans }) => {
+      if (await loans.renew(loanId, staffId, now, this.policy.loanDays)) return;
+      const state = await loans.renewalState(loanId);
+      if (!state) throw new NotFoundError("This loan");
+      throw renewalRefused(state);
     });
     return this.get(loanId);
   }
