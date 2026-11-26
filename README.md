@@ -148,6 +148,21 @@ Named release tests in `api/test`:
 
 Other API tests cover parallel returns, the loan-limit race, two Admins demoting each other at once, search injection safety, the Google sign-in flow, rate limits and AI fallback paths. The schema-parity test checks that the Drizzle schema matches the SQL migrations.
 
+## How it was built: an AI team
+
+This project was planned, designed, built, tested and documented by a team of **AI agents**: Claude Code sessions,
+each given one role (product owner, architect, engineer, UX designer, QA, DevOps) and its own Jira, Confluence and
+GitHub accounts, coordinated by an orchestrator agent. The accounts named Adam, Yousef, Malek, Haya, Salma, Basel and
+Talia, and the GitHub Apps ending in `-malek[bot]`, `-basel[bot]`, `-haya[bot]` and `-yousef-docs[bot]`, are AI agents,
+not people. The only human is the repository owner, Ahmed Oraby: he set the goals, made the decisions, reviewed the
+work and approved and merged what shipped.
+
+Read more:
+
+- [docs/ai-team.md](docs/ai-team.md): each agent, its role, what it did and its accounts, and what only the owner does.
+- [docs/how-it-works.md](docs/how-it-works.md): the step-by-step path of a ticket from Jira to production, with a
+  diagram: handoffs, reviews, and the automation behind each step.
+
 ## Configuration
 
 Set as Worker vars or secrets, or in `.dev.vars` locally. See `.dev.vars.example` and `wrangler.toml`.
