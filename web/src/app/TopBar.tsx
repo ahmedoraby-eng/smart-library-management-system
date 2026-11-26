@@ -73,7 +73,7 @@ export function TopBar({ pathname, showBell }: { pathname: string; showBell: boo
   return (
     <header
       data-testid="top-bar"
-      className="sticky top-0 z-30 -mx-8 mb-6 flex h-14 items-center gap-4 border-b border-border bg-canvas/85 px-8 backdrop-blur-md supports-[not(backdrop-filter:blur(0))]:bg-canvas"
+      className="sticky top-0 z-30 -mx-8 mb-6 flex h-14 items-center gap-4 border-b border-border bg-canvas/85 px-8 backdrop-blur-md max-sm:-mx-4 max-sm:gap-2 max-sm:px-4 supports-[not(backdrop-filter:blur(0))]:bg-canvas"
     >
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
         <ol className="flex items-center gap-1.5 text-sm text-neutral-600">
@@ -110,11 +110,11 @@ export function TopBar({ pathname, showBell }: { pathname: string; showBell: boo
         data-testid="top-search"
         aria-haspopup="dialog"
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm text-neutral-500 shadow-card transition-[border-color,box-shadow,color] duration-150 hover:border-border-strong hover:text-neutral-700 max-lg:w-44"
+        className="flex h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm text-neutral-500 shadow-card transition-[border-color,box-shadow,color] duration-150 hover:border-border-strong hover:text-neutral-700 max-lg:w-44 max-sm:w-8 max-sm:shrink-0 max-sm:justify-center max-sm:px-0"
       >
         <SearchIcon size={15} />
-        <span className="truncate">Search books, members…</span>
-        <kbd className="ml-auto rounded-xs border border-border px-1 font-mono text-[11px] leading-4 text-neutral-500">
+        <span className="truncate max-sm:sr-only">Search books, members…</span>
+        <kbd className="ml-auto rounded-xs max-sm:hidden border border-border px-1 font-mono text-[11px] leading-4 text-neutral-500">
           {shortcut}
         </kbd>
       </button>

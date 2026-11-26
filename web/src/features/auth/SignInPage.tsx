@@ -292,7 +292,7 @@ export function SignInPage() {
             />
           </div>
           <footer className="mt-6 text-center text-sm text-neutral-600">
-            <Link to="/privacy" className="underline underline-offset-2" data-testid="signin-privacy">
+            <Link to="/privacy" className="tap-y underline underline-offset-2" data-testid="signin-privacy">
               Privacy policy
             </Link>
           </footer>

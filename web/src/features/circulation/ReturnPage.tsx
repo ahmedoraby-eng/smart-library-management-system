@@ -199,7 +199,7 @@ export function ReturnPage() {
                       <Link
                         to="/books/$bookId"
                         params={{ bookId: loan.book.id }}
-                        className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                        className="tap-y font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                       >
                         {loan.book.title}
                       </Link>
