@@ -1,6 +1,6 @@
 # 0163. CI Postgres image `pgvector/pgvector:pg16` so the HNSW path is tested
 
-- **Status:** Accepted, not yet in force (2026-11-25, by Ahmed Oraby)
+- **Status:** Accepted (2026-11-25, by Ahmed Oraby)
 - **Date:** 2026-11-25
 - **Area:** cicd
 - **Deciders:** Architecture, approved by Ahmed Oraby
@@ -28,7 +28,7 @@ Change the CI service image to `pgvector/pgvector:pg16`. Approved by architectur
 
 ## Notes
 
-Implemented in PR #26 (merged): `scripts/ci-test.sh` starts `pgvector/pgvector:pg16` by default. **In force when** PR #29 makes CI call `npm run test:coverage`; until then CI's `test` job keeps its own `postgres:16` service.
+Implemented in PR #26 (merged): `scripts/ci-test.sh` starts `pgvector/pgvector:pg16` by default. **In force since 2026-11-25:** PR #29 (014e7bc) made CI call `npm run test:coverage`, so the API tests in CI run on `pgvector/pgvector:pg16`.
 
 ## Sources
 

@@ -67,7 +67,7 @@ The web app (`web/src`) is organised by feature (`books`, `circulation`, `member
 
 ![Data model on main: staff_users, members, loans and books; book_chunks (the AI search index); ai_usage and ai_cache (AI cost controls)](img/data-model.png)
 
-Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry).
+Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`. `0002_search.sql` adds a generated full-text column and trigram indexes to `books`, and a trigram index on member names. `0003_google_sub.sql` adds the Google account id to `staff_users`. `0004_book_chunks.sql` adds `book_chunks`, the derived search index of embedded description chunks (with a `vector(768)` column and an HNSW index where the server has pgvector). `0005_ai_cost.sql` adds `ai_usage` (daily AI searches and Neurons) and `ai_cache` (query embeddings and ranked results, with an expiry). `0006_loan_renewal.sql` adds `loans.renewed_at` and `loans.renewed_by` (nullable; a loan is renewed at most once).
 
 - **Copies are counts, not records.** A book has `total_copies` and `available_copies`. There is no per-copy entity.
 - **Stock invariant.** `0 <= available_copies <= total_copies` is a `CHECK` constraint. Available plus on-loan always equals total, where on-loan is the number of open loans of that book.
@@ -75,7 +75,7 @@ Tables (`migrations/0001_init.sql`): `staff_users`, `books`, `members`, `loans`.
 - **One open loan per member and title.** A partial unique index on `(member_id, book_id) WHERE returned_at IS NULL`.
 - **Books are archived, not removed, once they have history.** `loans.book_id` is `ON DELETE RESTRICT`. A book with open loans can't be deleted; with only past loans it is archived (`archived_at`); never borrowed, it is deleted. An archived book's ISBN can be reused (the ISBN unique index covers active books only).
 - **Optimistic concurrency.** Books and members carry a `version`. An update with an old version gets `409 STALE_VERSION`.
-- **Loan rules.** Member must be `ACTIVE`; no second open loan of the same title; open loans below `MAX_ACTIVE_LOANS` (default 5); due date defaults to `LOAN_DAYS` (14), or a custom date 1 to 60 days ahead. Returns are accepted for inactive members and archived books.
+- **Loan rules.** Member must be `ACTIVE`; no second open loan of the same title; open loans below `MAX_ACTIVE_LOANS` (default 5); due date defaults to `LOAN_DAYS` (14), or a custom date 1 to 60 days ahead. Returns are accepted for inactive members and archived books. A loan can be renewed once, while open and not overdue, by `LOAN_DAYS` from its current due date ([ADR-0186](adr/0186-loan-renewal-once-loan-days-from-due-date.md)).
 
 ### Borrow and return
 
@@ -92,6 +92,11 @@ Return (`CirculationService.return`):
 
 1. `UPDATE loans SET returned_at = ?, returned_by = ? WHERE id = ? AND returned_at IS NULL`. Two parallel returns: one updates a row, the other updates none and gets `409 LOAN_ALREADY_RETURNED`.
 2. `UPDATE books SET available_copies = available_copies + 1`.
+
+Renew (`CirculationService.renew`, SLM-18):
+
+1. `UPDATE loans SET due_at = due_at + LOAN_DAYS, renewed_at = ?, renewed_by = ? WHERE id = ? AND returned_at IS NULL AND renewed_at IS NULL AND due_at >= now`, with `now` from the injected clock (the complement of the overdue fragment). Two parallel renewals: one updates the row, the other updates none.
+2. When nothing was updated, the loan is read to explain why: `404` if it doesn't exist, else `409 LOAN_ALREADY_RETURNED`, `LOAN_ALREADY_RENEWED` or `LOAN_OVERDUE`, in that order. Stock is not touched.
 
 Deleting a book locks the book row first, so a borrow running at the same time waits and then finds the book archived or gone; if the borrow takes the row first, the delete then sees the open loan and gets `409 BOOK_HAS_ACTIVE_LOANS`.
 
@@ -117,6 +122,7 @@ All paths start with `/api`. Errors use RFC 9457 Problem Details (`application/p
 | `POST /members`, `PUT /members/:id` | A, L | Create, edit, deactivate |
 | `GET /loans`, `/loans/:id` | A, L, S | Loan history |
 | `POST /loans/borrow`, `POST /loans/:id/return` | A, L | Borrow Book, Return Book |
+| `POST /loans/:id/renew` | A, L | Renew a loan once (SLM-18) |
 | `GET /dashboard/summary` | A, L, S | Dashboard numbers |
 | `POST /ai/book-discovery` | A, L, S | AI discovery |
 | `GET /ai/quota` | A, L, S | AI-assisted searches left today |
@@ -161,7 +167,7 @@ Every decision taken so far (185 on 2026-11-25, ADR-0001 to ADR-0185), with the 
 - AI: the model only ranks, behind a validator and a fallback ([ADR-0013](adr/0013-llm-ranks-only-validator-fallback.md)); hybrid retrieval ([ADR-0016](adr/0016-hybrid-retrieval-rrf.md)); cost tiers ([ADR-0019](adr/0019-ai-cost-tiers-and-quotas.md)).
 - Deploy: Workers Builds, with migrations behind a gate ([ADR-0022](adr/0022-workers-builds-auto-deploy.md)).
 - Rate limiting: Workers bindings with an in-memory fallback ([ADR-0103](adr/0103-rate-limiting.md)).
-- Testing: CI Postgres image `pgvector/pgvector:pg16`, so the HNSW path is tested before production ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md), accepted, arrives with PR #29); the E2E smoke runs in CI with traces kept on failure ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md), supersedes [ADR-0176](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md)).
+- Testing: CI Postgres image `pgvector/pgvector:pg16`, so the HNSW path is tested before production ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)); the E2E smoke runs in CI with traces kept on failure ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md), supersedes [ADR-0176](adr/0176-playwright-e2e-smoke-three-flows-run-locally.md)).
 - Process: QA tests the PR before merge, and a Jira status check gates the merge ([ADR-0185](adr/0185-qa-tests-pr-before-merge.md)).
 - Not taken: a neutral GitHub App identity for agent commits ([ADR-0069](adr/0069-neutral-github-app-identity-agent-commits.md), rejected).
 
@@ -173,16 +179,16 @@ Database migrations are not part of the deploy: they are run by hand on producti
 
 ## CI and quality gates
 
-On `main` today CI runs the hygiene job, one `test` job (typecheck, `lint:deps`, the API tests on a plain `postgres:16` service container, so the vector tests take the brute-force path, and the web build), the **e2e** job and the migrations gate. The shared Node CI and the AI guardrails arrive with PR #29.
-
-Once PR #29 merges, every pull request and every push to `main` runs:
+Every pull request and every push to `main` runs:
 
 - **hygiene** (`.github/workflows/ci.yml`): a secret scan (gitleaks) and a check for employer or client names.
-- **ci / Build and test**: the shared Node CI. `npm ci`, then `npm run check` (typecheck, `lint:deps`, ESLint, Prettier check, build), then `npm run test:coverage` (`scripts/ci-test.sh`: the API and contracts tests on the `pgvector/pgvector:pg16` image, so the HNSW path is tested ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)), then the web tests; both fail under the coverage gate of 90% lines, statements and functions, with branches at 85% for the API and 80% for the web app), and an audit of production dependencies.
+- **ci / Build and test**: the shared Node CI ([ADR-0162](adr/0162-same-ci-gates-shared-playbook-90-coverage.md)). `npm ci`, then `npm run check` (typecheck, `lint:deps`, ESLint, Prettier check, build), then `npm run test:coverage` (`scripts/ci-test.sh`: the API and contracts tests on the `pgvector/pgvector:pg16` image, so the HNSW path is tested ([ADR-0163](adr/0163-ci-postgres-image-pgvector-pgvector-pg16-so.md)), then the web tests; both fail under the coverage gate of 90% lines, statements and functions, with branches at 85% for the API and 80% for the web app), and an audit of production dependencies.
 - **AI guardrails** (`.ai-guard.toml`): an AI-assisted PR ticks the AI-assistance box, adds or updates tests when it changes `api/src`, `web/src` or `contracts/src`, and needs the owner's review label when it changes workflows, the policy itself or `migrations/`.
-- **e2e** (`.github/workflows/e2e.yml`, on `main` now): `npm run e2e` on a GitHub-hosted runner. `e2e/run.ts` builds its own throwaway stack (embedded PostgreSQL 16, `wrangler dev`, the fake AI, generated secrets; no repository secrets). A failed test uploads its Playwright trace and screenshot as the `e2e-traces` artifact ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md)).
+- **e2e** (`.github/workflows/e2e.yml`): `npm run e2e` on a GitHub-hosted runner. `e2e/run.ts` builds its own throwaway stack (embedded PostgreSQL 16, `wrangler dev`, the fake AI, generated secrets; no repository secrets). A failed test uploads its Playwright trace and screenshot as the `e2e-traces` artifact ([ADR-0184](adr/0184-e2e-smoke-runs-github-ci-traces-kept.md)).
 - **migrations gate**: described above.
 
-**QA before merge and the Jira status check** ([ADR-0185](adr/0185-qa-tests-pr-before-merge.md)). QA tests the PR's build, not merged `main`. When a PR whose description says `Closes SLM-<n>` opens (or leaves draft), `scripts/jira-ready-for-testing.mjs` moves the issue from In Development to In Testing and assigns it to QA. `scripts/jira-status-check.mjs` posts a `Jira status` commit status: it is green only when every SLM key the PR names (title, branch, `Closes`/`Refs` lines) is in Ready for Release, which QA sets when the PR passed. A Released issue passes only for a PR that changes test files only, and only the owner's waiver label overrides the check. The rules are in `.github/jira-status.json`. The scripts and their tests (`scripts/test/`) are on `main`; the repository owner adds their workflow files ([ADR-0067](adr/0067-workflow-file-changes-pushed-owner.md)).
+**The merge gate.** The `protect-main` ruleset on `main` requires `hygiene`, `ci / Build and test`, `e2e`, `migrations` and `Jira status` to pass on a branch that is up to date with `main`, allows squash merges only, blocks force pushes and deletion of `main`, and has no bypass list. The AI guardrails report on every PR but are not a required check.
 
-A merged PR whose description says `Closes <issue key>` moves that issue to Released (`.github/workflows/jira-close.yml`). Contribution rules are in [AGENTS.md](../AGENTS.md). Agents commit through their own GitHub Apps ([ADR-0068](adr/0068-agents-reach-repo-through-their-github-apps.md)); a neutral App identity was rejected ([ADR-0069](adr/0069-neutral-github-app-identity-agent-commits.md)).
+**QA before merge and the Jira status check** ([ADR-0185](adr/0185-qa-tests-pr-before-merge.md)). QA tests the PR's build, not merged `main`. When a PR whose description says `Closes SLM-<n>` opens (or leaves draft), `scripts/jira-ready-for-testing.mjs` moves the issue from In Development to In Testing and assigns it to QA. `scripts/jira-status-check.mjs` posts a `Jira status` commit status: it is green only when every SLM key the PR names (title, branch, `Closes`/`Refs` lines) is in Ready for Release, which QA sets when the PR passed. A Released issue passes only for a PR that changes test files only, and only the owner's waiver label overrides the check. The rules are in `.github/jira-status.json`; the workflows are `jira-ready-for-testing.yml` (on PR open, reopen or ready for review) and `jira-status.yml` (on PR events and every 15 minutes). Both run the scripts from `main`, never the PR's code. The scripts' tests are in `scripts/test/`. Workflow files are pushed by the repository owner ([ADR-0067](adr/0067-workflow-file-changes-pushed-owner.md)).
+
+A merged PR whose description says `Closes <issue key>` moves that issue to Released once the deploy check `Workers Builds: smart-library` is green on the merge commit or a later one; it waits up to 12 minutes, and with no green deploy the issue stays where it is, with a comment (`.github/workflows/jira-close.yml`, [ADR-0023](adr/0023-close-on-merge-after-deploy.md)). Contribution rules are in [AGENTS.md](../AGENTS.md). Agents commit through their own GitHub Apps ([ADR-0068](adr/0068-agents-reach-repo-through-their-github-apps.md)); a neutral App identity was rejected ([ADR-0069](adr/0069-neutral-github-app-identity-agent-commits.md)).

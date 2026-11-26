@@ -31,7 +31,7 @@ The board should stay simple but show that testing and code review happen.
 
 ## Notes
 
-**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (when in force): a fifth status, Ready for Release, between In Testing and Released; QA tests the PR before the merge.
+**Amended by [0185](0185-qa-tests-pr-before-merge.md)** (in force since 2026-11-25): a fifth status, Ready for Release, between In Testing and Released; QA tests the PR before the merge.
 
 ## Sources
 

@@ -17,13 +17,14 @@ export function toLoanDto(l: LoanView): LoanDto {
     borrowedAt: l.borrowedAt.toISOString(),
     dueAt: l.dueAt.toISOString(),
     returnedAt: l.returnedAt?.toISOString() ?? null,
+    renewedAt: l.renewedAt?.toISOString() ?? null,
   };
 }
 
 const body = async (c: { req: { json: () => Promise<unknown> } }) => c.req.json().catch(() => null);
 const IdParam = z.object({ id: Uuid });
 
-/** /api/loans (SLM-4 borrow/return, SLM-5 history). Permissions per rbac-matrix.md. */
+/** /api/loans (SLM-4 borrow/return, SLM-5 history, SLM-18 renew). Permissions per rbac-matrix.md. */
 export function loanRoutes() {
   const r = new Hono<AppEnv>();
 
@@ -48,6 +49,11 @@ export function loanRoutes() {
   r.post("/:id/return", requirePermission("LOAN_PROCESS"), async (c) => {
     const { id } = parseOr400(IdParam, { id: c.req.param("id") });
     return c.json(toLoanDto(await c.var.container.circulation.return(id, c.var.principal.id)));
+  });
+
+  r.post("/:id/renew", requirePermission("LOAN_PROCESS"), async (c) => {
+    const { id } = parseOr400(IdParam, { id: c.req.param("id") });
+    return c.json(toLoanDto(await c.var.container.circulation.renew(id, c.var.principal.id)));
   });
 
   return r;

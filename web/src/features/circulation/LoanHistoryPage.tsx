@@ -25,8 +25,10 @@ import { ApiError } from "../../lib/apiClient";
 import { MemberNumber } from "../../components/MemberNumber";
 import { cn } from "../../lib/cn";
 import { formatDate } from "../../lib/format";
+import { useCan } from "../auth/session";
 import { useLoans } from "./api";
 import { LoanStatusBadge } from "./LoanStatusBadge";
+import { RenewButton, RenewedBadge, RenewError, useRenewAction } from "./RenewAction";
 import type { LoanHistorySearch } from "./searchSchemas";
 
 const route = getRouteApi("/app/loans");
@@ -41,7 +43,8 @@ const STATUS_OPTIONS = [
 ] as const;
 
 /**
- * Loan history (ux.md §3.6, SLM-5): read-only for every role. Filters, sort and page live in the URL.
+ * Loan history (ux.md §3.6, SLM-5): filters, sort and page live in the URL. Its one action is [Renew] on open
+ * loans (SLM-18), shown to roles with LOAN_PROCESS; renewed loans carry a «Renewed» marker for everyone.
  * Status is derived by the API (OVERDUE = open and past due); no fee or fine appears anywhere (AC5).
  */
 export function LoanHistoryPage() {
@@ -71,6 +74,8 @@ export function LoanHistoryPage() {
   }, [qText]);
 
   const loans = useLoans(search);
+  const canRenew = useCan()("LOAN_PROCESS");
+  const renewal = useRenewAction();
   const data = loans.data;
   const filtered = Boolean(search.q || search.status || search.memberId || search.bookId || search.from || search.to);
   const clearFilters = () => {
@@ -138,6 +143,8 @@ export function LoanHistoryPage() {
             testId="filter-to"
           />
         </div>
+
+        <RenewError message={renewal.error} onDismiss={renewal.clearError} />
 
         {(search.memberId || search.bookId) && (
           <div className="flex flex-wrap gap-2 border-b border-border px-4 py-2.5" data-testid="scope-chips">
@@ -230,7 +237,12 @@ export function LoanHistoryPage() {
                 </Thead>
                 <tbody>
                   {data.items.map((loan) => (
-                    <LoanRow key={loan.id} loan={loan} onMember={(memberId) => setSearch({ memberId })} />
+                    <LoanRow
+                      key={loan.id}
+                      loan={loan}
+                      onMember={(memberId) => setSearch({ memberId })}
+                      renew={canRenew ? { pending: renewal.pendingId === loan.id, onRenew: renewal.run } : undefined}
+                    />
                   ))}
                 </tbody>
               </Table>
@@ -248,7 +260,20 @@ export function LoanHistoryPage() {
   );
 }
 
-function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: string) => void }) {
+function LoanRow({
+  loan,
+  onMember,
+  renew,
+}: {
+  loan: LoanDto;
+  onMember: (memberId: string) => void;
+  /**
+   * Present for roles that may renew; a returned loan shows no button (nothing to renew). [Renew] sits under
+   * the status badge, not in an actions column of its own: a 7th column made the table scroll sideways at
+   * 1280 px (D-46-2, SLM-7 AC4).
+   */
+  renew?: { pending: boolean; onRenew: (loan: LoanDto) => void };
+}) {
   const overdue = loan.status === "OVERDUE";
   return (
     <Tr data-testid="history-row" data-status={loan.status} className={cn(overdue && "bg-overdue")}>
@@ -286,7 +311,11 @@ function LoanRow({ loan, onMember }: { loan: LoanDto; onMember: (memberId: strin
         {loan.returnedAt ? formatDate(loan.returnedAt) : "—"}
       </Td>
       <Td kind="nowrap">
-        <LoanStatusBadge loan={loan} />
+        <div className="flex flex-col items-start gap-1">
+          <LoanStatusBadge loan={loan} />
+          <RenewedBadge loan={loan} className="ml-0" />
+          {renew && loan.status !== "RETURNED" && <RenewButton loan={loan} {...renew} className="-ml-3" />}
+        </div>
       </Td>
       <Td kind="truncate" className="text-neutral-700 max-lg:hidden" title={loan.processedBy.name}>
         {loan.processedBy.name}

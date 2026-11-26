@@ -499,6 +499,38 @@ describe("PgCirculationStore", () => {
     expect(state?.returnedByName).toBeNull();
   });
 
+  it("SLM-18 renew: extends an open loan once from its due date; renewalState explains the rest; unknown or malformed ids", async () => {
+    const m = await addMember();
+    const b = await addBook("Renew Me");
+    const loan = await addLoan(b, m, { due: "2026-12-01T10:00:00Z" });
+    const at = new Date("2026-11-20T09:00:00Z");
+    const r = await store().inTransaction(async (tx) => ({
+      bad: await tx.loans.renew("x", staff.librarian, at, 14),
+      unknown: await tx.loans.renew(NIL, staff.librarian, at, 14),
+      first: await tx.loans.renew(loan, staff.admin, at, 14),
+      second: await tx.loans.renew(loan, staff.librarian, at, 14),
+      state: await tx.loans.renewalState(loan),
+      stateBad: await tx.loans.renewalState("x"),
+      stateUnknown: await tx.loans.renewalState(NIL),
+    }));
+    expect(r).toMatchObject({
+      bad: false,
+      unknown: false,
+      first: true,
+      second: false,
+      stateBad: null,
+      stateUnknown: null,
+    });
+    expect(r.state).toEqual({
+      dueAt: new Date("2026-12-15T10:00:00Z"),
+      returnedAt: null,
+      returnedByName: null,
+      renewedAt: at,
+    });
+    const row = (await pool.query("SELECT renewed_by FROM loans WHERE id = $1", [loan])).rows[0];
+    expect(row.renewed_by).toBe(staff.admin);
+  });
+
   it("insert returns the new loan id", async () => {
     const m = await addMember();
     const b = await addBook("Ins");
