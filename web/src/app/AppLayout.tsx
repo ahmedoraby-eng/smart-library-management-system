@@ -138,7 +138,7 @@ export function AppLayout() {
         </nav>
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
       </aside>
-      <main className="relative min-w-0 flex-1 px-8 pb-8" data-testid="main">
+      <main className="relative min-w-0 flex-1 px-8 pb-8 max-sm:px-4" data-testid="main">
         <TopBar pathname={pathname} showBell={can("LOAN_READ")} />
         {/* Page transitions: a view transition on this box (index.css), or a fade-up where the browser has none. */}
         <div key={pageKey(pathname)} className="slm-page" data-testid="page">

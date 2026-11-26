@@ -53,7 +53,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="page-head mb-6 flex items-start justify-between gap-4">
+      <header className="page-head mb-6 flex items-start justify-between gap-4 max-sm:flex-wrap">
         <div>
           <h1 className="font-book text-title plain:tracking-tight">Dashboard</h1>
           <p className="mt-1 text-neutral-600" data-testid="today">
@@ -118,7 +118,7 @@ export function DashboardPage() {
       ) : (
         <div className="slm-stagger flex flex-col gap-4">
           <KpiCards k={data.kpis} />
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="grid items-start gap-4 max-xl:grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_22rem]">
             <RecentBorrowings rows={data.recentBorrowings} canBorrow={can("LOAN_PROCESS")} />
             <div className="flex flex-col gap-4">
               <PopularBooks books={data.popularBooks} />
@@ -448,7 +448,7 @@ function RecentBorrowings({ rows, canBorrow }: { rows: DashboardSummary["recentB
                   <Link
                     to="/books/$bookId"
                     params={{ bookId: l.book.id }}
-                    className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                    className="tap-y font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                   >
                     {l.book.title}
                   </Link>
@@ -504,7 +504,7 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
                 <Link
                   to="/books/$bookId"
                   params={{ bookId: b.id }}
-                  className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                  className="tap-y block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                 >
                   {b.title}
                 </Link>
@@ -549,7 +549,7 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
                 <Link
                   to="/books/$bookId"
                   params={{ bookId: b.id }}
-                  className="block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+                  className="tap-y block truncate font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
                 >
                   {b.title}
                 </Link>

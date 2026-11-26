@@ -281,7 +281,7 @@ function LoanRow({
         <Link
           to="/books/$bookId"
           params={{ bookId: loan.book.id }}
-          className="font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+          className="tap-y font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
         >
           {loan.book.title}
         </Link>
@@ -292,7 +292,7 @@ function LoanRow({
           type="button"
           onClick={() => onMember(loan.member.id)}
           title={`Show loans of ${loan.member.fullName}`}
-          className="whitespace-nowrap text-left font-medium text-neutral-900 hover:underline"
+          className="tap-y whitespace-nowrap text-left font-medium text-neutral-900 hover:underline"
           data-testid="member-filter-link"
         >
           {loan.member.fullName}

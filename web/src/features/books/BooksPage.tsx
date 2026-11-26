@@ -326,12 +326,14 @@ function BookRow({ book, onDelete }: { book: BookDto; onDelete: (b: BookDto) => 
             <Link
               to="/books/$bookId"
               params={{ bookId: book.id }}
-              className="block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
+              className="tap-y block font-book text-md text-neutral-900 no-underline hover:underline plain:text-base"
               data-testid="book-title"
             >
               {book.title}
             </Link>
-            <div className="truncate text-sm text-neutral-600">{book.author}</div>
+            <div className="truncate text-sm text-neutral-600 max-wide:max-w-64" title={book.author}>
+              {book.author}
+            </div>
           </div>
         </div>
       </Td>
