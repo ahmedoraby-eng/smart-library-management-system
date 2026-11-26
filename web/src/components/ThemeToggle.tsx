@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
+import { prefersReducedMotion } from "../lib/motion";
 import { cn } from "../lib/cn";
 import { applyTheme, currentTheme, type Theme } from "../lib/theme";
 
@@ -17,15 +19,21 @@ export function ThemeToggle({ className }: { className?: string }) {
     <button
       type="button"
       onClick={() => {
-        applyTheme(next);
-        setTheme(next);
+        const swap = () => {
+          applyTheme(next);
+          flushSync(() => setTheme(next));
+        };
+        // Cross-fade the whole page where the browser supports view transitions; otherwise switch at once.
+        const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+        if (doc.startViewTransition && !prefersReducedMotion()) doc.startViewTransition(swap);
+        else swap();
       }}
       aria-label={label}
       title={label}
       data-testid="theme-toggle"
       data-theme-current={theme}
       className={cn(
-        "grid h-6 w-6 place-items-center rounded-sm text-neutral-500 opacity-50 transition-opacity hover:bg-neutral-100 hover:opacity-100 focus-visible:opacity-100",
+        "grid h-6 w-6 place-items-center rounded-sm text-neutral-500 opacity-50 transition-[opacity,background-color,transform] duration-200 hover:bg-neutral-100 hover:opacity-100 focus-visible:opacity-100 motion-safe:active:rotate-180",
         className,
       )}
     >

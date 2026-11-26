@@ -36,7 +36,7 @@ import { availabilitySegments, dismissNotice, isNoticeDismissed } from "./model"
 import { useCountUp } from "../../lib/useCountUp";
 
 /** Card-header links: brand-700, semibold. */
-const cardLink = "text-base font-semibold text-brand-700";
+const cardLink = "link-draw text-base font-semibold text-brand-700 no-underline";
 
 type Kpis = DashboardSummary["kpis"];
 const today = () =>
@@ -274,7 +274,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="border-border px-5.5 pt-4 pb-4.5 rr:max-xl:even:border-l rr:max-xl:[&:nth-child(n+3)]:border-t rr:xl:[&:not(:first-child)]:border-l plain:rounded-xl plain:border plain:bg-surface plain:p-5 plain:shadow-card"
+      className="border-border px-5.5 pt-4 pb-4.5 transition-colors duration-200 hover:bg-neutral-25 rr:max-xl:even:border-l rr:max-xl:[&:nth-child(n+3)]:border-t rr:xl:[&:not(:first-child)]:border-l plain:rounded-xl plain:border plain:bg-surface plain:p-5 plain:shadow-card"
       data-testid={testId}
     >
       <div className="flex items-center gap-2 text-neutral-600">
@@ -494,7 +494,7 @@ function PopularBooks({ books }: { books: DashboardSummary["popularBooks"] }) {
           {books.map((b, i) => (
             <li
               key={b.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex items-center gap-3 border-b border-border px-5 py-3 transition-colors duration-200 last:border-b-0 hover:bg-neutral-25"
               data-testid="popular-row"
             >
               <span className="w-5 text-right font-book text-[20px] leading-6 text-brass-500 tabular-nums book-italic plain:w-3 plain:text-left plain:text-sm plain:font-normal plain:text-neutral-600">
@@ -541,7 +541,7 @@ function RecentlyAdded({ books }: { books: DashboardSummary["recentlyAdded"] }) 
           {books.map((b) => (
             <li
               key={b.id}
-              className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
+              className="flex items-center gap-3 border-b border-border px-5 py-3 transition-colors duration-200 last:border-b-0 hover:bg-neutral-25"
               data-testid="added-row"
             >
               <BookCover title={b.title} url={b.coverImageUrl} />

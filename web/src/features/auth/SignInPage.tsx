@@ -8,6 +8,7 @@ import { LogoMark } from "../../components/LogoMark";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import { ApiError, api } from "../../lib/apiClient";
 import { useAuthProviders } from "./providers";
+import { splashReady } from "../../lib/splash";
 import { meQueryKey, safeNext, useMe } from "./session";
 
 const route = getRouteApi("/signin");
@@ -34,7 +35,7 @@ function SignInPlate() {
           Smart <i className="text-brass-200">Library</i>
         </span>
       </div>
-      <blockquote className="mt-12 max-w-115 font-book text-[30px] leading-10 font-normal text-[#f6efe0] book-italic">
+      <blockquote className="mt-12 max-w-115 font-book text-[30px] leading-10 font-normal text-[#f6efe0] book-italic motion-safe:animate-[slm-fade-up_700ms_var(--ease-out)_250ms_backwards]">
         “Every book its reader. Every reader their book.”
         <cite className="mt-3.5 block font-sans eyebrow not-italic text-brass-200">
           After S. R. Ranganathan · Five laws of library science
@@ -71,6 +72,8 @@ export function SignInPage() {
   const emailRef = useRef<HTMLInputElement>(null);
 
   const target = safeNext(search.next) ?? "/dashboard";
+
+  useEffect(() => splashReady(), []);
 
   // Already signed in → straight to the app.
   useEffect(() => {
@@ -141,7 +144,7 @@ export function SignInPage() {
           <p className="mt-1 hidden text-base text-neutral-600 plain:block">Staff sign-in</p>
         </div>
 
-        <div className="w-full max-w-100">
+        <div className="w-full max-w-100 motion-safe:animate-[slm-fade-up_450ms_var(--ease-out)_120ms_backwards]">
           {search.expired && (
             <InlineAlert variant="info" className="mb-3" testId="signin-expired">
               Your session ended. Sign in again to continue.

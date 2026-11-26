@@ -52,7 +52,7 @@ export function SimilarBooks({ bookId }: { bookId: string }) {
 
 function SimilarBookCard({ item: { book }, canBorrow }: { item: SimilarBook; canBorrow: boolean }) {
   return (
-    <li className="flex min-w-0 gap-3" data-testid="similar-book" data-book-id={book.id}>
+    <li className="group/card flex min-w-0 gap-3" data-testid="similar-book" data-book-id={book.id}>
       <BookCover title={book.title} url={book.coverImageUrl} size="md" />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
         <Link

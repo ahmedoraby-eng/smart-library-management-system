@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prefersReducedMotion, useCountUp } from "./useCountUp";
+import { prefersReducedMotion } from "./motion";
+import { useCountUp } from "./useCountUp";
 
 /** matchMedia that answers `reduce` for the reduced-motion query. */
 const stubMotion = (reduce: boolean) =>

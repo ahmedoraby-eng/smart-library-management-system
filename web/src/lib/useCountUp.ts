@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-/** True when the person asked the system for less motion, or the browser can't tell us (then we stay still). */
-export function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
+import { prefersReducedMotion } from "./motion";
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 

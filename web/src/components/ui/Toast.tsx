@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../lib/cn";
+import { prefersReducedMotion } from "../../lib/motion";
 import { AlertIcon, CheckCircleIcon, CloseIcon } from "./icons";
 
 type ToastKind = "success" | "error" | "info";
@@ -7,6 +8,8 @@ interface ToastItem {
   id: number;
   kind: ToastKind;
   message: ReactNode;
+  /** Sliding out; removed when the exit animation ends. */
+  leaving?: boolean;
 }
 
 interface ToastApi {
@@ -18,13 +21,23 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null);
 const MAX_TOASTS = 3;
 const AUTO_DISMISS_MS = 4000;
+const EXIT_MS = 200;
 
 /** Bottom-right, max 3 stacked, 4 s (errors stay until closed), role=status / role=alert (ux.md §2). */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
-  const dismiss = useCallback((id: number) => setItems((cur) => cur.filter((t) => t.id !== id)), []);
+  const remove = useCallback((id: number) => setItems((cur) => cur.filter((t) => t.id !== id)), []);
+  // With motion allowed a toast slides out first; under reduced motion it goes at once.
+  const dismiss = useCallback(
+    (id: number) => {
+      if (prefersReducedMotion()) return remove(id);
+      setItems((cur) => cur.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+      setTimeout(() => remove(id), EXIT_MS);
+    },
+    [remove],
+  );
   const push = useCallback((kind: ToastKind, message: ReactNode) => {
     const id = nextId.current++;
     setItems((cur) => [...cur, { id, kind, message }].slice(-MAX_TOASTS));
@@ -60,9 +73,11 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: numbe
       role={isError ? "alert" : "status"}
       data-testid="toast"
       data-kind={item.kind}
+      data-leaving={item.leaving || undefined}
       className={cn(
         "pointer-events-auto flex items-start gap-3 rounded-lg border bg-surface p-3.5 text-base shadow-pop motion-safe:animate-toast-in",
         isError ? "border-danger-200" : "border-border",
+        item.leaving && "animate-[slm-toast-out_200ms_ease-in_forwards]",
       )}
     >
       {isError ? (

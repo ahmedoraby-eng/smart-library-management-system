@@ -99,7 +99,7 @@ export function Tr({ className, ...rest }: HTMLAttributes<HTMLTableRowElement>) 
   return (
     <tr
       className={cn(
-        "border-b border-border transition-colors duration-150 ease-out last:border-b-0 hover:bg-neutral-25",
+        "group/row border-b border-border transition-[background-color,box-shadow] duration-200 ease-out last:border-b-0 hover:bg-neutral-25 hover:shadow-[inset_3px_0_0_var(--color-brass-500)] plain:hover:shadow-[inset_3px_0_0_var(--color-brand-500)]",
         className,
       )}
       {...rest}

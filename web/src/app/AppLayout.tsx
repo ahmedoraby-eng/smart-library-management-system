@@ -1,7 +1,7 @@
 import type { Permission } from "@slm/contracts";
 import { useIsFetching, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BookIcon,
   Button,
@@ -22,6 +22,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { cn } from "../lib/cn";
 import { ApiError, api } from "../lib/apiClient";
 import { useMe } from "../features/auth/session";
+import { splashReady } from "../lib/splash";
 import { OverdueBell } from "../features/circulation/OverdueBell";
 import { CommandPalette } from "../features/palette/CommandPalette";
 
@@ -72,6 +73,10 @@ export function AppLayout() {
   const me = useMe();
   const signOut = useSignOut();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The opening screen leaves once we know who is signed in (the shell, an error, or the way to sign-in).
+  useEffect(() => {
+    if (!me.isPending) splashReady();
+  }, [me.isPending]);
 
   if (me.isPending) return <LoadingScreen testId="shell-loading" />;
   if (me.error instanceof ApiError && me.error.code === "USER_DISABLED") {
@@ -122,14 +127,14 @@ export function AppLayout() {
           </span>
         </div>
         <CommandPalette />
-        <nav aria-label="Main" className="relative flex flex-col gap-0.5">
+        <nav aria-label="Main" className="slm-stagger-x relative flex flex-col gap-0.5">
           <NavIndicator active={[...items, ...adminItems].find((i) => isUnder(pathname, i.to))?.to} />
-          {items.map((i) => (
-            <NavLink key={i.to} item={i} />
+          {items.map((i, n) => (
+            <NavLink key={i.to} item={i} index={n} />
           ))}
           {adminItems.length > 0 && <div className="mx-2 my-2.5 h-px bg-spine-line" role="separator" />}
-          {adminItems.map((i) => (
-            <NavLink key={i.to} item={i} />
+          {adminItems.map((i, n) => (
+            <NavLink key={i.to} item={i} index={items.length + n} />
           ))}
         </nav>
         <UserCard onSignOut={() => signOut.mutate()} signingOut={signOut.isPending} />
@@ -204,11 +209,12 @@ function FetchProgress() {
   );
 }
 
-function NavLink({ item }: { item: NavItem }) {
+function NavLink({ item, index }: { item: NavItem; index: number }) {
   return (
     <Link
       to={item.to}
       title={item.label}
+      style={{ "--slm-i": index } as CSSProperties}
       data-testid={`nav-${item.to.slice(1).replaceAll("/", "-")}`}
       className="group relative flex items-center gap-2.5 rounded-l-sm rounded-r-none px-2.5 py-2 font-medium no-underline transition-colors duration-200 ease-out max-xl:justify-center plain:rounded-md"
       inactiveProps={{ className: "text-spine-muted hover:bg-white/5 hover:text-spine-ink plain:hover:bg-neutral-50" }}

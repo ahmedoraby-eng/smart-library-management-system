@@ -159,6 +159,26 @@
       transform: translateX(16px);
     }
   }
+  @keyframes slm-toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  @keyframes slm-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+  }
+  @keyframes slm-sheen {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
   @keyframes slm-grow-x {
     from {
       transform: scaleX(0);
@@ -396,6 +416,34 @@
   }
 }
 
+/* The sidebar's links slide in one after another when the shell first appears. */
+@media (prefers-reduced-motion: no-preference) {
+  :where(.slm-stagger-x) > a {
+    animation: slm-slide-in 320ms var(--ease-out) backwards;
+    animation-delay: calc(120ms + var(--slm-i, 0) * 40ms);
+  }
+}
+
+/* A link whose underline draws in from the left on hover (card header links). */
+@utility link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 220ms var(--ease-out);
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+}
+
+/* Switching theme cross-fades the whole page (browsers with view transitions). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out);
+}
+
 /* Anyone who asks for less motion gets none: every animation and transition ends at once. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -407,5 +455,10 @@
     transition-duration: 1ms !important;
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
