@@ -440,7 +440,7 @@ async function main(): Promise<void> {
     12: async () => {
       const tag = "Renew and the overdue bell";
       await page.goto(`${LIVE}/circulation/return`);
-      const renew = page.getByTestId("renew-button").first();
+      const renew = page.locator(`[data-testid="renew-button"]:not([disabled])`).first(); // a late loan cannot be renewed
       if (!(await appears(renew, 10_000))) {
         log("  scene 12: no Renew button on the live site yet (SLM-18 not deployed)");
         return false;
