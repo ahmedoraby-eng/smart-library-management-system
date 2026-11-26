@@ -30,10 +30,12 @@ export async function glide(page: Page, loc: Locator): Promise<void> {
 export async function spotlight(page: Page, loc: Locator, opts: { zoom?: number; ms?: number } = {}): Promise<void> {
   const o = { zoom: opts.zoom ?? 1.3, ms: Math.round((opts.ms ?? 2400) / SPEED) };
   await loc.scrollIntoViewIfNeeded().catch(() => undefined);
-  // The cursor rests just below the element's left edge, never on the words (Talia, 26/11).
+  // The cursor rests just left of the element, never on the words (Talia, 26/11); below it only at the window's edge.
   const beside = async (steps: number) => {
     const b = await loc.boundingBox();
-    if (b) await page.mouse.move(b.x + Math.min(18, b.width / 4), b.y + b.height + 14, { steps });
+    if (!b) return;
+    if (b.x > 40) await page.mouse.move(b.x - 22, b.y + b.height / 2, { steps });
+    else await page.mouse.move(b.x + Math.min(18, b.width / 4), b.y + b.height + 14, { steps });
   };
   await beside(18);
   await sleep(200);
