@@ -482,7 +482,16 @@ async function main(): Promise<void> {
       await typeInto(page, page.getByTestId("field-totalCopies"), "1");
       await show(page, page.getByTestId("field-totalCopies"), 1500, 1.3);
       await click(page, page.getByTestId("save-book"));
-      await page.getByTestId("book-detail-title").waitFor();
+      if (!(await appears(page.getByTestId("book-detail-title"), 15_000))) {
+        // keep the form's error for diagnosis (edit-v3/out/), then the run goes on
+        await page
+          .screenshot({
+            path: join(homedir(), "Code/slm-ops/video/edit-v3/out/scene5-save-failed.png"),
+            fullPage: true,
+          })
+          .catch(() => undefined);
+        throw new Error("scene 5: Save did not open the book page (form error in edit-v3/out/scene5-save-failed.png)");
+      }
       await holdUntil(0.97);
     },
 
